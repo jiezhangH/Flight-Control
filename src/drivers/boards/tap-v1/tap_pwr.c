@@ -99,7 +99,9 @@ static int board_button_irq(int irq, FAR void *context)
 			*(uint32_t *)0x40002850 = 0xdeaddead;
 			stm32_pwr_enablebkp(false);
 			up_mdelay(50);
-			up_systemreset();
+
+			// shut down power and wait for it to go down
+			board_pwr(false);
 
 			while (1);
 		}
