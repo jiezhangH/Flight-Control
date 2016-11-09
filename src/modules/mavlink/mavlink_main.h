@@ -376,7 +376,18 @@ public:
 	/**
 	 * Count transmitted bytes
 	 */
-	void			count_txbytes(unsigned n) { _bytes_tx += n; };
+	void			count_txbytes(unsigned n)
+	{
+		_bytes_tx += n;
+		_bytes_tx_comm += n;
+	};
+
+	unsigned get_bytes_tx_comm() {return _bytes_tx_comm;};
+
+	void set_bytes_tx_comm(unsigned val)
+	{
+		_bytes_tx_comm = val;
+	};
 
 	/**
 	 * Count bytes not transmitted because of errors
@@ -531,6 +542,7 @@ private:
 	int32_t			_protocol_version;
 
 	unsigned		_bytes_tx;
+	unsigned		_bytes_tx_comm;
 	unsigned		_bytes_txerr;
 	unsigned		_bytes_rx;
 	uint64_t		_bytes_timestamp;
