@@ -642,9 +642,9 @@ protected:
 			msg.errors_count3 = 0;
 			msg.errors_count4 = 0;
 
-			mavlink_msg_sys_status_send_struct(_mavlink->get_channel(), &msg);
-
 			_mavlink->set_bytes_tx_comm(0);
+
+			mavlink_msg_sys_status_send_struct(_mavlink->get_channel(), &msg);
 
 			/* battery status message with higher resolution */
 			mavlink_battery_status_t bat_msg = {};
