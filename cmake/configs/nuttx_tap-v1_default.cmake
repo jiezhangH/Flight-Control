@@ -29,6 +29,7 @@ set(config_module_list
 	modules/sensors
 	drivers/vmount
 	drivers/protocol_splitter
+	drivers/mavlink_dup
 
 	#
 	# System commands
