@@ -52,6 +52,12 @@
 #include "stm32_sdio.h"
 #include "stm32.h"
 
+/*
+ * TODO:FIX THIS
+ * J and U numbers reflect V1 HW except were diff will show you!
+ *
+ */
+
 /************************************************************************************
  * Definitions
  ************************************************************************************/
@@ -151,7 +157,7 @@
 
 /* Timer Frequencies, if APBx is set to 1, frequency is same to APBx
  * otherwise frequency is 2xAPBx.
- * Note: TIM1,8 are on APB2, others on APB1
+ * Note: TIM1,8-11 are on APB2, others on APB1
  */
 
 #define BOARD_TIM1_FREQUENCY    STM32_APB2_TIM1_CLKIN
@@ -168,6 +174,47 @@
 #define BOARD_TIM12_FREQUENCY   STM32_APB1_TIM12_CLKIN
 #define BOARD_TIM13_FREQUENCY   STM32_APB1_TIM13_CLKIN
 #define BOARD_TIM14_FREQUENCY   STM32_APB1_TIM14_CLKIN
+
+/* SDIO dividers.  Note that slower clocking is required when DMA is disabled
+ * in order to avoid RX overrun/TX underrun errors due to delayed responses
+ * to service FIFOs in interrupt driven mode.  These values have not been
+ * tuned!!!
+ *
+ * HCLK=72MHz, SDIOCLK=72MHz, SDIO_CK=HCLK/(178+2)=400 KHz
+ */
+
+#define SDIO_INIT_CLKDIV        (178 << SDIO_CLKCR_CLKDIV_SHIFT)
+
+/* DMA ON:  HCLK=72 MHz, SDIOCLK=72MHz, SDIO_CK=HCLK/(2+2)=18 MHz
+ * DMA OFF: HCLK=72 MHz, SDIOCLK=72MHz, SDIO_CK=HCLK/(3+2)=14.4 MHz
+ */
+
+#ifdef CONFIG_SDIO_DMA
+#  define SDIO_MMCXFR_CLKDIV    (2 << SDIO_CLKCR_CLKDIV_SHIFT)
+#else
+#  define SDIO_MMCXFR_CLKDIV    (3 << SDIO_CLKCR_CLKDIV_SHIFT)
+#endif
+
+/* DMA ON:  HCLK=72 MHz, SDIOCLK=72MHz, SDIO_CK=HCLK/(1+2)=24 MHz
+ * DMA OFF: HCLK=72 MHz, SDIOCLK=72MHz, SDIO_CK=HCLK/(3+2)=14.4 MHz
+ */
+
+#ifdef CONFIG_SDIO_DMA
+#  define SDIO_SDXFR_CLKDIV     (1 << SDIO_CLKCR_CLKDIV_SHIFT)
+#else
+#  define SDIO_SDXFR_CLKDIV     (3 << SDIO_CLKCR_CLKDIV_SHIFT)
+#endif
+
+/* DMA Channl/Stream Selections *****************************************************/
+/* Stream selections are arbitrary for now but might become important in the future
+ * is we set aside more DMA channels/streams.
+ *
+ * SDIO DMA
+ *   DMAMAP_SDIO_1 = Channel 4, Stream 3 <- may later be used by SPI DMA
+ *   DMAMAP_SDIO_2 = Channel 4, Stream 6
+ */
+
+#define DMAMAP_SDIO DMAMAP_SDIO_1
 
 /* LED definitions ******************************************************************/
 /* If CONFIG_ARCH_LEDS is not defined, then the user can control the LEDs in any
@@ -216,8 +263,8 @@
  * USART1_RX    PB7     GPS_USART1_RX            JP1-13,14
  * USART2_TX    PA2     GB_USART2_TX             JP2-19,20
  * USART2_RX    PA3     GB_USART2_RX             JP2-21,22
- * USART3_TX    PC10    RF2_USART3_TX            J3-2
- * USART3_RX    PC11    RF2_USART3_RX            J3-1
+ * USART3_TX    PC10    ESC_USART3_TX            U81-HCT244 etal ESC and DEBUG
+ * USART3_RX    PC11    ESC_USART3_RX            U83-5 74HCT151  ESC and DEBUG
  * USART6_TX    PC6     RF_USART6_TX             JP2-15,16
  * USART6_RX    PC7     RF_USART6_RX             JP2-17,18
 */
@@ -242,15 +289,12 @@
 /*
  * UARTs.
  *
- *  N.B. The 's' is here to match the wrong labeling on Schematic
  *
  * Peripheral   Port     Signal Name               CONN
- * UART4_TX     PA0     OFS_UsART4_TX             JP1-19,20
- * UART4_RX     PA1     OFS_UsART4_RX             JP1-17,18
- * UART5_TX     PC12    ESC_UsART5_TX             U7-HCT244 etal ESC
- * UART5_RX     PD2     ESC_UsART5_RX             U8-5 74HCT151
+ * UART4_TX     PA0     OFS_UART4_TX             J34-5
+ * UART4_RX     PA1     OFS_UART4_RX             J34-6
  *
- * Note that UART5 has no optional pinout, so it is not listed here.
+ * Note that UART5 Is not used
  *
 */
 
@@ -261,8 +305,8 @@
  * I2C
  *
  * Peripheral   Port     Signal Name               CONN
- * I2C1_SDA     PB9     I2C1_SDA                  J2-4,9,16,21 mpu6050, U4 MS6507
- * I2C1_SDL     PB8     I2C1_SCL                  J2-3,10,15,22 mpu6050, U4 MS6507
+ * I2C1_SDA     PB9     I2C1_SDA                  IMU-2 MS6507
+ * I2C1_SDL     PB8     I2C1_SCL                  IMU-3 MS6507
  * I2C2_SDA     PB11    Sonar Echo/I2C_SDA        JP2-31,32
  * I2C2_SDL     PB10    Sonar Trig/I2C_SCL        JP2-29,30
  * I2C3_SDA     PC9     COMPASS_I2C3_SDA          JP1-27,28

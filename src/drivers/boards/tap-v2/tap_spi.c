@@ -67,18 +67,17 @@
 
 __EXPORT void stm32_spiinitialize(void)
 {
-	stm32_configgpio(GPIO_SPI_CS_SDCARD);
-	stm32_configgpio(GPIO_SPI_SD_SW);
+	stm32_configgpio(GPIO_SENSOR_SPI2_CS0);
 }
 
 
 __EXPORT void stm32_spi2select(FAR struct spi_dev_s *dev, enum spi_dev_e devid, bool selected)
 {
 	/* there can only be one device on this bus, so always select it */
-	stm32_gpiowrite(GPIO_SPI_CS_SDCARD, !selected);
+	stm32_gpiowrite(GPIO_SENSOR_SPI2_CS0, !selected);
 }
 
 __EXPORT uint8_t stm32_spi2status(FAR struct spi_dev_s *dev, enum spi_dev_e devid)
 {
-	return !stm32_gpioread(GPIO_SPI_SD_SW);
+	return !stm32_gpioread(GPIO_SENSOR_SPI2_CS0);
 }

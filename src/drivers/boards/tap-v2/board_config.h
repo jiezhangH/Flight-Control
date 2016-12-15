@@ -48,6 +48,12 @@
 #include <nuttx/compiler.h>
 #include <stdint.h>
 
+/*
+ * TODO:FIX THIS
+ * J and U numbers reflect V1 HW except were diff will show you!
+ *
+ */
+
 /****************************************************************************************************
  * Definitions
  ****************************************************************************************************/
@@ -68,24 +74,27 @@
  * SPI
  *
  * Peripheral   Port     Signal Name               CONN
- * SPI2_NSS       PB12    SD_SPI2_NSS               SD-2 CS
- * SPI2_SCK       PB13    SD_SPI2_SCK               SD-5 CLK
- * SPI2_MISO      PB14    SD_SPI2_MISO              SD-7 D0
- * SPI2_MOSI      PB15    SD_SPI2_MOSI              SD-3 DI
- *
- *                PC2     SD_SW                     SD-9 SW
- *
+ * SPI2_NSS       PB12    SENSOR_SPI2_CS0          IMU-6
+ * SPI2_SCK       PB13    SENSOR_SPI2_SCK          IMU-7
+ * SPI2_MISO      PB14    SENSOR_SPI2_MISO         IMU-8
+ * SPI2_MOSI      PB15    SENSOR_SPI2_MOSI         IMU-9
  */
-#define GPIO_SPI_CS_SDCARD	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN12)
-#define GPIO_SPI_SD_SW	    (GPIO_INPUT|GPIO_PULLUP|GPIO_PORTC|GPIO_PIN2)
+#define GPIO_SENSOR_SPI2_CS0  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN12)
 
+/* Todo: Add Serial EE PROM to some bus? */
+
+#define GPIO_EEPROM_WP  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN4)
+
+/* Active High Write Protect  */
+
+#define EEPROM_WP_CTRL(protected_true)    px4_arch_gpiowrite(GPIO_EEPROM_WP, (protected_true))
 
 /*
  * I2C busses
  *
  * Peripheral   Port     Signal Name               CONN
- * I2C1_SDA     PB9     I2C1_SDA                  J2-4,9,16,21 mpu6050, U4 MS6507
- * I2C1_SDL     PB8     I2C1_SCL                  J2-3,10,15,22 mpu6050, U4 MS6507
+ * I2C1_SDA     PB9     I2C1_SDA                  IMU-2 MS6507
+ * I2C1_SDL     PB8     I2C1_SCL                  IMU-3 MS6507
  *
  * I2C2_SDA     PB11    Sonar Echo/I2C_SDA        JP2-31,32
  * I2C2_SDL     PB10    Sonar Trig/I2C_SCL        JP2-29,30
@@ -247,15 +256,31 @@
 #define POWER_ON_GPIO  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
 #define POWER_OFF_GPIO (GPIO_INPUT|GPIO_PULLDOWN|GPIO_PORTA|GPIO_PIN4)
 
-#define GPIO_S0  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN15)
-#define GPIO_S1  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN14)
-#define GPIO_S2  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN13)
+#define GPIO_S0  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN15)
+#define GPIO_S1  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN14)
+#define GPIO_S2  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN13)
+
+#define CONSOLE_ON_ESC
+extern  bool esc_disabled_for_console;
+#define DEBUG_PORT_CTRL(noesc_just_debug_true) \
+	do { \
+		esc_disabled_for_console = noesc_just_debug_true; \
+		px4_arch_gpiowrite(GPIO_S0, 1); \
+		px4_arch_gpiowrite(GPIO_S1, 1); \
+		px4_arch_gpiowrite(GPIO_S2, 1); \
+	} while (0)
 
 #define GPIO_PCON_RADIO (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN3)
 #define RF_RADIO_POWER_CONTROL(_on_true)	px4_arch_gpiowrite(GPIO_PCON_RADIO, !(_on_true))
 
 #define GPIO_TEMP_CONT (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN4)
 #define TEMP_CONTROL(_on_true)	px4_arch_gpiowrite(GPIO_TEMP_CONT, (_on_true))
+
+#define GPIO_SD_PW_EN  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTA|GPIO_PIN15)
+
+/* Active High SD Card Power enable */
+
+#define SD_CARD_POWER_CTRL(on_true)    px4_arch_gpiowrite(GPIO_SD_PW_EN, (on_true))
 
 #define  FLASH_BASED_PARAMS
 

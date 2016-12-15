@@ -1,7 +1,8 @@
 /****************************************************************************
  *
- *   Copyright (c) 2016 PX4 Development Team. All rights reserved.
- *         Author: David Sidrane <david_s5@nscdg.com>
+ *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
+ *   Authors: Gregory Nutt <gnutt@nuttx.org>
+ *            David Sidrane <david_s5@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -13,7 +14,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
+ * 3. Neither the name NuttX nor the names of its contributors may be
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,90 +33,165 @@
  *
  ****************************************************************************/
 
-/**
- * @file tap-v2_sdio.c
- *
- * Board-specific SDIOfunctions.
- */
-
-/************************************************************************************
+/****************************************************************************
  * Included Files
- ************************************************************************************/
+ ****************************************************************************/
 
 #include <px4_config.h>
 
-#include <stdint.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <debug.h>
 #include <errno.h>
 
-#include <nuttx/spi/spi.h>
+#include <nuttx/sdio.h>
 #include <nuttx/mmcsd.h>
-#include <arch/board/board.h>
 
-#include "up_arch.h"
 #include "chip.h"
-#include "stm32.h"
 #include "board_config.h"
+#include "stm32_gpio.h"
+#include "stm32_sdio.h"
+
+#ifdef CONFIG_MMCSD
+
 
 /****************************************************************************
- * Pre-Processor Definitions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* Configuration ************************************************************/
-
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_CPP_HAVE_VARARGS
 #  ifdef CONFIG_DEBUG
-#    define message(...) lowsyslog(__VA_ARGS__)
+#    define message(...) syslog(__VA_ARGS__)
 #  else
 #    define message(...) printf(__VA_ARGS__)
 #  endif
 #else
 #  ifdef CONFIG_DEBUG
-#    define message lowsyslog
+#    define message syslog
 #  else
 #    define message printf
 #  endif
 #endif
 
-/************************************************************************************
+/* Card detections requires card support and a card detection GPIO */
+
+#define HAVE_NCD   1
+#if !defined(GPIO_SDMMC1_NCD)
+#  undef HAVE_NCD
+#endif
+
+/****************************************************************************
  * Private Data
- ************************************************************************************/
-static struct spi_dev_s *spi;
+ ****************************************************************************/
 
-/************************************************************************************
- * Public Functions
- ************************************************************************************/
+static FAR struct sdio_dev_s *sdio_dev;
+#ifdef HAVE_NCD
+static bool g_sd_inserted = 0xff; /* Impossible value */
+#endif
 
-/************************************************************************************
- * Name: board_sdio_initialize
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: stm32_ncd_interrupt
  *
  * Description:
- *   Called to configure SDIO.
+ *   Card detect interrupt handler.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
-__EXPORT int board_sdio_initialize(void)
+#ifdef HAVE_NCD
+static int stm32_ncd_interrupt(int irq, FAR void *context)
 {
-	/* Get the SPI port for the microSD slot */
+	bool present;
 
-	spi = stm32_spibus_initialize(CONFIG_NSH_MMCSDSPIPORTNO);
+	present = !stm32_gpioread(GPIO_SDMMC1_NCD);
 
-	if (!spi) {
-		message("[boot] FAILED to initialize SPI port %d\n", CONFIG_NSH_MMCSDSPIPORTNO);
-		return -ENODEV;
-	}
-
-	/* Now bind the SPI interface to the MMCSD driver */
-	int result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi);
-
-	if (result != OK) {
-		message("[boot] FAILED to bind SPI port 2 to the MMCSD driver\n");
-		return -ENODEV;
+	if (sdio_dev && present != g_sd_inserted) {
+		sdio_mediachange(sdio_dev, present);
+		g_sd_inserted = present;
 	}
 
 	return OK;
 }
+#endif
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+__BEGIN_DECLS
+
+/****************************************************************************
+ * Name: board_sdio_initialize
+ *
+ * Description:
+ *   Initialize SDIO-based MMC/SD card support
+ *
+ ****************************************************************************/
+
+int board_sdio_initialize(void)
+{
+	int ret;
+
+	SD_CARD_POWER_CTRL(true);
+
+#ifdef HAVE_NCD
+	/* Card detect */
+
+	bool cd_status;
+
+	/* Configure the card detect GPIO */
+
+	stm32_configgpio(GPIO_SDMMC1_NCD);
+
+	/* Register an interrupt handler for the card detect pin */
+
+	stm32_gpiosetevent(GPIO_SDMMC1_NCD, true, true, true, stm32_ncd_interrupt);
+#endif
+
+	/* Mount the SDIO-based MMC/SD block driver */
+	/* First, get an instance of the SDIO interface */
+
+	finfo("Initializing SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
+
+	sdio_dev = sdio_initialize(CONFIG_NSH_MMCSDSLOTNO);
+
+	if (!sdio_dev) {
+		message("[boot] Failed to initialize SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
+		return -ENODEV;
+	}
+
+	/* Now bind the SDIO interface to the MMC/SD driver */
+
+	finfo("Bind SDIO to the MMC/SD driver, minor=%d\n", CONFIG_NSH_MMCSDMINOR);
+
+	ret = mmcsd_slotinitialize(CONFIG_NSH_MMCSDMINOR, sdio_dev);
+
+	if (ret != OK) {
+		message("[boot] Failed to bind SDIO to the MMC/SD driver: %d\n", ret);
+		return ret;
+	}
+
+	finfo("Successfully bound SDIO to the MMC/SD driver\n");
+
+#ifdef HAVE_NCD
+	/* Use SD card detect pin to check if a card is g_sd_inserted */
+
+	cd_status = !stm32_gpioread(GPIO_SDMMC1_NCD);
+	finfo("Card detect : %d\n", cd_status);
+
+	sdio_mediachange(sdio_dev, cd_status);
+#else
+	/* Assume that the SD card is inserted.  What choice do we have? */
+
+	sdio_mediachange(sdio_dev, true);
+#endif
+
+	return OK;
+}
+
+#endif /* CONFIG_MMCSD */

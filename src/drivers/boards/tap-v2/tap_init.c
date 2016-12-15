@@ -136,12 +136,25 @@ __EXPORT void stm32_boardinitialize(void)
 
 	board_pwr_init(0);
 
+	/* configure LEDs */
+
+	board_autoled_initialize();
+
+	/* SDIO PWR OFF (active high, init is clear) */
+
+	stm32_configgpio(GPIO_SD_PW_EN);
+
+	/* Sereial EE PROM R.O. (active high, init is clear) */
+
+	stm32_configgpio(GPIO_EEPROM_WP);
+
+
 	/* TEMP ctrl Off (active high, init is clear) */
 
 	stm32_configgpio(GPIO_TEMP_CONT);
 
 
-	/* Select 0 */
+	/* Select Debug Port */
 
 	stm32_configgpio(GPIO_S0);
 	stm32_configgpio(GPIO_S1);
@@ -165,9 +178,6 @@ __EXPORT void stm32_boardinitialize(void)
 
 	stm32_spiinitialize();
 
-	/* configure LEDs */
-
-	board_autoled_initialize();
 }
 
 /****************************************************************************
