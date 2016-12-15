@@ -5,13 +5,20 @@
 #  NOTE: COMMENT LINES ARE REMOVED BEFORE STORED IN ROMFS.
 #
 
-# Serial map:
+# V1 HW Serial map:
 # /dev/ttyS0: GPS
 # /dev/ttyS1: GB
 # /dev/ttyS2: nsh shell / console
 # /dev/ttyS3: payload
 # /dev/ttyS4: esc bus
 # /dev/ttyS5: RC input
+
+# V2 HW Serial map:
+# /dev/ttyS0: GPS
+# /dev/ttyS1: GB
+# /dev/ttyS2: esc bus / console (mux s7)
+# /dev/ttyS3: payload
+# /dev/ttyS4: RC input
 
 #
 # Start CDC/ACM serial driver
@@ -119,6 +126,12 @@ set PWM_MAX none
 set FMU_MODE pwm
 set MAV_TYPE none
 set FAILSAFE none
+set ESC_TTY /dev/ttyS4
+
+if ver hwcmp TAP_V2
+then
+	set ESC_TTY /dev/ttyS2
+fi
 
 # Start canned airframe config
 sh /etc/init.d/rc.autostart

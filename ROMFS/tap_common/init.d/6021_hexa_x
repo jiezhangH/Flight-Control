@@ -77,7 +77,7 @@ then
 	param set RC_MAP_AUX2 7
 	param set RC_MAP_AUX3 9
 	param set RC_MAP_AUX4 10
-	
+
 	param set RC1_MAX 1833.0
 	param set RC1_MIN 1163.0
 	param set RC1_REV 1.0
@@ -130,7 +130,7 @@ then
 	param set COM_ARM_SWISBTN 1
 fi
 
-if tap_esc start -d /dev/ttyS4 -n 6
+if tap_esc start -d ${ESC_TTY} -n 6
 then
 fi
 set OUTPUT_MODE tap_esc
