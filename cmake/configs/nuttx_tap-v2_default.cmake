@@ -23,6 +23,7 @@ set(config_module_list
 # Place holder	drivers/icm20xxx
 	drivers/ms5611
 	drivers/hmc5883
+	drivers/ist8310
 	drivers/gps
 	drivers/airspeed
 	drivers/meas_airspeed
