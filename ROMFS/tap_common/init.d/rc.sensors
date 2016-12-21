@@ -21,9 +21,21 @@ if ist8310 -C start
 then
 fi
 
-# Internal I2C bus
-if mpu6000 -I -T 6000 start
+# start accel/gyro
+if ver hwcmp TAP_V1
 then
+	# Internal I2C bus
+	if mpu6000 -I -T 6000 start
+	then
+	fi
+fi
+
+if ver hwcmp TAP_V2
+then
+	# internal SPI bus
+	if mpu6000 -s -T 20602 start
+	then
+	fi
 fi
 
 # Wait 50 ms for sensors (because we need to wait for the HRT and work queue callbacks to fire)
