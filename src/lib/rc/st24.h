@@ -54,7 +54,9 @@ __BEGIN_DECLS
 enum ST24_PACKET_TYPE {
 	ST24_PACKET_TYPE_CHANNELDATA12 = 0,
 	ST24_PACKET_TYPE_CHANNELDATA24,
-	ST24_PACKET_TYPE_TRANSMITTERGPSDATA
+	ST24_PACKET_TYPE_TRANSMITTERGPSDATA,
+	ST24_PACKET_TYPE_GPSDATA,
+	ST24_PACKET_TYPE_BINDCMD
 };
 
 #pragma pack(push, 1)
@@ -126,8 +128,14 @@ typedef struct {
 	uint8_t	pressCompassStatus;	///< baro / compass status
 } TelemetryData;
 
+typedef struct {
+	uint16_t t;			// packet counter or clock
+	uint8_t cmd[4];		// command is "BIND"
+} StBindCmd;
+
 #pragma pack(pop)
 
+#define PACKET_LEGNTH_STBINDCMD	sizeof(StBindCmd)
 /**
  * CRC8 implementation for ST24 protocol
  *
@@ -136,6 +144,8 @@ typedef struct {
  * @return the checksum of these bytes over len
  */
 uint8_t st24_common_crc8(uint8_t *ptr, uint8_t len);
+
+ReceiverFcPacket *st24_encode_bind(StBindCmd *bindCmd);
 
 /**
  * Decoder for ST24 protocol

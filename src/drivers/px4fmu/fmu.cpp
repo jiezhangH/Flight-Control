@@ -244,6 +244,10 @@ private:
 
 	perf_counter_t	_ctl_latency;
 
+	bool st24_flag;
+	int  st24_time_now;
+	int  st24_time_start;
+
 	static bool	arm_nothrottle()
 	{
 		return ((_armed.prearmed && !_armed.armed) || _armed.in_esc_calibration_mode);
@@ -361,7 +365,10 @@ PX4FMU::PX4FMU() :
 	_to_mixer_status(nullptr),
 	_mot_t_max(0.0f),
 	_thr_mdl_fac(0.0f),
-	_ctl_latency(perf_alloc(PC_ELAPSED, "ctl_lat"))
+	_ctl_latency(perf_alloc(PC_ELAPSED, "ctl_lat")),
+	st24_flag(true),
+	st24_time_now(0),
+	st24_time_start(0)
 {
 	for (unsigned i = 0; i < _max_actuators; i++) {
 		_min_pwm[i] = PWM_DEFAULT_MIN;
@@ -460,7 +467,7 @@ PX4FMU::init()
 	}
 
 	_safety_disabled = circuit_breaker_enabled("CBRK_IO_SAFETY", CBRK_IO_SAFETY_KEY);
-
+	st24_time_start = hrt_absolute_time();
 	work_start();
 
 	return OK;
@@ -1435,6 +1442,30 @@ PX4FMU::cycle()
 		//warnx("RCscan: %s RC input locked", RC_SCAN_STRING[_rc_scan_state]);
 	}
 
+	/*bind*/
+	st24_time_now =  hrt_absolute_time();
+
+	if ((st24_time_now - st24_time_start) > 5000000) {
+		if (st24_flag) {
+			StBindCmd bind_cmd = {0, {'B', 'I', 'N', 'D'}};
+			ReceiverFcPacket *bind_packet =  st24_encode_bind(&bind_cmd);
+
+			for (int i = 0; i < 5; i++) {
+				int ret1 = ::write(_rcs_fd, (uint8_t *)bind_packet, (bind_packet->length + 3));
+
+				if (ret1 < 0) {
+					perror("write");
+				}
+
+				usleep(1000);
+			}
+
+			if ((st24_time_now - st24_time_start) > 10000000) {
+				st24_flag = 0;
+			}
+		}
+	}
+
 	// read all available data from the serial RC input UART
 	int newBytes = ::read(_rcs_fd, &_rcs_buf[0], SBUS_BUFFER_SIZE);
 
@@ -1512,6 +1543,7 @@ PX4FMU::cycle()
 			   || _cycle_timestamp - _rc_scan_begin < rc_scan_max) {
 
 			if (newBytes > 0) {
+				st24_flag = 0;
 				// parse new data
 				uint8_t st24_rssi, lost_count;
 
