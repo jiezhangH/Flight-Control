@@ -20,7 +20,6 @@ set(config_module_list
 	drivers/rgbled_pwm
 	drivers/tap_esc
 	drivers/mpu6000
-# Place holder	drivers/icm20xxx
 	drivers/ms5611
 	drivers/hmc5883
 	drivers/ist8310
