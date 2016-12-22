@@ -128,7 +128,7 @@ int DevCommon::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	//pretend we have enough space left to write, so mavlink will not drop data and throw off
 	//our parsing state
-	if (cmd == FIONWRITE) {
+	if (cmd == FIONSPACE) {
 		*(int *)arg = 1024;
 		return 0;
 	}
@@ -301,7 +301,7 @@ ssize_t Mavlink2Dev::write(struct file *filp, const char *buffer, size_t buflen)
 	case ParserState::GotLength: {
 			_packet_len -= buflen;
 			int buf_free;
-			::ioctl(_fd, FIONWRITE, (unsigned long)&buf_free);
+			::ioctl(_fd, FIONSPACE, (unsigned long)&buf_free);
 
 			if (buf_free < buflen) {
 				//let write fail, to let mavlink know the buffer would overflow

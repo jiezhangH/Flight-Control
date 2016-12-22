@@ -195,7 +195,7 @@ int MavlinkDuplicator::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	//pretend we have enough space left to write, so mavlink will not drop data and throw off
 	//our parsing state
-	if (cmd == FIONWRITE) {
+	if (cmd == FIONSPACE) {
 		*(int *)arg = 1024;
 		return 0;
 	}
@@ -418,7 +418,7 @@ pollevent_t MavlinkDuplicator::poll_state(struct file *filp)
 			// available data in poll()
 			// if (fds[i].revents & POLLIN) {
 			int buf_avail = 0;
-			int ioctl_ret = ::ioctl(_backends[i].fd, FIONREAD, (unsigned long)&buf_avail);
+			int ioctl_ret = ::ioctl(_backends[i].fd, FIONSPACE, (unsigned long)&buf_avail);
 
 			if (ioctl_ret == 0 && buf_avail > 0) {
 				_polling_backend = i;
@@ -529,7 +529,7 @@ ssize_t MavlinkDuplicator::try_write(int fd, const char *buffer, size_t buflen)
 {
 
 	int buf_free;
-	::ioctl(fd, FIONWRITE, (unsigned long)&buf_free);
+	::ioctl(fd, FIONSPACE, (unsigned long)&buf_free);
 
 	if (buf_free < buflen) {
 		return 0;
@@ -544,18 +544,18 @@ void MavlinkDuplicator::update_connection_state()
 
 	if (_connected_backend_writer >= 0) {
 		if (hrt_elapsed_time(&_last_got_data_timestamp) > 3000 * 1000) {
-			PX4_INFO("backend %i disconnected", (int)_connected_backend_writer);
+			PX4_DEBUG("backend %i disconnected", (int)_connected_backend_writer);
 			_connected_backend_writer = -1;
 
 		} else if (_polling_backend != -1 && _polling_backend != _connected_backend_writer) {
 			_connected_backend_writer = _polling_backend;
-			PX4_INFO("Switching to backend %i", (int)_connected_backend_writer);
+			PX4_DEBUG("Switching to backend %i", (int)_connected_backend_writer);
 		}
 
 	} else {
 		if (_polling_backend >= 0) {
 			_connected_backend_writer = _polling_backend;
-			PX4_INFO("backend %i connected", (int)_connected_backend_writer);
+			PX4_DEBUG("backend %i connected", (int)_connected_backend_writer);
 		}
 	}
 
