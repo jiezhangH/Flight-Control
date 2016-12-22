@@ -12,7 +12,7 @@ then
 	#
 
 	# Use the mixer file
-	set MIXER_FILE /etc/mixers/$MIXER.main.mix
+	set MIXER_FILE /etc/mixers/${MIXER}.main.mix
 
 	set OUTPUT_DEV /dev/pwm_output0
 
