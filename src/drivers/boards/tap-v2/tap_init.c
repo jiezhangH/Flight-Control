@@ -404,7 +404,8 @@ __EXPORT int board_app_initialize(uintptr_t arg)
 #endif
 
 	/* Init the microSD slot */
-
+	/* Using this only until the problem with the DMA for the SD card is not fixed */
+#ifdef USE_SD_CARD
 	result = board_sdio_initialize();
 
 	if (result != OK) {
@@ -412,6 +413,7 @@ __EXPORT int board_app_initialize(uintptr_t arg)
 		return -ENODEV;
 	}
 
+#endif
 	return OK;
 }
 
