@@ -51,6 +51,7 @@
 #include <uORB/topics/input_rc.h>
 #include <uORB/topics/esc_status.h>
 #include <uORB/topics/multirotor_motor_limits.h>
+#include <systemlib/mavlink_log.h>
 
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_mixer.h>
@@ -125,6 +126,7 @@ private:
 
 	orb_advert_t        _esc_feedback_pub = nullptr;
 	orb_advert_t      _to_mixer_status; 	///< mixer status flags
+	orb_advert_t    	_mavlink_log_pub;
 	esc_status_s      _esc_feedback;
 	uint8_t           _channels_count; // The number of ESC channels
 
@@ -176,6 +178,7 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_control_subs{ -1},
 	_esc_feedback_pub(nullptr),
 	_to_mixer_status(nullptr),
+	_mavlink_log_pub(nullptr),
 	_esc_feedback{},
 	_channels_count(channels_count),
 	_mixers(nullptr),
@@ -257,6 +260,7 @@ TAP_ESC::init()
 				ESC_CHANNEL_MAP_RUNNING_DIRECTION;
 	}
 
+	config.controlMode = 2;
 	config.maxChannelValue = RPMMAX;
 	config.minChannelValue = RPMMIN;
 
@@ -755,7 +759,8 @@ TAP_ESC::cycle()
 					_esc_feedback.esc[feed_back_data.channelID].esc_vendor = esc_status_s::ESC_VENDOR_TAP;
 					// printf("vol is %d\n",feed_back_data.voltage );
 					// printf("speed is %d\n",feed_back_data.speed );
-
+					//mavlink_log_info(&_mavlink_log_pub, "tap_esc: %d speed : %d", (int)_esc_feedback.esc[feed_back_data.channelID].esc_state
+					//		,_esc_feedback.esc[feed_back_data.channelID].esc_rpm);
 					_esc_feedback.esc_connectiontype = esc_status_s::ESC_CONNECTION_TYPE_SERIAL;
 					_esc_feedback.counter++;
 					_esc_feedback.esc_count = esc_count;
@@ -765,6 +770,17 @@ TAP_ESC::cycle()
 					orb_publish(ORB_ID(esc_status), _esc_feedback_pub, &_esc_feedback);
 				}
 			}
+
+//			if (_packet.msg_id == ESCBUS_MSG_ID_CONFIG_INFO_BASIC) {
+//				ConfigInfoBasicRequest &feed_back_data_config = _packet.d.reqConfigInfoBasic;
+//				uint16_t channel_max;
+//				uint16_t channel_min;
+//
+//				channel_max = feed_back_data_config.maxChannelValue;
+//				channel_min = feed_back_data_config.minChannelValue;
+//				mavlink_log_info(&_mavlink_log_pub, "channel_max: %d channel_min : %d", channel_max,channel_min);
+//			}
+
 		}
 
 		/* and publish for anyone that cares to see */
