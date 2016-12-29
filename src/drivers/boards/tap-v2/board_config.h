@@ -173,8 +173,10 @@
 /* todo:Revisit - cannnot tell from schematic - one could be tone alarm*/
 #define TONE_ALARM_TIMER        8   /* timer 8 */
 #define TONE_ALARM_CHANNEL      3   /* channel 3 */
-#define GPIO_TONE_ALARM_IDLE    (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN8)
-#define GPIO_TONE_ALARM         (GPIO_ALT|GPIO_AF2|GPIO_SPEED_2MHz|GPIO_FLOAT|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
+
+/* Must be an unused pin - a null tone alarm, were main does nothing, would be a better approach */
+#define GPIO_TONE_ALARM_IDLE    (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN2)
+#define GPIO_TONE_ALARM         (GPIO_ALT|GPIO_AF2|GPIO_SPEED_2MHz|GPIO_FLOAT|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN2)
 
 /*
  * PWM
