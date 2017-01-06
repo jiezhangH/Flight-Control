@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ############################################################################
 #
-#   Copyright (C) 2012-2015 PX4 Development Team. All rights reserved.
+#   Copyright (C) 2012-2017 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -178,14 +178,12 @@ class uploader(object):
         PROG_MULTI_MAX  = [252, 252]   # protocol max is 255, must be multiple of 4
         READ_MULTI_MAX  = [252, 252]   # protocol max is 255
 
-
         PROTOCOL_UKN  = -1
         PROTOCOL_0    = 0
         PROTOCOL_1    = 1
-#                                  0   1   2   3   4   5   6   7   8   9  10   11  12  13  14  15  16  17 18   19  20 21   22  23
-        protocol_cmds = [bytes(b'\x12\x20\x10\x11\x13\x14\x00\x21\x22\x23\x24\x27\x28\x29\x2a\x2b\x2c\x2d\x2e\x30\x01\x02\x03\x04'),
-                         bytes(b'\xab\xba\xf0\xf1\xf3\x14\x00\xe1\xe2\xe3\x24\xe4\x28\xe5\xe6\xe7\x2c\x2d\x2e\xe8\x01\x02\x03\x04')]
-
+#                           0        1        2        3        4        5        6        7        8        9       10        11       12       13       14       15       16       17      18        19       20      21        22       23
+        protocol_cmds = [(b'\x12', b'\x20', b'\x10', b'\x11', b'\x13', b'\x14', b'\x00', b'\x21', b'\x22', b'\x23', b'\x24', b'\x27', b'\x28', b'\x29', b'\x2a', b'\x2b', b'\x2c', b'\x2d', b'\x2e', b'\x30', b'\x01', b'\x02', b'\x03', b'\x04'),
+                         (b'\xab', b'\xba', b'\xf0', b'\xf1', b'\xf3', b'\x14', b'\x00', b'\xe1', b'\xe2', b'\xe3', b'\x24', b'\xe4', b'\x28', b'\xe5', b'\xe6', b'\xe7', b'\x2c', b'\x2d', b'\x2e', b'\xe8', b'\x01', b'\x02', b'\x03', b'\x04')]
 
         NSH_INIT        = bytearray(b'\x0d\x0d\x0d')
         NSH_REBOOT_BL   = b"reboot -b\n"
