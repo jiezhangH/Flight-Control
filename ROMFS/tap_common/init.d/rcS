@@ -217,7 +217,7 @@ then
 fi
 
 # mavlink baudrate for Gimbal UART
-set BAUDRATE 115200
+set BAUDRATE 500000
 
 # FIXME: for now we just want to make sure mavlink always runs with version 2,
 # later move this to a proper place
