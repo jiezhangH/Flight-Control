@@ -260,7 +260,11 @@ TAP_ESC::init()
 				ESC_CHANNEL_MAP_RUNNING_DIRECTION;
 	}
 
+#ifdef CONFIG_ARCH_BOARD_TAP_V1
+	config.controlMode = 0;
+#else
 	config.controlMode = 2;
+#endif
 	config.maxChannelValue = RPMMAX;
 	config.minChannelValue = RPMMIN;
 
