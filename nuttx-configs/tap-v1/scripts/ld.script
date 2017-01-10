@@ -45,7 +45,10 @@
  * the 0x0800:0000 address range.
  *
  * The first 16 KiB of flash is reserved for the bootloader.
+ * The second 16 KiB is retained to be compatable with the other
+ * exiting TAP bootloader.
  * Paramater storage will use the next 2 16KiB Sectors.
+ * The PX4 code is located at 64 KiB
  */
 
 MEMORY
