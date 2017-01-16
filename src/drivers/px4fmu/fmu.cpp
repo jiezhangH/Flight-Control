@@ -300,7 +300,7 @@ private:
 			hrt_abstime now, bool frame_drop, bool failsafe,
 			unsigned frame_drops, int rssi);
 	void dsm_bind_ioctl(int dsmMode);
-	void sr_bind(int srModel);
+	void st24_bind();
 	void set_rc_scan_state(RC_SCAN _rc_scan_state);
 	void rc_io_invert();
 	void rc_io_invert(bool invert);
@@ -1351,8 +1351,7 @@ PX4FMU::cycle()
 				dsm_bind_ioctl((int)cmd.param2);
 
 			} else if ((int)cmd.param1 == 1) {
-				// SR/RX pairing command
-				sr_bind((int)cmd.param2);
+				st24_bind();
 			}
 		}
 
@@ -1440,30 +1439,6 @@ PX4FMU::cycle()
 	if (_report_lock && _rc_scan_locked) {
 		_report_lock = false;
 		//warnx("RCscan: %s RC input locked", RC_SCAN_STRING[_rc_scan_state]);
-	}
-
-	/*bind*/
-	st24_time_now =  hrt_absolute_time();
-
-	if ((st24_time_now - st24_time_start) > 5000000) {
-		if (st24_flag) {
-			StBindCmd bind_cmd = {0, {'B', 'I', 'N', 'D'}};
-			ReceiverFcPacket *bind_packet =  st24_encode_bind(&bind_cmd);
-
-			for (int i = 0; i < 5; i++) {
-				int ret1 = ::write(_rcs_fd, (uint8_t *)bind_packet, (bind_packet->length + 3));
-
-				if (ret1 < 0) {
-					perror("write");
-				}
-
-				usleep(1000);
-			}
-
-			if ((st24_time_now - st24_time_start) > 10000000) {
-				st24_flag = 0;
-			}
-		}
 	}
 
 	// read all available data from the serial RC input UART
@@ -2837,18 +2812,19 @@ PX4FMU::gpio_ioctl(struct file *filp, int cmd, unsigned long arg)
 }
 
 void
-PX4FMU::sr_bind(int /*srModel*/)
+PX4FMU::st24_bind()
 {
 	if (!_armed.armed) {
-		// SR/RX unbind sequence
 		dsm_config(_rcs_fd);
 		RF_RADIO_POWER_CONTROL(false);
-		usleep(200000);
+		usleep(1000);
 		RF_RADIO_POWER_CONTROL(true);
-		usleep(900000);
-		char unbindcmd[] = {0x55, 0x55, 0x08, 0x04, 0x00, 0x00, 0x42, 0x49, 0x4E, 0x44, 0xB0};
-		int res = ::write(_rcs_fd, &unbindcmd[0], sizeof(unbindcmd));
-		PX4_INFO("WROTE UNBIND COMMAND: %d (fd: %d)", res, _rcs_fd);
+		usleep(1000);
+
+		ReceiverFcPacket *bind_packet = st24_get_bind_packet();
+		// send 3 more bytes 2 for header and 1 for crc
+		int ret = ::write(_rcs_fd, (uint8_t *)bind_packet, (bind_packet->length + 3));
+		PX4_INFO("Sent ST24 bind command res: %d", ret);
 
 	} else {
 		warnx(kSystemArmedRejectBind);

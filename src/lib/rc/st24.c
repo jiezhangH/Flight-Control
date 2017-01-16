@@ -77,8 +77,7 @@ static uint8_t _rxlen;
 static uint16_t _last_throttle_raw = 0;
 
 static ReceiverFcPacket _rxpacket;
-
-ReceiverFcPacket _txpacket;
+static ReceiverFcPacket _txpacket;
 
 uint8_t st24_common_crc8(uint8_t *ptr, uint8_t len)
 {
@@ -250,13 +249,19 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 	return ret;
 }
 
-ReceiverFcPacket *st24_encode_bind(StBindCmd *bindCmd)
+ReceiverFcPacket *st24_encode(uint8_t type, const uint8_t *data, uint8_t bytecount)
 {
 	_txpacket.header1 = ST24_STX1;
 	_txpacket.header2 = ST24_STX2;
-	_txpacket.length = 8;
-	_txpacket.type = ST24_PACKET_TYPE_BINDCMD;
-	memcpy(_txpacket.st24_data, (const uint8_t *)bindCmd, PACKET_LEGNTH_STBINDCMD);
-	_txpacket.st24_data[PACKET_LEGNTH_STBINDCMD] = st24_common_crc8((uint8_t *) & (_txpacket.length), _txpacket.length);
+	_txpacket.length = bytecount + 2; // 2 bytes more for length and type
+	_txpacket.type = type;
+	memcpy(_txpacket.st24_data, data, bytecount);
+	_txpacket.st24_data[bytecount] = st24_common_crc8((uint8_t *) &_txpacket.length, _txpacket.length);
 	return &_txpacket;
+}
+
+ReceiverFcPacket *st24_get_bind_packet(void)
+{
+	StBindCmd bind_cmd = {0, {'B', 'I', 'N', 'D'}};
+	return st24_encode(ST24_PACKET_TYPE_BINDCMD, (uint8_t *) &bind_cmd, sizeof(StBindCmd));
 }

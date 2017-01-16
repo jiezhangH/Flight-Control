@@ -135,7 +135,6 @@ typedef struct {
 
 #pragma pack(pop)
 
-#define PACKET_LEGNTH_STBINDCMD	sizeof(StBindCmd)
 /**
  * CRC8 implementation for ST24 protocol
  *
@@ -145,7 +144,8 @@ typedef struct {
  */
 uint8_t st24_common_crc8(uint8_t *ptr, uint8_t len);
 
-ReceiverFcPacket *st24_encode_bind(StBindCmd *bindCmd);
+ReceiverFcPacket *st24_encode(uint8_t type, const uint8_t *data, uint8_t bytes);
+ReceiverFcPacket *st24_get_bind_packet(void);
 
 /**
  * Decoder for ST24 protocol
