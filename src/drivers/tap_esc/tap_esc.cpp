@@ -441,9 +441,10 @@ void TAP_ESC:: send_esc_outputs(const float *pwm, const unsigned num_pwm)
 		} else if (rpm[i] < RPMSTOPPED) {
 			rpm[i] = RPMSTOPPED;
 		}
+		rpm[i] |= get_tap_esc_rgbled_color(i);
 	}
 
-	rpm[which_to_respone] |= (RUN_FEEDBACK_ENABLE_MASK | RUN_BLUE_LED_ON_MASK);
+	rpm[which_to_respone] |= RUN_FEEDBACK_ENABLE_MASK;
 
 
 	EscPacket packet = {0xfe, _channels_count, ESCBUS_MSG_ID_RUN};
