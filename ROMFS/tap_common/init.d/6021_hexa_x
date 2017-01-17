@@ -8,7 +8,7 @@
 # @output AUX2 feed-through of RC AUX2 channel
 # @output AUX3 feed-through of RC AUX3 channel
 #
-# @maintainer Anton Babushkin <anton@px4.io>
+# @maintainer Matthias Grob <matthias@yuneecresearch.com>
 #
 
 sh /etc/init.d/rc.mc_defaults
@@ -21,25 +21,50 @@ then
 	# Attitude parameters setting for TAP
 	#
 
-	# pitch angle & rate setting
-	param set MC_PITCHRATE_P 0.13
-	param set MC_PITCHRATE_I 0.000
-	param set MC_PITCHRATE_D 0.0032
-	param set MC_PITCHRATE_MAX 360.0
-	param set MC_PITCH_P 4.5
+	if ver hwcmp TAP_V1
+	then
+		# TAP v1
+		# pitch angle & rate setting
+		param set MC_PITCHRATE_P 0.13
+		param set MC_PITCHRATE_I 0.000
+		param set MC_PITCHRATE_D 0.0032
+		param set MC_PITCHRATE_MAX 360.0
+		param set MC_PITCH_P 4.5
 
-	# roll angle & rate setting
-	param set MC_ROLLRATE_P 0.13
-	param set MC_ROLLRATE_I 0.000
-	param set MC_ROLLRATE_D 0.0032
-	param set MC_ROLLRATE_MAX 360.0
-	param set MC_ROLL_P 4.5
+		# roll angle & rate setting
+		param set MC_ROLLRATE_P 0.13
+		param set MC_ROLLRATE_I 0.000
+		param set MC_ROLLRATE_D 0.0032
+		param set MC_ROLLRATE_MAX 360.0
+		param set MC_ROLL_P 4.5
 
-	# yaw angle & rate setting
-	param set MC_YAWRATE_P 0.12
-	param set MC_YAWRATE_I 0.05
-	param set MC_YAWRATE_MAX 120.0
-	param set MC_YAW_P 3.0
+		# yaw angle & rate setting
+		param set MC_YAWRATE_P 0.12
+		param set MC_YAWRATE_I 0.05
+		param set MC_YAWRATE_MAX 120.0
+		param set MC_YAW_P 3.0
+	else
+		# TAP v2
+		# pitch angle & rate setting
+		param set MC_PITCHRATE_P 0.145
+		param set MC_PITCHRATE_I 0.000
+		param set MC_PITCHRATE_D 0.002
+		param set MC_PITCHRATE_MAX 360.0
+		param set MC_PITCH_P 8
+
+		# roll angle & rate setting
+		param set MC_ROLLRATE_P 0.145
+		param set MC_ROLLRATE_I 0.000
+		param set MC_ROLLRATE_D 0.002
+		param set MC_ROLLRATE_MAX 360.0
+		param set MC_ROLL_P 8
+
+		# yaw angle & rate setting
+		param set MC_YAWRATE_P 0.12
+		param set MC_YAWRATE_I 0.05
+		param set MC_YAWRATE_MAX 120.0
+		param set MC_YAW_P 3.0
+	fi
 
 	#
 	# Throttle max/min setting
