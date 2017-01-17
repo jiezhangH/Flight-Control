@@ -13,7 +13,7 @@ uint8 HIL_STATE_OFF = 0
 uint8 HIL_STATE_ON = 1
 
 # Navigation state, i.e. "what should vehicle do".
-uint8 NAVIGATION_STATE_MANUAL = 0		# Manual mode
+uint8 NAVIGATION_STATE_MANUAL = 0		# SMART mode
 uint8 NAVIGATION_STATE_ALTCTL = 1		# Altitude control mode
 uint8 NAVIGATION_STATE_POSCTL = 2		# Position control mode
 uint8 NAVIGATION_STATE_AUTO_MISSION = 3		# Auto mission mode
@@ -33,7 +33,8 @@ uint8 NAVIGATION_STATE_RATTITUDE = 16		# Rattitude (aka "flip") mode
 uint8 NAVIGATION_STATE_AUTO_TAKEOFF = 17	# Takeoff
 uint8 NAVIGATION_STATE_AUTO_LAND = 18		# Land
 uint8 NAVIGATION_STATE_AUTO_FOLLOW_TARGET = 19	# Auto Follow
-uint8 NAVIGATION_STATE_MAX = 20
+uint8 NAVIGATION_STATE_SMART = 20		# Manual mode
+uint8 NAVIGATION_STATE_MAX = 21
 
 uint8 RC_IN_MODE_DEFAULT = 0
 uint8 RC_IN_MODE_OFF = 1

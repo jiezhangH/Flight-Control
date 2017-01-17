@@ -440,6 +440,16 @@ main_state_transition(struct vehicle_status_s *status, main_state_t new_main_sta
 
 		break;
 
+	case commander_state_s::MAIN_STATE_SMART:
+
+		/* need at minimum local position estimate */
+		if (status_flags->condition_local_position_valid ||
+			 status_flags->condition_global_position_valid) {
+			 ret = TRANSITION_CHANGED;
+		}
+
+		break;
+
 	case commander_state_s::MAIN_STATE_MAX:
 	default:
 		break;
@@ -754,6 +764,37 @@ bool set_nav_state(struct vehicle_status_s *status,
 				status->nav_state = vehicle_status_s::NAVIGATION_STATE_POSCTL;
 			}
 		}
+		break;
+
+	case commander_state_s::MAIN_STATE_SMART: {
+
+			if (rc_lost && is_armed) {
+				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
+
+				set_rc_loss_nav_state(status, armed, status_flags, rc_loss_act);
+
+				/* As long as there is RC, we can fallback to ALTCTL, or STAB. */
+				/* A local position estimate is enough for POSCTL for multirotors,
+				 * this enables POSCTL using e.g. flow.
+				 * For fixedwing, a global position is needed. */
+
+			} else if (((status->is_rotary_wing && !status_flags->condition_local_position_valid) ||
+					(!status->is_rotary_wing && !status_flags->condition_global_position_valid))
+				  && is_armed) {
+				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
+
+				if (status_flags->condition_local_altitude_valid) {
+					status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
+
+				} else {
+					status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
+				}
+
+			} else {
+				status->nav_state = vehicle_status_s::NAVIGATION_STATE_SMART;
+			}
+		}
+
 		break;
 
 	case commander_state_s::MAIN_STATE_AUTO_MISSION:
