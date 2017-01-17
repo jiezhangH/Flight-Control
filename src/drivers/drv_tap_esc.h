@@ -32,6 +32,7 @@
  ****************************************************************************/
 
 #define TAPESC_RGBLED_DEVICE_PATH "/dev/tap_esc_rgbled"
+#define MOTOR_NUMBER 6
 
 #define TAP_ESC_CRC {\
 		0x00, 0xE7, 0x29, 0xCE, 0x52, 0xB5, 0x7B, 0x9C, 0xA4, 0x43, 0x8D, 0x6A,\

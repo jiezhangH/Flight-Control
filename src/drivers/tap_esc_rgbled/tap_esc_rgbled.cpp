@@ -41,7 +41,6 @@
 
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
-#define MOTOR_NUMBER 6
 
 class TAP_ESC_RGBLED : public device::CDev
 {

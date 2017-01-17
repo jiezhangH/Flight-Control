@@ -61,6 +61,7 @@
 #include <drivers/drv_tone_alarm.h>
 #include <drivers/drv_led.h>
 #include <drivers/drv_rgbled.h>
+#include <drivers/drv_tap_esc.h>
 
 #include "commander_helper.h"
 #include "DevMgr.hpp"
@@ -115,6 +116,7 @@ static unsigned int tune_durations[TONE_NUMBER_OF_TUNES];
 static DevHandle h_leds;
 static DevHandle h_rgbleds;
 static DevHandle h_buzzer;
+static DevHandle h_tap_esc_rgbleds;
 
 int buzzer_init()
 {
@@ -305,6 +307,15 @@ int led_init()
 		PX4_WARN("No RGB LED found at " RGBLED0_DEVICE_PATH);
 	}
 
+#if defined(CONFIG_ARCH_BOARD_TAP_V2)
+	/* then try RGB LEDs, this can fail on TAP*/
+	DevMgr::getHandle(TAPESC_RGBLED_DEVICE_PATH, h_tap_esc_rgbleds);
+
+	if (!h_tap_esc_rgbleds.isValid()) {
+		PX4_WARN("No RGB LED found at " TAPESC_RGBLED_DEVICE_PATH);
+	}
+#endif
+
 	return 0;
 }
 
@@ -314,6 +325,10 @@ void led_deinit()
 	DevMgr::releaseHandle(h_leds);
 #endif
 	DevMgr::releaseHandle(h_rgbleds);
+
+#if defined(CONFIG_ARCH_BOARD_TAP_V2)
+	DevMgr::releaseHandle(h_tap_esc_rgbleds);
+#endif
 }
 
 int led_toggle(int led)
@@ -333,14 +348,24 @@ int led_off(int led)
 
 void rgbled_set_color(rgbled_color_t color)
 {
-
 	h_rgbleds.ioctl(RGBLED_SET_COLOR, (unsigned long)color);
+#if defined(CONFIG_ARCH_BOARD_TAP_V2)
+	for(int i=0;i<MOTOR_NUMBER;i++){
+		h_tap_esc_rgbleds.ioctl(RGBLED_SET_ID, (unsigned long)i);
+		h_tap_esc_rgbleds.ioctl(RGBLED_SET_COLOR, (unsigned long)color);
+	}
+#endif
 }
 
 void rgbled_set_mode(rgbled_mode_t mode)
 {
-
 	h_rgbleds.ioctl(RGBLED_SET_MODE, (unsigned long)mode);
+#if defined(CONFIG_ARCH_BOARD_TAP_V2)
+	for(int i=0;i<MOTOR_NUMBER;i++){
+		h_tap_esc_rgbleds.ioctl(RGBLED_SET_ID, (unsigned long)i);
+		h_tap_esc_rgbleds.ioctl(RGBLED_SET_MODE, (unsigned long)mode);
+	}
+#endif
 }
 
 void rgbled_set_pattern(rgbled_pattern_t *pattern)
