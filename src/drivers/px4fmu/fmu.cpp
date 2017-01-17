@@ -2821,7 +2821,7 @@ PX4FMU::st24_bind()
 		RF_RADIO_POWER_CONTROL(false);
 		usleep(1000);
 		RF_RADIO_POWER_CONTROL(true);
-		usleep(1000);
+		usleep(10000);
 
 		ReceiverFcPacket *bind_packet = st24_get_bind_packet();
 		// send 3 more bytes 2 for header and 1 for crc
