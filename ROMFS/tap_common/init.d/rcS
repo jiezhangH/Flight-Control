@@ -86,7 +86,7 @@ tone_alarm start
 #
 # Start system state indicator
 #
-if rgbled start
+if tap_esc_rgbled start
 then
 fi
 
