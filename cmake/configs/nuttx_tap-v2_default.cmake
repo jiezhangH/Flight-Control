@@ -32,6 +32,7 @@ set(config_module_list
 	drivers/protocol_splitter
 	drivers/mavlink_dup
 	drivers/tap_esc_rgbled
+	drivers/tap_esc_tune
 
 	#
 	# System commands

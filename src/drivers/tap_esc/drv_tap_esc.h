@@ -31,6 +31,8 @@
  *
  ****************************************************************************/
 
+#define NOTE_STRENGTH	40
+
 #define TAP_ESC_CRC {\
 		0x00, 0xE7, 0x29, 0xCE, 0x52, 0xB5, 0x7B, 0x9C, 0xA4, 0x43, 0x8D, 0x6A,\
 		0xF6, 0x11, 0xDF, 0x38, 0xAF, 0x48, 0x86, 0x61, 0xFD, 0x1A, 0xD4, 0x33,\
@@ -154,6 +156,12 @@ typedef  struct {
 	uint8_t  requestInfoType;
 } InfoRequest;
 
+typedef struct {
+	uint16_t frequency; // 0 - 20kHz
+	uint16_t duration_ms;
+	uint8_t strength;
+} EscbusTunePacket;
+
 /****** InfoRequest ***********/
 
 typedef  struct {
@@ -164,7 +172,7 @@ typedef  struct {
 		InfoRequest 			reqInfo;
 		ConfigInfoBasicRequest 	reqConfigInfoBasic;
 		RunReq					reqRun;
-
+		EscbusTunePacket		tunePacket;
 		ConfigInfoBasicResponse rspConfigInfoBasic;
 		RunInfoRepsonse			rspRunInfo;
 		uint8_t bytes[100];
@@ -261,3 +269,6 @@ typedef enum {
 	CRC,
 
 } PARSR_ESC_STATE;
+
+__EXPORT extern EscbusTunePacket *get_tune_packet();
+__EXPORT extern bool get_tune_stop();

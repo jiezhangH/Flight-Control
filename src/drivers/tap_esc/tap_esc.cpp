@@ -145,6 +145,7 @@ private:
 	void		work_start();
 	void		work_stop();
 	void send_esc_outputs(const float *pwm, const unsigned num_pwm);
+	void send_tune_packet(bool arm,EscbusTunePacket *tune_packet);
 	uint8_t crc8_esc(uint8_t *p, uint8_t len);
 	uint8_t crc_packet(EscPacket &p);
 	int send_packet(EscPacket &p, int responder);
@@ -476,6 +477,15 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 
 	if (ret < 1) {
 		PX4_WARN("TX ERROR: ret: %d, errno: %d", ret, errno);
+	}
+}
+
+void TAP_ESC::send_tune_packet(bool arm,EscbusTunePacket *tune_packet)
+{
+	if(!arm){
+		EscPacket buzzer_packet = {0xfe, sizeof(EscbusTunePacket), ESCBUS_MSG_ID_TUNE};
+		buzzer_packet.d.tunePacket = *tune_packet;
+		send_packet(buzzer_packet, -1);
 	}
 }
 
@@ -826,6 +836,12 @@ TAP_ESC::cycle()
 
 	}
 
+	if(!get_tune_stop()){
+		EscbusTunePacket *esc_tune_packet = get_tune_packet();
+		send_tune_packet(_armed.armed,esc_tune_packet);
+		mavlink_log_info(&_mavlink_log_pub, "frequency %d",esc_tune_packet->frequency);
+		//mavlink_log_info(&_mavlink_log_pub, "frequency %d",esc_tune_packet->frequency);
+	}
 
 }
 
