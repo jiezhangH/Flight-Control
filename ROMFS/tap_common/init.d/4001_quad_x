@@ -17,7 +17,7 @@ then
 fi
 set OUTPUT_MODE tap_esc
 
-if [ $AUTOCNF == yes ]
+if [ $AUTOCNF == yes -o $NEW_DEFAULTS == yes ]
 then
 	param set BAT_N_CELLS 4
 fi

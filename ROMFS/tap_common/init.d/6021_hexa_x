@@ -13,7 +13,7 @@
 
 sh /etc/init.d/rc.mc_defaults
 
-if [ $AUTOCNF == yes ]
+if [ $AUTOCNF == yes -o $NEW_DEFAULTS == yes ]
 then
 	param set MAV_TYPE 13
 
@@ -71,6 +71,7 @@ then
 	#
 	param set MPC_THR_MAX 0.94
 	param set MPC_THR_MIN 0.1
+	param set MPC_THR_HOVER 0.25
 
 	#
 	# Maximum tilt angle
