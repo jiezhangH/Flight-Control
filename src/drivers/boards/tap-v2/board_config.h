@@ -84,14 +84,14 @@
 
 #define GPIO_SENSOR_SPI2_CS0      (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN12)
 
-/* Todo: Add Serial EE PROM to some bus? */
 
 #define GPIO_EEPROM_WP  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN3)
 
 /* Active High Write Protect  */
 
-#define EEPROM_WP_CTRL(protected_true)    px4_arch_gpiowrite(GPIO_EEPROM_WP, (protected_true))
+#define BOARD_EEPROM_WP_CTRL(_on_true)    px4_arch_gpiowrite(GPIO_EEPROM_WP, (_on_true))
 
+#define BOARD_HAS_MTD_PARTITION_OVERRIDE {"/fs/mtd_caldata"}
 /*
  * I2C busses
  *

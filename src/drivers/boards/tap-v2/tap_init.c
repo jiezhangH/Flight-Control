@@ -145,7 +145,7 @@ __EXPORT void stm32_boardinitialize(void)
 
 	stm32_configgpio(GPIO_SD_PW_EN);
 
-	/* Sereial EE PROM R.O. (active high, init is clear) */
+	/* Serial EEPROM (WP is active high, init is SET) */
 
 	stm32_configgpio(GPIO_EEPROM_WP);
 
