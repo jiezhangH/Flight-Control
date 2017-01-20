@@ -63,6 +63,14 @@ fi
 uorb start
 
 #
+# Start the MTD
+#
+if mtd start
+then
+else
+fi
+
+#
 # Load parameters
 #
 if param load
