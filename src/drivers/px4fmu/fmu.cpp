@@ -2818,10 +2818,12 @@ PX4FMU::st24_bind()
 {
 	if (!_armed.armed) {
 		dsm_config(_rcs_fd);
+#ifdef RF_RADIO_POWER_CONTROL
 		RF_RADIO_POWER_CONTROL(false);
 		usleep(1000);
 		RF_RADIO_POWER_CONTROL(true);
 		usleep(10000);
+#endif
 
 		ReceiverFcPacket *bind_packet = st24_get_bind_packet();
 		// send 3 more bytes 2 for header and 1 for crc
