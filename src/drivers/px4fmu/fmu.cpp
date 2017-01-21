@@ -944,9 +944,9 @@ PX4FMU::fill_rc_in(uint16_t raw_rc_count_local,
 #ifdef RC_SERIAL_PORT
 void PX4FMU::set_rc_scan_state(RC_SCAN newState)
 {
-//    warnx("RCscan: %s failed, trying %s", PX4FMU::RC_SCAN_STRING[_rc_scan_state], PX4FMU::RC_SCAN_STRING[newState]);
+	// PX4_INFO("RCscan: %s failed, trying %s", PX4FMU::RC_SCAN_STRING[_rc_scan_state], PX4FMU::RC_SCAN_STRING[newState]);
 	_rc_scan_begin = 0;
-	_rc_scan_state = newState;
+	_rc_scan_state = RC_SCAN_ST24;
 }
 
 void PX4FMU::rc_io_invert(bool invert)
