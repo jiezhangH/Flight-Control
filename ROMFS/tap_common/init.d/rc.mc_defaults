@@ -20,6 +20,9 @@ then
 	param set COM_DISARM_LAND 2
 fi
 
+# temporarily force auto disarm off for existing setups
+param set COM_DISARM_LAND 0
+
 # set environment variables (!= parameters)
 set PWM_RATE 400
 # tell the mixer to use parameters for these instead
