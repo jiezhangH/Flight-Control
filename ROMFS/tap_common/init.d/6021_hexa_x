@@ -18,7 +18,7 @@ then
 	param set MAV_TYPE 13
 
 	#
-	# Attitude parameters setting for TAP
+	# Control parameters setting for TAP
 	#
 
 	if ver hwcmp TAP_V1
@@ -70,6 +70,7 @@ then
 		param set MPC_Z_VEL_P 0.4
 		param set MPC_XY_P 1.2
 		param set MPC_Z_P 1.5
+		param set MPC_Z_VEL_MAX 1.5
 	fi
 
 	#
