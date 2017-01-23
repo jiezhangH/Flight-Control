@@ -71,7 +71,7 @@ then
 	#
 	param set MPC_THR_MAX 0.94
 	param set MPC_THR_MIN 0.1
-	param set MPC_THR_HOVER 0.25
+	param set MPC_THR_HOVER 0.37
 
 	#
 	# Maximum tilt angle
