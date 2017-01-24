@@ -38,9 +38,14 @@
 #include <drivers/device/device.h>
 #include <systemlib/err.h>
 
+#include <px4_getopt.h>
+#include <uORB/uORB.h>
+#include <uORB/topics/tap_leds.h>
 
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
+
+#define MAX_LED_NUM 6
 
 class TAP_ESC_RGBLED : public device::CDev
 {
@@ -53,7 +58,6 @@ public:
 	virtual int		probe();
 	virtual int		info();
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
-	uint16_t 		_get_rgbled_color[MOTOR_NUMBER] = {};
 
 private:
 
@@ -69,8 +73,10 @@ private:
 	int				_led_interval;
 	bool			_should_run;
 	int				_counter;
-	int				_led_id;
-	uint16_t 		_set_rgbled_color[MOTOR_NUMBER];
+	uint16_t		_led_color;
+	orb_advert_t	_tap_leds_pub = nullptr;
+	uint8_t 		_n_leds = 6;
+	uint16_t 		_set_rgbled_color[MAX_LED_NUM];
 
 
 	void 			set_color(rgbled_color_t ledcolor);
@@ -80,9 +86,9 @@ private:
 	static void		led_trampoline(void *arg);
 	void			led();
 
-	int			send_led_enable(bool enable,int led_id);
-	int			send_led_rgb(int led_id);
-	int			get(bool &on, bool &powersave, uint16_t &rgb, int led_id);
+	int			send_led_enable(bool enable);
+	int			send_led_rgb();
+	int			get(bool &on, bool &powersave, uint16_t &rgb);
 };
 
 extern "C" __EXPORT int tap_esc_rgbled_main(int argc, char *argv[]);
@@ -93,16 +99,10 @@ namespace
 TAP_ESC_RGBLED *tap_esc_rgbled = nullptr;
 }
 
-uint16_t get_tap_esc_rgbled_color(int led_id)
-{
-	return tap_esc_rgbled->_get_rgbled_color[led_id];
-}
-
 void tap_esc_rgbled_usage();
 
 TAP_ESC_RGBLED::TAP_ESC_RGBLED() :
 	CDev("tap_esc_rgbled", TAPESC_RGBLED_DEVICE_PATH),
-	_get_rgbled_color{},
 	_mode(RGBLED_MODE_OFF),
 	_enable(false),
 	_brightness(1.0f),
@@ -110,7 +110,6 @@ TAP_ESC_RGBLED::TAP_ESC_RGBLED() :
 	_led_interval(0),
 	_should_run(false),
 	_counter(0),
-	_led_id(-1),
 	_set_rgbled_color{}
 {
 	memset(&_work, 0, sizeof(_work));
@@ -127,10 +126,8 @@ TAP_ESC_RGBLED::init()
 {
 	/* switch off LED on start */
 	CDev::init();
-	for(int i=0; i<MOTOR_NUMBER; i++){
-		send_led_enable(false,i);
-		send_led_rgb(i);
-	}
+	send_led_enable(false);
+	send_led_rgb();
 	return OK;
 }
 
@@ -142,15 +139,15 @@ TAP_ESC_RGBLED::info()
 	bool on, powersave;
 	uint16_t rgb;
 
-	ret = get(on, powersave, rgb, _led_id);
+	ret = get(on, powersave, rgb);
 
 	if (ret == OK) {
 		/* we don't care about power-save mode */
 		DEVICE_LOG("state: %s", on ? "ON" : "OFF");
-		DEVICE_LOG("rgb: %d, led_id: %d", rgb,_led_id);
+		DEVICE_LOG("rgb: %d", rgb);
 
 	} else {
-		warnx("failed to read led");
+		PX4_WARN("failed to read led");
 	}
 
 	return ret;
@@ -166,20 +163,10 @@ TAP_ESC_RGBLED::ioctl(struct file *filp, int cmd, unsigned long arg)
 	int ret = ENOTTY;
 
 	switch (cmd) {
-
-	case RGBLED_SET_ID:
-		/* set the tap esc led id*/
-		if(arg<MOTOR_NUMBER){
-			_led_id = arg;
-		}else{
-			_led_id = -1;
-		}
-		return OK;
-
 	case RGBLED_SET_COLOR:
 		/* set the specified color name */
 		set_color((rgbled_color_t)arg);
-		send_led_rgb(_led_id);
+		send_led_rgb();
 		return OK;
 
 	case RGBLED_SET_MODE:
@@ -229,9 +216,7 @@ TAP_ESC_RGBLED::led()
 			_counter = 0;
 		}
 
-		for(int i=0; i<MOTOR_NUMBER; i++){
-			send_led_enable(_counter == 0,i);
-		}
+		send_led_enable(_counter == 0);
 
 		break;
 
@@ -260,10 +245,9 @@ TAP_ESC_RGBLED::led()
 		if (_counter >= RGBLED_PATTERN_LENGTH || _pattern.duration[_counter] <= 0) {
 			_counter = 0;
 		}
-		for(int i=0; i<MOTOR_NUMBER; i++){
-			set_color(_pattern.color[_counter]);
-			send_led_rgb(i);
-		}
+
+		set_color(_pattern.color[_counter]);
+		send_led_rgb();
 		_led_interval = _pattern.duration[_counter];
 		break;
 
@@ -283,37 +267,40 @@ TAP_ESC_RGBLED::led()
 void
 TAP_ESC_RGBLED::set_color(rgbled_color_t color)
 {
-
 	switch (color) {
 	case RGBLED_COLOR_OFF:
-		_set_rgbled_color[_led_id] = 0;
+		_led_color = 0;
 		break;
 
 	case RGBLED_COLOR_RED:
-		_set_rgbled_color[_led_id] = RUN_RED_LED_ON_MASK;
+		_led_color = RUN_RED_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_YELLOW:
-		_set_rgbled_color[_led_id] = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK;
+
+	// amber case handaled as yellow
+	case RGBLED_COLOR_AMBER:
+		_led_color = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_PURPLE:
-		_set_rgbled_color[_led_id] = RUN_RED_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+		_led_color = RUN_RED_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_GREEN:
-		_set_rgbled_color[_led_id] = RUN_GREEN_LED_ON_MASK;
+		_led_color = RUN_GREEN_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_BLUE:
-		_set_rgbled_color[_led_id] = RUN_BLUE_LED_ON_MASK;
+		_led_color = RUN_BLUE_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_WHITE:
-		_set_rgbled_color[_led_id] = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+		_led_color = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
 		break;
+
 	default:
-		warnx("color unknown");
+		PX4_WARN("color not supported");
 		break;
 	}
 
@@ -331,15 +318,13 @@ TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
 		switch (mode) {
 		case RGBLED_MODE_OFF:
 			_should_run = false;
-			send_led_enable(false,_led_id);
+			send_led_enable(false);
 			break;
 
 		case RGBLED_MODE_ON:
 			_brightness = 1.0f;
-			for(int i=0;i<MOTOR_NUMBER;i++){
-				send_led_rgb(i);
-				send_led_enable(true,i);
-			}
+			send_led_rgb();
+			send_led_enable(true);
 			break;
 
 		case RGBLED_MODE_BLINK_SLOW:
@@ -347,9 +332,7 @@ TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
 			_counter = 0;
 			_led_interval = 2000;
 			_brightness = 1.0f;
-			for(int i=0;i<MOTOR_NUMBER;i++){
-				send_led_rgb(i);
-			}
+			send_led_rgb();
 			break;
 
 		case RGBLED_MODE_BLINK_NORMAL:
@@ -357,9 +340,7 @@ TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
 			_counter = 0;
 			_led_interval = 500;
 			_brightness = 1.0f;
-			for(int i=0;i<MOTOR_NUMBER;i++){
-				send_led_rgb(i);
-			}
+			send_led_rgb();
 			break;
 
 		case RGBLED_MODE_BLINK_FAST:
@@ -367,31 +348,25 @@ TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
 			_counter = 0;
 			_led_interval = 100;
 			_brightness = 1.0f;
-			for(int i=0;i<MOTOR_NUMBER;i++){
-				send_led_rgb(i);
-			}
+			send_led_rgb();
 			break;
 
 		case RGBLED_MODE_BREATHE:
 			_should_run = true;
 			_counter = 0;
 			_led_interval = 25;
-			for(int i=0;i<MOTOR_NUMBER;i++){
-				send_led_enable(true,i);
-			}
+			send_led_enable(true);
 			break;
 
 		case RGBLED_MODE_PATTERN:
 			_should_run = true;
 			_counter = 0;
 			_brightness = 1.0f;
-			for(int i=0;i<MOTOR_NUMBER;i++){
-				send_led_enable(true,i);
-			}
+			send_led_enable(true);
 			break;
 
 		default:
-			warnx("mode unknown");
+			PX4_WARN("mode unknown");
 			break;
 		}
 
@@ -417,10 +392,10 @@ TAP_ESC_RGBLED::set_pattern(rgbled_pattern_t *pattern)
  * Sent ENABLE flag to LED driver
  */
 int
-TAP_ESC_RGBLED::send_led_enable(bool enable,int led_id)
+TAP_ESC_RGBLED::send_led_enable(bool enable)
 {
 	_enable = enable;
-	send_led_rgb(led_id);
+	send_led_rgb();
 	return (OK);
 }
 
@@ -428,46 +403,54 @@ TAP_ESC_RGBLED::send_led_enable(bool enable,int led_id)
  * Send RGB PWM settings to LED driver according to current color and brightness
  */
 int
-TAP_ESC_RGBLED::send_led_rgb(int led_id)
+TAP_ESC_RGBLED::send_led_rgb()
 {
+	struct tap_leds_s leds;
+	memset(&leds, 0, sizeof(leds));
 
 	if (_enable) {
+		for (uint8_t i = 0; i < _n_leds; i++) {
+			leds.color[i] = _led_color;
+		}
+	}
 
-		_get_rgbled_color[led_id] = _set_rgbled_color[led_id];
+	// publish tap_leds msg
+	if (_tap_leds_pub != nullptr) {
+		orb_publish(ORB_ID(tap_leds), _tap_leds_pub, &leds);
 
 	} else {
-		_get_rgbled_color[led_id] = 0;
+		_tap_leds_pub =  orb_advertise(ORB_ID(tap_leds), &leds);
 	}
 
 	return (OK);
 }
 
 int
-TAP_ESC_RGBLED::get(bool &on, bool &powersave, uint16_t &rgb, int led_id)
+TAP_ESC_RGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
 {
 	powersave = OK; on = _enable;
-	rgb = get_tap_esc_rgbled_color(led_id);
+	rgb = _led_color;
 	return OK;
 }
 
 void
 tap_esc_rgbled_usage()
 {
-	warnx("missing command: tap_esc_rgbled_usage try 'start', 'test', 'info', 'off', 'stop'");
+	PX4_WARN("missing command: tap_esc_rgbled_usage try 'start', 'test', 'info', 'off', 'stop'");
 }
 
 int
 tap_esc_rgbled_main(int argc, char *argv[])
 {
 	int ch;
+	int myoptind = 1;
+	const char *myoptarg = nullptr;
 
 	/* jump over start/off/etc and look at options first */
-	while ((ch = getopt(argc, argv, "a:b:")) != EOF) {
+	while ((ch = px4_getopt(argc, argv, "m:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
-		case 'a':
-			break;
-
-		case 'b':
+		case 'm':
+			// TODO: read value
 			break;
 
 		default:
@@ -488,20 +471,20 @@ tap_esc_rgbled_main(int argc, char *argv[])
 
 	if (!strcmp(verb, "start")) {
 		if (tap_esc_rgbled != nullptr) {
-			errx(1, "already started");
+			PX4_WARN("already started");
 		}
 
 		if (tap_esc_rgbled == nullptr) {
 			tap_esc_rgbled = new TAP_ESC_RGBLED();
 
 			if (tap_esc_rgbled == nullptr) {
-				errx(1, "new failed");
+				PX4_ERR("new failed");
 			}
 
 			if (OK != tap_esc_rgbled->init()) {
 				delete tap_esc_rgbled;
 				tap_esc_rgbled = nullptr;
-				errx(1, "init failed");
+				PX4_ERR("init failed");
 			}
 		}
 
@@ -510,7 +493,7 @@ tap_esc_rgbled_main(int argc, char *argv[])
 
 	/* need the driver past this point */
 	if (tap_esc_rgbled == nullptr) {
-		warnx("not started");
+		PX4_WARN("not started");
 		tap_esc_rgbled_usage();
 		exit(1);
 	}
@@ -519,7 +502,7 @@ tap_esc_rgbled_main(int argc, char *argv[])
 		fd = open(TAPESC_RGBLED_DEVICE_PATH, 0);
 
 		if (fd == -1) {
-			errx(1, "Unable to open " TAPESC_RGBLED_DEVICE_PATH);
+			PX4_ERR("Unable to open " TAPESC_RGBLED_DEVICE_PATH);
 		}
 
 		rgbled_pattern_t pattern = { {RGBLED_COLOR_RED, RGBLED_COLOR_GREEN, RGBLED_COLOR_BLUE, RGBLED_COLOR_WHITE, RGBLED_COLOR_OFF, RGBLED_COLOR_OFF},
@@ -543,7 +526,7 @@ tap_esc_rgbled_main(int argc, char *argv[])
 		fd = open(TAPESC_RGBLED_DEVICE_PATH, 0);
 
 		if (fd == -1) {
-			errx(1, "Unable to open " TAPESC_RGBLED_DEVICE_PATH);
+			PX4_ERR("Unable to open %s", TAPESC_RGBLED_DEVICE_PATH);
 		}
 
 		ret = ioctl(fd, RGBLED_SET_MODE, (unsigned long)RGBLED_MODE_OFF);
@@ -562,4 +545,3 @@ tap_esc_rgbled_main(int argc, char *argv[])
 	tap_esc_rgbled_usage();
 	exit(0);
 }
-
