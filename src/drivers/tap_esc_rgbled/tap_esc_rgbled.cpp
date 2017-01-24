@@ -48,8 +48,6 @@
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
 
-#define MAX_LED_NUM 6
-
 class TAP_ESC_RGBLED : public device::CDev
 {
 public:
@@ -61,6 +59,7 @@ public:
 	virtual int		probe();
 	virtual int		info();
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
+	void set_number_of_leds(uint8_t n_leds);
 
 private:
 
@@ -78,8 +77,7 @@ private:
 	int				_counter;
 	uint16_t		_led_color;
 	orb_advert_t	_tap_leds_pub = nullptr;
-	uint8_t 		_n_leds = 6;
-	uint16_t 		_set_rgbled_color[MAX_LED_NUM];
+	uint8_t 		_n_leds = TAP_ESC_MAX_MOTOR_NUM; // One led for motor
 
 
 	void 			set_color(rgbled_color_t ledcolor);
@@ -112,8 +110,7 @@ TAP_ESC_RGBLED::TAP_ESC_RGBLED() :
 	_running(false),
 	_led_interval(0),
 	_should_run(false),
-	_counter(0),
-	_set_rgbled_color{}
+	_counter(0)
 {
 	memset(&_work, 0, sizeof(_work));
 	memset(&_pattern, 0, sizeof(_pattern));
@@ -437,6 +434,11 @@ TAP_ESC_RGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
 	return OK;
 }
 
+void TAP_ESC_RGBLED::set_number_of_leds(uint8_t n_leds)
+{
+	_n_leds = n_leds;
+}
+
 void
 tap_esc_rgbled_usage()
 {
@@ -479,6 +481,8 @@ tap_esc_rgbled_main(int argc, char *argv[])
 
 		if (tap_esc_rgbled == nullptr) {
 			tap_esc_rgbled = new TAP_ESC_RGBLED();
+			// TODO: get this information from getopt
+			tap_esc_rgbled->set_number_of_leds(6);
 
 			if (tap_esc_rgbled == nullptr) {
 				PX4_ERR("new failed");
@@ -508,11 +512,10 @@ tap_esc_rgbled_main(int argc, char *argv[])
 			PX4_ERR("Unable to open " RGBLED0_DEVICE_PATH);
 		}
 
-		rgbled_pattern_t pattern = { {RGBLED_COLOR_RED, RGBLED_COLOR_GREEN, RGBLED_COLOR_BLUE, RGBLED_COLOR_WHITE, RGBLED_COLOR_AMBER, RGBLED_COLOR_OFF},
-			{500, 500, 500, 500, 1000, 0 }	// "0" indicates end of pattern
+		rgbled_pattern_t pattern = { {RGBLED_COLOR_RED, RGBLED_COLOR_GREEN, RGBLED_COLOR_BLUE, RGBLED_COLOR_WHITE, RGBLED_COLOR_AMBER, RGBLED_COLOR_OFF, RGBLED_COLOR_OFF},
+			{500, 500, 500, 500, 500, 1000, 0 }	// "0" indicates end of pattern
 		};
 
-		// ret = ioctl(fd, RGBLED_SET_ID, (unsigned long)0);
 		ret = ioctl(fd, RGBLED_SET_PATTERN, (unsigned long)&pattern);
 		ret = ioctl(fd, RGBLED_SET_MODE, (unsigned long)RGBLED_MODE_PATTERN);
 
