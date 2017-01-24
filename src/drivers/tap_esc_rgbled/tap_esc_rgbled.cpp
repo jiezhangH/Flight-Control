@@ -94,7 +94,6 @@ private:
 
 extern "C" __EXPORT int tap_esc_rgbled_main(int argc, char *argv[]);
 
-/* for now, we only support one RGBLED */
 namespace
 {
 TAP_ESC_RGBLED *tap_esc_rgbled = nullptr;
@@ -262,7 +261,7 @@ TAP_ESC_RGBLED::led()
 }
 
 /**
- * Parse color constant and set _r _g _b values
+ * Parse color constant and set _led_color value
  */
 void
 TAP_ESC_RGBLED::set_color(rgbled_color_t color)
@@ -400,7 +399,7 @@ TAP_ESC_RGBLED::send_led_enable(bool enable)
 }
 
 /**
- * Send RGB PWM settings to LED driver according to current color and brightness
+ * Publish LEDs color over uORB to the ESC driver
  */
 int
 TAP_ESC_RGBLED::send_led_rgb()
@@ -538,7 +537,7 @@ tap_esc_rgbled_main(int argc, char *argv[])
 		ret = ioctl(fd, RGBLED_SET_MODE, (unsigned long)RGBLED_MODE_OFF);
 		close(fd);
 
-		/* delete the rgbled object if stop was requested, in addition to turning off the LED. */
+		/* delete the rgbled object if stop was requested. In addition,turn off the LED. */
 		if (!strcmp(verb, "stop")) {
 			delete tap_esc_rgbled;
 			tap_esc_rgbled = nullptr;
