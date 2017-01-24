@@ -80,8 +80,7 @@
 /** set pattern */
 #define RGBLED_SET_PATTERN		_RGBLEDIOC(7)
 
-/** set rgbled id */
-#define RGBLED_SET_ID		_RGBLEDIOC(8)
+
 /*
   structure passed to RGBLED_SET_RGB ioctl()
   Note that the driver scales the brightness to 0 to 255, regardless

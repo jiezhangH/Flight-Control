@@ -29,6 +29,7 @@
 #include <nuttx/wqueue.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_tap_esc.h>
+#include <drivers/drv_rgbled.h>
 
 #include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
@@ -104,7 +105,7 @@ TAP_ESC_RGBLED *tap_esc_rgbled = nullptr;
 void tap_esc_rgbled_usage();
 
 TAP_ESC_RGBLED::TAP_ESC_RGBLED() :
-	CDev("tap_esc_rgbled", TAPESC_RGBLED_DEVICE_PATH),
+	CDev("tap_esc_rgbled", RGBLED0_DEVICE_PATH),
 	_mode(RGBLED_MODE_OFF),
 	_enable(false),
 	_brightness(1.0f),
@@ -146,7 +147,7 @@ TAP_ESC_RGBLED::info()
 	if (ret == OK) {
 		/* we don't care about power-save mode */
 		DEVICE_LOG("state: %s", on ? "ON" : "OFF");
-		DEVICE_LOG("rgb: %d", rgb);
+		DEVICE_LOG("rgb: 0x%04x", rgb);
 
 	} else {
 		PX4_WARN("failed to read led");
@@ -430,7 +431,8 @@ TAP_ESC_RGBLED::send_led_rgb()
 int
 TAP_ESC_RGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
 {
-	powersave = OK; on = _enable;
+	powersave = OK;
+	on = _enable;
 	rgb = _led_color;
 	return OK;
 }
@@ -445,11 +447,10 @@ int
 tap_esc_rgbled_main(int argc, char *argv[])
 {
 	int ch;
-	int myoptind = 1;
-	const char *myoptarg = nullptr;
 
 	/* jump over start/off/etc and look at options first */
-	while ((ch = px4_getopt(argc, argv, "m:", &myoptind, &myoptarg)) != EOF) {
+	// TODO migrate this to px4_getopt
+	while ((ch = getopt(argc, argv, "m:")) != EOF) {
 		switch (ch) {
 		case 'm':
 			// TODO: read value
@@ -501,17 +502,17 @@ tap_esc_rgbled_main(int argc, char *argv[])
 	}
 
 	if (!strcmp(verb, "test")) {
-		fd = open(TAPESC_RGBLED_DEVICE_PATH, 0);
+		fd = open(RGBLED0_DEVICE_PATH, 0);
 
 		if (fd == -1) {
-			PX4_ERR("Unable to open " TAPESC_RGBLED_DEVICE_PATH);
+			PX4_ERR("Unable to open " RGBLED0_DEVICE_PATH);
 		}
 
-		rgbled_pattern_t pattern = { {RGBLED_COLOR_RED, RGBLED_COLOR_GREEN, RGBLED_COLOR_BLUE, RGBLED_COLOR_WHITE, RGBLED_COLOR_OFF, RGBLED_COLOR_OFF},
+		rgbled_pattern_t pattern = { {RGBLED_COLOR_RED, RGBLED_COLOR_GREEN, RGBLED_COLOR_BLUE, RGBLED_COLOR_WHITE, RGBLED_COLOR_AMBER, RGBLED_COLOR_OFF},
 			{500, 500, 500, 500, 1000, 0 }	// "0" indicates end of pattern
 		};
 
-		ret = ioctl(fd, RGBLED_SET_ID, (unsigned long)0);
+		// ret = ioctl(fd, RGBLED_SET_ID, (unsigned long)0);
 		ret = ioctl(fd, RGBLED_SET_PATTERN, (unsigned long)&pattern);
 		ret = ioctl(fd, RGBLED_SET_MODE, (unsigned long)RGBLED_MODE_PATTERN);
 
@@ -525,10 +526,10 @@ tap_esc_rgbled_main(int argc, char *argv[])
 	}
 
 	if (!strcmp(verb, "off") || !strcmp(verb, "stop")) {
-		fd = open(TAPESC_RGBLED_DEVICE_PATH, 0);
+		fd = open(RGBLED0_DEVICE_PATH, 0);
 
 		if (fd == -1) {
-			PX4_ERR("Unable to open %s", TAPESC_RGBLED_DEVICE_PATH);
+			PX4_ERR("Unable to open %s", RGBLED0_DEVICE_PATH);
 		}
 
 		ret = ioctl(fd, RGBLED_SET_MODE, (unsigned long)RGBLED_MODE_OFF);
