@@ -45,7 +45,8 @@ then
 		param set MC_YAW_P 3.0
 
 		# hover thrust
-		param set MPC_THR_HOVER 0.4 # not tuned
+		# not tuned
+		param set MPC_THR_HOVER 0.4
 	else
 		# TAP v2
 		# pitch angle & rate setting
@@ -69,7 +70,8 @@ then
 		param set MC_YAW_P 6
 
 		# hover thrust
-		param set MPC_THR_HOVER 0.415 # without camera 0.37
+		# without camera 0.37
+		param set MPC_THR_HOVER 0.415
 
 		# Position control parameters
 		param set MPC_XY_VEL_P 0.15
@@ -134,7 +136,8 @@ then
 	param set RC1_MAX 1833.0
 	param set RC1_MIN 1163.0
 	param set RC1_REV 1.0
-	param set RC1_TRIM 1163.0 # 1156.0 would be better but fails RC calibration check
+	# 1156.0 would be better but fails RC calibration check
+	param set RC1_TRIM 1163.0
 	param set RC2_MAX 1833.0
 	param set RC2_MIN 1163.0
 	param set RC2_REV -1.0
