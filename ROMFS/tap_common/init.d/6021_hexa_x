@@ -71,6 +71,14 @@ then
 		param set MPC_XY_P 1.2
 		param set MPC_Z_P 1.5
 		param set MPC_Z_VEL_MAX 1.5
+
+		# throttle pid attenuation
+		param set MC_TPA_RATE_P 0.4
+		param set MC_TPA_RATE_I 0.5
+		param set MC_TPA_RATE_D 0.2
+		param set MC_TPA_BREAK_P 0.65
+		param set MC_TPA_BREAK_I 0.6
+		param set MC_TPA_BREAK_D 0.65
 	fi
 
 	#
