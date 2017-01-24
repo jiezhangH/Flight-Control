@@ -7,9 +7,11 @@
 /**
  * @file tap_esc_rgbled.cpp
  *
- * Driver for the RGB LED controller connected via ttyS2 to esc.
+ * Driver for the RGB LED controller.
+ * Adaped from drivers/rgbled_pwm
  *
  * @author Haohua Chang <872561481@qq.com>
+ * @author Simone Guscetti <simone@px4.io>
  */
 
 #include <nuttx/config.h>
