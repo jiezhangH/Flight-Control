@@ -48,6 +48,7 @@
 #include <uORB/topics/actuator_outputs.h>
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/test_motor.h>
+#include <uORB/topics/tap_leds.h>
 #include <uORB/topics/input_rc.h>
 #include <uORB/topics/esc_status.h>
 #include <uORB/topics/multirotor_motor_limits.h>
@@ -109,6 +110,7 @@ private:
 	// subscriptions
 	int	_armed_sub;
 	int _test_motor_sub;
+	int _tap_leds_sub;
 	orb_advert_t        	_outputs_pub = nullptr;
 	actuator_outputs_s      _outputs;
 	static actuator_armed_s	_armed;
@@ -173,6 +175,7 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_mode(MODE_4PWM), //FIXME: what is this mode used for???
 	_armed_sub(-1),
 	_test_motor_sub(-1),
+	_tap_leds_sub(-1),
 	_outputs_pub(nullptr),
 	_control_subs{ -1},
 	_esc_feedback_pub(nullptr),
@@ -424,13 +427,21 @@ void TAP_ESC::select_responder(uint8_t sel)
 }
 
 
-void TAP_ESC:: send_esc_outputs(const float *pwm, const unsigned num_pwm)
+void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 {
 
 	uint16_t rpm[TAP_ESC_MAX_MOTOR_NUM];
 	memset(rpm, 0, sizeof(rpm));
 	uint8_t motor_cnt = num_pwm;
 	static uint8_t which_to_respone = 0;
+	bool updated;
+	static struct tap_leds_s leds;
+
+	orb_check(_tap_leds_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(tap_leds), _tap_leds_sub, &leds);
+	}
 
 	for (uint8_t i = 0; i < motor_cnt; i++) {
 		rpm[i] = pwm[i];
@@ -441,7 +452,9 @@ void TAP_ESC:: send_esc_outputs(const float *pwm, const unsigned num_pwm)
 		} else if (rpm[i] < RPMSTOPPED) {
 			rpm[i] = RPMSTOPPED;
 		}
-		rpm[i] |= get_tap_esc_rgbled_color(i);
+
+		// make sure that only the LED bit are modified
+		rpm[i] |= (leds.color[i] & RUN_LED_ON_MASK);
 	}
 
 	rpm[which_to_respone] |= RUN_FEEDBACK_ENABLE_MASK;
@@ -585,6 +598,7 @@ TAP_ESC::cycle()
 		_to_mixer_status = orb_advertise(ORB_ID(multirotor_motor_limits), &multirotor_motor_limits);
 		_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
 		_test_motor_sub = orb_subscribe(ORB_ID(test_motor));
+		_tap_leds_sub = orb_subscribe(ORB_ID(tap_leds));
 		_initialized = true;
 	}
 
