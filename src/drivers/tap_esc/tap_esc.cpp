@@ -56,7 +56,6 @@
 
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_mixer.h>
-#include <drivers/drv_tap_esc.h>
 #include <systemlib/mixer/mixer.h>
 #include <systemlib/param/param.h>
 #include <systemlib/pwm_limit/pwm_limit.h>
@@ -68,6 +67,8 @@
 #endif
 
 #define ESC_HAVE_CURRENT_SENSOR
+
+#include "drv_tap_esc.h"
 
 /*
  * This driver connects to TAP ESCs via serial.

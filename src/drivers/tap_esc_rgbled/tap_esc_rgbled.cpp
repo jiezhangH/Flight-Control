@@ -28,7 +28,7 @@
 
 #include <nuttx/wqueue.h>
 #include <drivers/drv_hrt.h>
-#include <drivers/drv_tap_esc.h>
+#include <drivers/tap_esc/drv_tap_esc.h>
 #include <drivers/drv_rgbled.h>
 
 #include <systemlib/perf_counter.h>
