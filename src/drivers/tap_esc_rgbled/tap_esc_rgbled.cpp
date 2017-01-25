@@ -43,7 +43,7 @@
 
 #include <px4_getopt.h>
 #include <uORB/uORB.h>
-#include <uORB/topics/tap_leds.h>
+#include <uORB/topics/leds.h>
 
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
@@ -76,7 +76,7 @@ private:
 	bool			_should_run;
 	int				_counter;
 	uint16_t		_led_color;
-	orb_advert_t	_tap_leds_pub = nullptr;
+	orb_advert_t	_leds_pub = nullptr;
 	uint8_t 		_n_leds = TAP_ESC_MAX_MOTOR_NUM; // One led for motor
 
 
@@ -404,7 +404,7 @@ TAP_ESC_RGBLED::send_led_enable(bool enable)
 int
 TAP_ESC_RGBLED::send_led_rgb()
 {
-	struct tap_leds_s leds;
+	struct leds_s leds;
 	memset(&leds, 0, sizeof(leds));
 
 	if (_enable) {
@@ -413,12 +413,12 @@ TAP_ESC_RGBLED::send_led_rgb()
 		}
 	}
 
-	// publish tap_leds msg
-	if (_tap_leds_pub != nullptr) {
-		orb_publish(ORB_ID(tap_leds), _tap_leds_pub, &leds);
+	// publish leds msg
+	if (_leds_pub != nullptr) {
+		orb_publish(ORB_ID(leds), _leds_pub, &leds);
 
 	} else {
-		_tap_leds_pub =  orb_advertise(ORB_ID(tap_leds), &leds);
+		_leds_pub =  orb_advertise(ORB_ID(leds), &leds);
 	}
 
 	return (OK);

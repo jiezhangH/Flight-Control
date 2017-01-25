@@ -66,6 +66,7 @@ set(msg_file_names
 	hil_sensor.msg
 	home_position.msg
 	input_rc.msg
+	leds.msg
 	log_message.msg
 	manual_control_setpoint.msg
 	mavlink_log.msg
@@ -127,7 +128,6 @@ set(msg_file_names
 	vision_position_estimate.msg
 	vtol_vehicle_status.msg
 	wind_estimate.msg
-	tap_leds.msg
 	)
 
 # Get absolute paths
