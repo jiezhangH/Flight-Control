@@ -269,6 +269,3 @@ typedef enum {
 	CRC,
 
 } PARSR_ESC_STATE;
-
-__EXPORT extern EscbusTunePacket *get_tune_packet();
-__EXPORT extern bool get_tune_stop();

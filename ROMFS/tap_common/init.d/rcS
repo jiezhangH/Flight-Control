@@ -81,7 +81,6 @@ else
 	fi
 fi
 
-#tone_alarm start
 tap_esc_tune start
 
 #

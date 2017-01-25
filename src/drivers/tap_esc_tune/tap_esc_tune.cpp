@@ -87,6 +87,7 @@
  */
 
 #include <px4_config.h>
+#include <px4_workqueue.h>
 #include <debug.h>
 
 #include <drivers/device/device.h>
@@ -105,16 +106,18 @@
 #include <ctype.h>
 
 #include <board_config.h>
-#include <drivers/drv_hrt.h>
-#include <drivers/drv_tap_esc.h>
+#include <drivers/tap_esc/drv_tap_esc.h>
+
+#include <uORB/uORB.h>
+#include <uORB/topics/tune.h>
 
 #include <systemlib/err.h>
 
-class TAP_ESC_TUNE : public device::CDev
+class TapEscTune : public device::CDev
 {
 public:
-	TAP_ESC_TUNE();
-	~TAP_ESC_TUNE();
+	TapEscTune();
+	~TapEscTune();
 
 	virtual int		init();
 
@@ -124,14 +127,14 @@ public:
 	{
 		return _tune_names[tune];
 	}
-	EscbusTunePacket _tune_packet;
-	bool _stop_flag;
 
 private:
 	static const unsigned	_tune_max = 1024 * 8; // be reasonable about user tunes
 	const char		 *_default_tunes[TONE_NUMBER_OF_TUNES];
 	const char		 *_tune_names[TONE_NUMBER_OF_TUNES];
 	static const uint8_t	_note_tab[];
+
+	struct work_s	_work = {};
 
 	unsigned		_default_tune_number; // number of currently playing default tune (0 for none)
 
@@ -148,12 +151,11 @@ private:
 	bool			_repeat;	// if true, tune restarts at end
 	int				_cbrk;	//if true, no audio output
 
-	hrt_call		_note_call;	// HRT callout for note completion
-
+	orb_advert_t	_tune_pub = nullptr;
 	// Convert a note value in the range C1 to B7 into a divisor for
 	// the configured timer's clock.
 	//
-	unsigned		note_to_frequency(unsigned note);
+	uint16_t		note_to_frequency(unsigned note);
 
 	// Calculate the duration in microseconds of play and silence for a
 	// note given the current tempo, length and mode and the number of
@@ -168,14 +170,6 @@ private:
 
 	//set tap_esc tune packet
 	void 			set_tune_packet(uint16_t frequency, uint16_t duration, uint8_t strength);
-
-	// Start playing the note
-	//
-	void			start_note();
-
-	// Stop playing the current note and make the player 'safe'
-	//
-	void			stop_note();
 
 	// Start playing the tune
 	//
@@ -205,7 +199,7 @@ private:
 };
 
 // semitone offsets from C for the characters 'A'-'G'
-const uint8_t TAP_ESC_TUNE::_note_tab[] = {9, 11, 0, 2, 4, 5, 7};
+const uint8_t TapEscTune::_note_tab[] = {9, 11, 0, 2, 4, 5, 7};
 
 /*
  * Driver 'main' command.
@@ -213,10 +207,8 @@ const uint8_t TAP_ESC_TUNE::_note_tab[] = {9, 11, 0, 2, 4, 5, 7};
 extern "C" __EXPORT int tap_esc_tune_main(int argc, char *argv[]);
 
 
-TAP_ESC_TUNE::TAP_ESC_TUNE() :
+TapEscTune::TapEscTune() :
 	CDev("tone_alarm", TONEALARM0_DEVICE_PATH),
-	_tune_packet{},
-	_stop_flag(true),
 	_default_tune_number(0),
 	_user_tune(nullptr),
 	_tune(nullptr),
@@ -224,7 +216,7 @@ TAP_ESC_TUNE::TAP_ESC_TUNE() :
 {
 	// enable debug() calls
 	//_debug_enabled = true;
-	_default_tunes[TONE_STARTUP_TUNE] = "MFT240L8 O4aO5dc O4aO5dc O4aO5dc L16dcdcdcdc";		// startup tune
+	_default_tunes[TONE_STARTUP_TUNE] = "MFT240L8 O2aO3dc O2aO3dc O2aO3dc L16dcdcdcdc";		// startup tune
 	_default_tunes[TONE_ERROR_TUNE] = "MBT200a8a8a8PaaaP";						// ERROR tone
 	_default_tunes[TONE_NOTIFY_POSITIVE_TUNE] = "MFT200e8a8a";					// Notify Positive tone
 	_default_tunes[TONE_NOTIFY_NEUTRAL_TUNE] = "MFT200e8e";						// Notify Neutral tone
@@ -249,7 +241,7 @@ TAP_ESC_TUNE::TAP_ESC_TUNE() :
 	_tune_names[TONE_BATTERY_WARNING_SLOW_TUNE] = "slow_bat";	// battery warning slow
 	_tune_names[TONE_BATTERY_WARNING_FAST_TUNE] = "fast_bat";	// battery warning fast
 	_tune_names[TONE_GPS_WARNING_TUNE] = "gps_warning";	            // gps warning
-	_tune_names[TONE_ARMING_FAILURE_TUNE] = "arming_failure";            //fail to arm
+	_tune_names[TONE_ARMING_FAILURE_TUNE] = "arming_failure";       //fail to arm
 	_tune_names[TONE_PARACHUTE_RELEASE_TUNE] = "parachute_release";	// parachute release
 	_tune_names[TONE_EKF_WARNING_TUNE] = "ekf_warning";				// ekf warning
 	_tune_names[TONE_BARO_WARNING_TUNE] = "baro_warning";			// baro warning
@@ -257,13 +249,13 @@ TAP_ESC_TUNE::TAP_ESC_TUNE() :
 	_tune_names[TONE_HOME_SET] = "home_set";
 }
 
-TAP_ESC_TUNE::~TAP_ESC_TUNE()
+TapEscTune::~TapEscTune()
 {
 
 }
 
 int
-TAP_ESC_TUNE::init()
+TapEscTune::init()
 {
 	int ret;
 
@@ -277,17 +269,15 @@ TAP_ESC_TUNE::init()
 	return OK;
 }
 
-unsigned
-TAP_ESC_TUNE::note_to_frequency(unsigned note)
+uint16_t
+TapEscTune::note_to_frequency(unsigned note)
 {
-	// compute the frequency first (Hz)
-	float freq = 880.0f * expf(logf(2.0f) * ((int)note - 46) / 12.0f);
-
-	return freq;
+	// compute the frequency (Hz)
+	return (uint16_t)(880.0f * powf(2.0f, ((int)note - 46) / 12.0f));
 }
 
 unsigned
-TAP_ESC_TUNE::note_duration(unsigned &silence, unsigned note_length, unsigned dots)
+TapEscTune::note_duration(unsigned &silence, unsigned note_length, unsigned dots)
 {
 	unsigned whole_note_period = (60 * 1000000 * 4) / _tempo;
 
@@ -325,7 +315,7 @@ TAP_ESC_TUNE::note_duration(unsigned &silence, unsigned note_length, unsigned do
 }
 
 unsigned
-TAP_ESC_TUNE::rest_duration(unsigned rest_length, unsigned dots)
+TapEscTune::rest_duration(unsigned rest_length, unsigned dots)
 {
 	unsigned whole_note_period = (60 * 1000000 * 4) / _tempo;
 
@@ -345,37 +335,31 @@ TAP_ESC_TUNE::rest_duration(unsigned rest_length, unsigned dots)
 	return rest_period;
 }
 
-void TAP_ESC_TUNE::set_tune_packet(uint16_t frequency, uint16_t duration, uint8_t strength)
+void TapEscTune::set_tune_packet(uint16_t frequency, uint16_t duration, uint8_t strength)
 {
-	_tune_packet.frequency = frequency;
-	_tune_packet.duration_ms = duration/1000;
-	_tune_packet.strength = strength;
+	struct tune_s note;
+	note.frequency = frequency;
+	// NOTE: duration for the tap_esc driver should be in ms
+	note.duration = duration;
+	note.strength = strength;
+
+	if (_tune_pub != nullptr) {
+		orb_publish(ORB_ID(tune), _tune_pub, &note);
+
+	} else {
+		_tune_pub =  orb_advertise(ORB_ID(tune), &note);
+	}
 }
 
 void
-TAP_ESC_TUNE::start_note()
-{
-	//set start flag
-	_stop_flag = false;
-}
-
-void
-TAP_ESC_TUNE::stop_note()
-{
-	//set stop flag
-	_stop_flag = true;
-}
-
-void
-TAP_ESC_TUNE::start_tune(const char *tune)
+TapEscTune::start_tune(const char *tune)
 {
 	// kill any current playback
-	hrt_cancel(&_note_call);
+	work_cancel(LPWORK, &_work);
 
 	// record the tune
 	_tune = tune;
 	_next = tune;
-
 	// initialise player state
 	_tempo = 120;
 	_note_length = 4;
@@ -385,23 +369,21 @@ TAP_ESC_TUNE::start_tune(const char *tune)
 	_repeat = false;		// otherwise command-line tunes repeat forever...
 
 	// schedule a callback to start playing
-	hrt_call_after(&_note_call, 0, (hrt_callout)next_trampoline, this);
+	work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, 0);
 }
 
 void
-TAP_ESC_TUNE::next_note()
+TapEscTune::next_note()
 {
 	// do we have an inter-note gap to wait for?
 	if (_silence_length > 0) {
-		stop_note();
-		hrt_call_after(&_note_call, (hrt_abstime)_silence_length, (hrt_callout)next_trampoline, this);
+		work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(_silence_length));
 		_silence_length = 0;
 		return;
 	}
 
 	// make sure we still have a tune - may be removed by the write / ioctl handler
 	if ((_next == nullptr) || (_tune == nullptr)) {
-		stop_note();
 		return;
 	}
 
@@ -491,11 +473,8 @@ TAP_ESC_TUNE::next_note()
 			break;
 
 		case 'P':	// pause for a note length
-			stop_note();
-			hrt_call_after(&_note_call,
-				       (hrt_abstime)rest_duration(next_number(), next_dots()),
-				       (hrt_callout)next_trampoline,
-				       this);
+			work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(rest_duration(next_number(),
+					next_dots())));
 			return;
 
 		case 'T': {	// change tempo
@@ -520,10 +499,8 @@ TAP_ESC_TUNE::next_note()
 
 			if (note == 0) {
 				// this is a rest - pause for the current note length
-				hrt_call_after(&_note_call,
-					       (hrt_abstime)rest_duration(_note_length, next_dots()),
-					       (hrt_callout)next_trampoline,
-					       this);
+				work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(rest_duration(_note_length,
+						next_dots())));
 				return;
 			}
 
@@ -576,13 +553,11 @@ TAP_ESC_TUNE::next_note()
 	// compute the note frequency
 	frequency = note_to_frequency(note);
 
-	// start playing the note
-	start_note();
-
-	set_tune_packet(frequency,duration,NOTE_STRENGTH);
+	// NOTE: the esc interface is using duration in ms
+	set_tune_packet(frequency, (uint16_t)(duration / 1000), NOTE_STRENGTH);
 
 	// and arrange a callback when the note should stop
-	hrt_call_after(&_note_call, (hrt_abstime)duration, (hrt_callout)next_trampoline, this);
+	work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(duration));
 	return;
 
 	// tune looks bad (unexpected EOF, bad character, etc.)
@@ -592,7 +567,6 @@ tune_error:
 
 	// stop (and potentially restart) the tune
 tune_end:
-	stop_note();
 
 	if (_repeat) {
 		start_tune(_tune);
@@ -606,7 +580,7 @@ tune_end:
 }
 
 int
-TAP_ESC_TUNE::next_char()
+TapEscTune::next_char()
 {
 	while (isspace(*_next)) {
 		_next++;
@@ -616,7 +590,7 @@ TAP_ESC_TUNE::next_char()
 }
 
 unsigned
-TAP_ESC_TUNE::next_number()
+TapEscTune::next_number()
 {
 	unsigned number = 0;
 	int c;
@@ -634,7 +608,7 @@ TAP_ESC_TUNE::next_number()
 }
 
 unsigned
-TAP_ESC_TUNE::next_dots()
+TapEscTune::next_dots()
 {
 	unsigned dots = 0;
 
@@ -647,22 +621,19 @@ TAP_ESC_TUNE::next_dots()
 }
 
 void
-TAP_ESC_TUNE::next_trampoline(void *arg)
+TapEscTune::next_trampoline(void *arg)
 {
-	TAP_ESC_TUNE *ta = (TAP_ESC_TUNE *)arg;
-
+	TapEscTune *ta = reinterpret_cast<TapEscTune *>(arg);
 	ta->next_note();
 }
 
 
 int
-TAP_ESC_TUNE::ioctl(file *filp, int cmd, unsigned long arg)
+TapEscTune::ioctl(file *filp, int cmd, unsigned long arg)
 {
 	int result = OK;
 
 	DEVICE_DEBUG("ioctl %i %u", cmd, arg);
-
-//	irqstate_t flags = px4_enter_critical_section();
 
 	/* decide whether to increase the alarm level to cmd or leave it alone */
 	switch (cmd) {
@@ -706,7 +677,7 @@ TAP_ESC_TUNE::ioctl(file *filp, int cmd, unsigned long arg)
 }
 
 int
-TAP_ESC_TUNE::write(file *filp, const char *buffer, size_t len)
+TapEscTune::write(file *filp, const char *buffer, size_t len)
 {
 	// sanity-check the buffer for length and nul-termination
 	if (len > _tune_max) {
@@ -750,7 +721,7 @@ TAP_ESC_TUNE::write(file *filp, const char *buffer, size_t len)
 namespace
 {
 
-TAP_ESC_TUNE	*g_dev;
+TapEscTune	*g_dev;
 
 int
 play_tune(unsigned tune)
@@ -806,15 +777,15 @@ tap_esc_tune_main(int argc, char *argv[])
 
 	/* start the driver lazily */
 	if (g_dev == nullptr) {
-		g_dev = new TAP_ESC_TUNE;
+		g_dev = new TapEscTune;
 
 		if (g_dev == nullptr) {
-			errx(1, "couldn't allocate the TAP_ESC_TUNE driver");
+			errx(1, "couldn't allocate the TapEscTune driver");
 		}
 
 		if (g_dev->init() != OK) {
 			delete g_dev;
-			errx(1, "TAP_ESC_TUNE init failed");
+			errx(1, "TapEscTune init failed");
 		}
 	}
 
@@ -875,14 +846,3 @@ tap_esc_tune_main(int argc, char *argv[])
 
 	errx(1, "unrecognized command, try 'start', 'stop', an alarm number or name, or a file name starting with a '/'");
 }
-
-EscbusTunePacket *get_tune_packet()
-{
-	return &(g_dev->_tune_packet);
-}
-
-bool get_tune_stop()
-{
-	return g_dev->_stop_flag;
-}
-

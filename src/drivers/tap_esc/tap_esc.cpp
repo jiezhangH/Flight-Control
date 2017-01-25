@@ -49,6 +49,7 @@
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/leds.h>
 #include <uORB/topics/test_motor.h>
+#include <uORB/topics/tune.h>
 #include <uORB/topics/input_rc.h>
 #include <uORB/topics/esc_status.h>
 #include <uORB/topics/multirotor_motor_limits.h>
@@ -112,6 +113,7 @@ private:
 	int	_armed_sub;
 	int _test_motor_sub;
 	int _leds_sub;
+	int _tunes_sub;
 	orb_advert_t        	_outputs_pub = nullptr;
 	actuator_outputs_s      _outputs;
 	static actuator_armed_s	_armed;
@@ -145,7 +147,7 @@ private:
 	void		work_start();
 	void		work_stop();
 	void send_esc_outputs(const float *pwm, const unsigned num_pwm);
-	void send_tune_packet(bool arm,EscbusTunePacket *tune_packet);
+	void send_tune_packet(EscbusTunePacket &tune_packet);
 	uint8_t crc8_esc(uint8_t *p, uint8_t len);
 	uint8_t crc_packet(EscPacket &p);
 	int send_packet(EscPacket &p, int responder);
@@ -178,6 +180,7 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_armed_sub(-1),
 	_test_motor_sub(-1),
 	_leds_sub(-1),
+	_tunes_sub(-1),
 	_outputs_pub(nullptr),
 	_control_subs{ -1},
 	_esc_feedback_pub(nullptr),
@@ -480,13 +483,11 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 	}
 }
 
-void TAP_ESC::send_tune_packet(bool arm,EscbusTunePacket *tune_packet)
+void TAP_ESC::send_tune_packet(EscbusTunePacket &tune_packet)
 {
-	if(!arm){
-		EscPacket buzzer_packet = {0xfe, sizeof(EscbusTunePacket), ESCBUS_MSG_ID_TUNE};
-		buzzer_packet.d.tunePacket = *tune_packet;
-		send_packet(buzzer_packet, -1);
-	}
+	EscPacket buzzer_packet = {0xfe, sizeof(EscbusTunePacket), ESCBUS_MSG_ID_TUNE};
+	buzzer_packet.d.tunePacket = tune_packet;
+	send_packet(buzzer_packet, -1);
 }
 
 void TAP_ESC::read_data_from_uart()
@@ -610,6 +611,7 @@ TAP_ESC::cycle()
 		_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
 		_test_motor_sub = orb_subscribe(ORB_ID(test_motor));
 		_leds_sub = orb_subscribe(ORB_ID(leds));
+		_tunes_sub = orb_subscribe(ORB_ID(tune));
 		_initialized = true;
 	}
 
@@ -836,13 +838,23 @@ TAP_ESC::cycle()
 
 	}
 
-	if(!get_tune_stop()){
-		EscbusTunePacket *esc_tune_packet = get_tune_packet();
-		send_tune_packet(_armed.armed,esc_tune_packet);
-		mavlink_log_info(&_mavlink_log_pub, "frequency %d",esc_tune_packet->frequency);
-		//mavlink_log_info(&_mavlink_log_pub, "frequency %d",esc_tune_packet->frequency);
-	}
+	updated = false;
+	orb_check(_tunes_sub, &updated);
 
+	if (updated) {
+		struct tune_s tune;
+		EscbusTunePacket esc_tune_packet;
+
+		orb_copy(ORB_ID(tune), _tunes_sub, &tune);
+
+		esc_tune_packet.frequency = tune.frequency;
+		esc_tune_packet.duration_ms = tune.duration;
+		esc_tune_packet.strength = tune.strength;
+
+		if (!_is_armed) {
+			send_tune_packet(esc_tune_packet);
+		}
+	}
 }
 
 void TAP_ESC::work_stop()
