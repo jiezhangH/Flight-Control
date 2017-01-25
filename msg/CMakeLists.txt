@@ -129,8 +129,6 @@ set(msg_file_names
 	vision_position_estimate.msg
 	vtol_vehicle_status.msg
 	wind_estimate.msg
-	typhoon_h520_led.msg
-	tap_leds.msg
 	)
 
 # Get absolute paths
