@@ -81,7 +81,10 @@ else
 	fi
 fi
 
-tap_esc_tune start
+if ver hwcmp TAP_V2
+then
+	tap_esc_tune start
+fi
 
 #
 # Start system state indicator
