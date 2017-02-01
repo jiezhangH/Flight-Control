@@ -33,6 +33,8 @@
 
 #pragma once
 
+#include "subscriber_handler.h"
+
 #include <px4_workqueue.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_command_ack.h>
@@ -66,6 +68,8 @@ private:
 
 	/** return an ACK to a vehicle_command */
 	void answer_command(const vehicle_command_s &cmd, unsigned result);
+
+	events::SubscriberHanler _sh;
 
 	volatile bool _task_should_exit = false;
 	volatile bool _task_is_running = false;

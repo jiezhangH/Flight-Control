@@ -88,22 +88,18 @@ SendEvent::cycle_trampoline(void *arg)
 void SendEvent::cycle()
 {
 	if (_task_should_exit) {
-		if (_vehicle_command_sub >= 0) {
-			orb_unsubscribe(_vehicle_command_sub);
-			_vehicle_command_sub = -1;
-		}
+		_sh.unsubscribe();
 
 		_task_is_running = false;
 		return;
 	}
 
 	// check if not yet initialized. we have to do it here, because it's running in a different context than initialisation
-	if (_vehicle_command_sub < 0) {
-		_vehicle_command_sub = orb_subscribe(ORB_ID(vehicle_command));
-	}
+	_sh.subscribe();
+	_updated_bitfield = _sh.check_for_updates();
 
 	process_commands();
-
+	_updated_bitfield = 0;
 	work_queue(LPWORK, &_work, (worker_t)&SendEvent::cycle_trampoline, this,
 		   USEC2TICK(SEND_EVENT_INTERVAL_US));
 }
@@ -111,14 +107,12 @@ void SendEvent::cycle()
 void SendEvent::process_commands()
 {
 	struct vehicle_command_s cmd;
-	bool updated;
-	orb_check(_vehicle_command_sub, &updated);
 
-	if (!updated) {
+	if (!(_updated_bitfield & (0x01 < 0) == (0x01 < 0))) {
 		return;
 	}
 
-	orb_copy(ORB_ID(vehicle_command), _vehicle_command_sub, &cmd);
+	orb_copy(ORB_ID(vehicle_command), _sh.get_vehicle_command_sub(), &cmd);
 
 	bool got_temperature_calibration_command = false, accel = false, baro = false, gyro = false;
 
