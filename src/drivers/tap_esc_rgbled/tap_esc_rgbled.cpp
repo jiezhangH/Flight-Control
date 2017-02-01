@@ -48,11 +48,11 @@
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
 
-class TAP_ESC_RGBLED : public device::CDev
+class TapEscRGBLED : public device::CDev
 {
 public:
-	TAP_ESC_RGBLED();
-	virtual ~TAP_ESC_RGBLED();
+	TapEscRGBLED();
+	virtual ~TapEscRGBLED();
 
 
 	virtual int		init();
@@ -96,12 +96,12 @@ extern "C" __EXPORT int tap_esc_rgbled_main(int argc, char *argv[]);
 
 namespace
 {
-TAP_ESC_RGBLED *tap_esc_rgbled = nullptr;
+TapEscRGBLED *tap_esc_rgbled = nullptr;
 }
 
 void tap_esc_rgbled_usage();
 
-TAP_ESC_RGBLED::TAP_ESC_RGBLED() :
+TapEscRGBLED::TapEscRGBLED() :
 	CDev("tap_esc_rgbled", RGBLED0_DEVICE_PATH),
 	_mode(RGBLED_MODE_OFF),
 	_enable(false),
@@ -115,13 +115,13 @@ TAP_ESC_RGBLED::TAP_ESC_RGBLED() :
 	memset(&_pattern, 0, sizeof(_pattern));
 }
 
-TAP_ESC_RGBLED::~TAP_ESC_RGBLED()
+TapEscRGBLED::~TapEscRGBLED()
 {
 
 }
 
 int
-TAP_ESC_RGBLED::init()
+TapEscRGBLED::init()
 {
 	/* switch off LED on start */
 	CDev::init();
@@ -132,7 +132,7 @@ TAP_ESC_RGBLED::init()
 
 
 int
-TAP_ESC_RGBLED::info()
+TapEscRGBLED::info()
 {
 	int ret;
 	bool on, powersave;
@@ -152,12 +152,12 @@ TAP_ESC_RGBLED::info()
 	return ret;
 }
 int
-TAP_ESC_RGBLED::probe()
+TapEscRGBLED::probe()
 {
 	return (OK);
 }
 int
-TAP_ESC_RGBLED::ioctl(struct file *filp, int cmd, unsigned long arg)
+TapEscRGBLED::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	int ret = ENOTTY;
 
@@ -189,9 +189,9 @@ TAP_ESC_RGBLED::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 
 void
-TAP_ESC_RGBLED::led_trampoline(void *arg)
+TapEscRGBLED::led_trampoline(void *arg)
 {
-	TAP_ESC_RGBLED *rgbl = reinterpret_cast<TAP_ESC_RGBLED *>(arg);
+	TapEscRGBLED *rgbl = reinterpret_cast<TapEscRGBLED *>(arg);
 
 	rgbl->led();
 }
@@ -200,7 +200,7 @@ TAP_ESC_RGBLED::led_trampoline(void *arg)
  * Main loop function
  */
 void
-TAP_ESC_RGBLED::led()
+TapEscRGBLED::led()
 {
 	if (!_should_run) {
 		_running = false;
@@ -257,14 +257,14 @@ TAP_ESC_RGBLED::led()
 	_counter++;
 
 	/* re-queue ourselves to run again later */
-	work_queue(LPWORK, &_work, (worker_t)&TAP_ESC_RGBLED::led_trampoline, this, _led_interval);
+	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, _led_interval);
 }
 
 /**
  * Parse color constant and set _led_color value
  */
 void
-TAP_ESC_RGBLED::set_color(rgbled_color_t color)
+TapEscRGBLED::set_color(rgbled_color_t color)
 {
 	switch (color) {
 	case RGBLED_COLOR_OFF:
@@ -309,7 +309,7 @@ TAP_ESC_RGBLED::set_color(rgbled_color_t color)
  * Set mode, if mode not changed has no any effect (doesn't reset blinks phase)
  */
 void
-TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
+TapEscRGBLED::set_mode(rgbled_mode_t mode)
 {
 	if (mode != _mode) {
 		_mode = mode;
@@ -372,7 +372,7 @@ TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
 		/* if it should run now, start the workq */
 		if (_should_run && !_running) {
 			_running = true;
-			work_queue(LPWORK, &_work, (worker_t)&TAP_ESC_RGBLED::led_trampoline, this, 1);
+			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 1);
 		}
 
 	}
@@ -382,7 +382,7 @@ TAP_ESC_RGBLED::set_mode(rgbled_mode_t mode)
  * Set pattern for PATTERN mode, but don't change current mode
  */
 void
-TAP_ESC_RGBLED::set_pattern(rgbled_pattern_t *pattern)
+TapEscRGBLED::set_pattern(rgbled_pattern_t *pattern)
 {
 	memcpy(&_pattern, pattern, sizeof(rgbled_pattern_t));
 }
@@ -391,7 +391,7 @@ TAP_ESC_RGBLED::set_pattern(rgbled_pattern_t *pattern)
  * Sent ENABLE flag to LED driver
  */
 int
-TAP_ESC_RGBLED::send_led_enable(bool enable)
+TapEscRGBLED::send_led_enable(bool enable)
 {
 	_enable = enable;
 	send_led_rgb();
@@ -402,7 +402,7 @@ TAP_ESC_RGBLED::send_led_enable(bool enable)
  * Publish LEDs color over uORB to the ESC driver
  */
 int
-TAP_ESC_RGBLED::send_led_rgb()
+TapEscRGBLED::send_led_rgb()
 {
 	struct leds_s leds;
 	memset(&leds, 0, sizeof(leds));
@@ -425,7 +425,7 @@ TAP_ESC_RGBLED::send_led_rgb()
 }
 
 int
-TAP_ESC_RGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
+TapEscRGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
 {
 	powersave = OK;
 	on = _enable;
@@ -433,7 +433,7 @@ TAP_ESC_RGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
 	return OK;
 }
 
-void TAP_ESC_RGBLED::set_number_of_leds(uint8_t n_leds)
+void TapEscRGBLED::set_number_of_leds(uint8_t n_leds)
 {
 	_n_leds = n_leds;
 }
@@ -479,7 +479,7 @@ tap_esc_rgbled_main(int argc, char *argv[])
 		}
 
 		if (tap_esc_rgbled == nullptr) {
-			tap_esc_rgbled = new TAP_ESC_RGBLED();
+			tap_esc_rgbled = new TapEscRGBLED();
 			// TODO: get this information from getopt
 			tap_esc_rgbled->set_number_of_leds(6);
 
