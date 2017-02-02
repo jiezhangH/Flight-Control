@@ -34,6 +34,7 @@
 #pragma once
 
 #include "subscriber_handler.h"
+#include "status_display.h"
 
 #include <px4_workqueue.h>
 #include <uORB/topics/vehicle_command.h>
@@ -70,6 +71,7 @@ private:
 	void answer_command(const vehicle_command_s &cmd, unsigned result);
 
 	events::SubscriberHanler _sh;
+	status::StatusDisplay _sd;
 
 	volatile bool _task_should_exit = false;
 	volatile bool _task_is_running = false;

@@ -96,10 +96,12 @@ void SendEvent::cycle()
 
 	// check if not yet initialized. we have to do it here, because it's running in a different context than initialisation
 	_sh.subscribe();
-	_updated_bitfield = _sh.check_for_updates();
+	_sh.check_for_updates();
 
 	process_commands();
-	_updated_bitfield = 0;
+
+	_sd.process(_sh);
+
 	work_queue(LPWORK, &_work, (worker_t)&SendEvent::cycle_trampoline, this,
 		   USEC2TICK(SEND_EVENT_INTERVAL_US));
 }
@@ -107,8 +109,9 @@ void SendEvent::cycle()
 void SendEvent::process_commands()
 {
 	struct vehicle_command_s cmd;
+	uint32_t update_bitfield = _sh.get_update_bitfield();
 
-	if (!(_updated_bitfield & (0x01 < 0) == (0x01 < 0))) {
+	if (!((update_bitfield & VEHICLE_COMMAND_MASK) == VEHICLE_COMMAND_MASK)) {
 		return;
 	}
 
