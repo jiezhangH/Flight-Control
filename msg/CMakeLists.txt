@@ -68,6 +68,7 @@ set(msg_file_names
 	input_rc.msg
 	leds.msg
 	log_message.msg
+	main_led.msg
 	manual_control_setpoint.msg
 	mavlink_log.msg
 	mc_att_ctrl_status.msg
