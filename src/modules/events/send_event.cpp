@@ -39,15 +39,47 @@
 #include <drivers/drv_hrt.h>
 
 static SendEvent *send_event_obj = nullptr;
+struct work_s SendEvent::_work = {};
 
 // Run it at 30 Hz.
 const unsigned SEND_EVENT_INTERVAL_US = 33000;
+
+int SendEvent::initialize()
+{
+	int ret = work_queue(LPWORK, &_work, (worker_t)&SendEvent::initialize_trampoline, nullptr, 0);
+
+	if (ret) {
+		return 1;
+	}
+
+	int i = 0;
+
+	do {
+		/* wait up to 3s */
+		usleep(100000);
+
+	} while (!send_event_obj->is_running() && ++i < 30);
+
+	if (i == 30) {
+		PX4_ERR("failed to stop");
+	}
+
+	if (send_event_obj->is_running()) {
+		return 0;
+	}
+
+	// if it is not running return -1
+	return -1;
+}
 
 int SendEvent::start()
 {
 	if (_task_is_running) {
 		return 0;
 	}
+
+	// subscribe to the topics
+	_sh.subscribe();
 
 	_task_is_running = true;
 	_task_should_exit = false;
@@ -77,6 +109,18 @@ void SendEvent::stop()
 	}
 }
 
+void SendEvent::initialize_trampoline(void *arg)
+{
+	send_event_obj = new SendEvent();
+
+	if (!send_event_obj) {
+		PX4_ERR("alloc failed");
+		return;
+	}
+
+	send_event_obj->start();
+}
+
 void
 SendEvent::cycle_trampoline(void *arg)
 {
@@ -94,8 +138,6 @@ void SendEvent::cycle()
 		return;
 	}
 
-	// check if not yet initialized. we have to do it here, because it's running in a different context than initialisation
-	_sh.subscribe();
 	_sh.check_for_updates();
 
 	process_commands();
@@ -205,14 +247,7 @@ int send_event_main(int argc, char *argv[])
 			return -1;
 
 		} else {
-			send_event_obj = new SendEvent();
-
-			if (!send_event_obj) {
-				PX4_ERR("alloc failed");
-				return -1;
-			}
-
-			return send_event_obj->start();
+			return SendEvent::initialize();
 		}
 
 	} else if (!strcmp(argv[1], "stop_listening")) {

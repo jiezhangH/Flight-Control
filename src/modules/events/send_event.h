@@ -45,6 +45,11 @@ extern "C" __EXPORT int send_event_main(int argc, char *argv[]);
 class SendEvent
 {
 public:
+	/** Initialize class in the same context as the work queue.
+	 *
+	 * @return 0 if successfull, -1 on error */
+	static int initialize();
+
 	/** Start background listening for commands
 	 *
 	 * @return 0 if successfull, -1 on error. */
@@ -58,6 +63,8 @@ public:
 	void print_status();
 
 private:
+	/** Trampoline for initialisation. */
+	static void initialize_trampoline(void *arg);
 	/** Trampoline for the work queue. */
 	static void cycle_trampoline(void *arg);
 
@@ -70,12 +77,13 @@ private:
 	/** return an ACK to a vehicle_command */
 	void answer_command(const vehicle_command_s &cmd, unsigned result);
 
-	events::SubscriberHanler _sh;
+	events::SubscriberHandler _sh;
 	status::StatusDisplay _sd;
 
 	volatile bool _task_should_exit = false;
 	volatile bool _task_is_running = false;
-	struct work_s _work = {};
+	static struct work_s _work;
+	int _updated_bitfield;
 	int _vehicle_command_sub = -1;
 	orb_advert_t _command_ack_pub = nullptr;
 };
