@@ -71,6 +71,10 @@ bool StatusDisplay::check_for_updates(events::SubscriberHandler &sh)
 
 void StatusDisplay::process(events::SubscriberHandler &sh)
 {
+	if (_status_display_uptime == 0) {
+		_status_display_uptime = hrt_absolute_time();
+	}
+
 	// if any update to the vehicle status topic exit
 	if (!check_for_updates(sh)) {
 		return;
@@ -109,7 +113,6 @@ void StatusDisplay::set_main_led()
 		set_normal_color = true;
 
 	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR ||
-		   // TODO: check this condition
 		   (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
 		      == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && hotplug_timeout)) {
 		_rgb.mode = main_led_s::LED_MODE_BLINK_FAST;
