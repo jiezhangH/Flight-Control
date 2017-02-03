@@ -44,12 +44,13 @@ struct work_s SendEvent::_work = {};
 // Run it at 30 Hz.
 const unsigned SEND_EVENT_INTERVAL_US = 33000;
 
+
 int SendEvent::initialize()
 {
 	int ret = work_queue(LPWORK, &_work, (worker_t)&SendEvent::initialize_trampoline, nullptr, 0);
 
-	if (ret) {
-		return 1;
+	if (ret < 0) {
+		return ret;
 	}
 
 	int i = 0;
@@ -61,15 +62,11 @@ int SendEvent::initialize()
 	} while (!send_event_obj->is_running() && ++i < 30);
 
 	if (i == 30) {
-		PX4_ERR("failed to stop");
+		PX4_ERR("failed to start");
+		return -1;
 	}
 
-	if (send_event_obj->is_running()) {
-		return 0;
-	}
-
-	// if it is not running return -1
-	return -1;
+	return 0;
 }
 
 int SendEvent::start()
@@ -84,8 +81,10 @@ int SendEvent::start()
 	_task_is_running = true;
 	_task_should_exit = false;
 
-	/* Schedule a cycle to start things. */
-	return work_queue(LPWORK, &_work, (worker_t)&SendEvent::cycle_trampoline, this, 0);
+	// Kick off the cycling. We can call it directly because we're already in the work queue context
+	cycle();
+
+	return 0;
 }
 
 void SendEvent::stop()
@@ -245,10 +244,9 @@ int send_event_main(int argc, char *argv[])
 		if (send_event_obj) {
 			PX4_INFO("already running");
 			return -1;
-
-		} else {
-			return SendEvent::initialize();
 		}
+
+		return SendEvent::initialize();
 
 	} else if (!strcmp(argv[1], "stop_listening")) {
 		if (send_event_obj) {

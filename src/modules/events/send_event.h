@@ -45,15 +45,10 @@ extern "C" __EXPORT int send_event_main(int argc, char *argv[]);
 class SendEvent
 {
 public:
-	/** Initialize class in the same context as the work queue.
+	/** Initialize class in the same context as the work queue. And start the background listener.
 	 *
-	 * @return 0 if successfull, -1 on error */
+	 * @return 0 if successfull, <0 on error */
 	static int initialize();
-
-	/** Start background listening for commands
-	 *
-	 * @return 0 if successfull, -1 on error. */
-	int start();
 
 	/** Stop background listener */
 	void stop();
@@ -63,6 +58,13 @@ public:
 	void print_status();
 
 private:
+
+	/** Start background listening for commands
+	 *
+	 * @return 0 if successfull, <0 on error. */
+	int start();
+
+
 	/** Trampoline for initialisation. */
 	static void initialize_trampoline(void *arg);
 	/** Trampoline for the work queue. */
