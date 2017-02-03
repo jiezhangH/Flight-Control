@@ -66,6 +66,7 @@ set(msg_file_names
 	hil_sensor.msg
 	home_position.msg
 	input_rc.msg
+	led_event.msg
 	leds.msg
 	log_message.msg
 	main_led.msg
