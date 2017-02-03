@@ -44,6 +44,7 @@
 #include <px4_getopt.h>
 #include <uORB/uORB.h>
 #include <uORB/topics/leds.h>
+#include <uORB/topics/led_event.h>
 
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
@@ -77,7 +78,12 @@ private:
 	int				_counter;
 	uint16_t		_led_color;
 	orb_advert_t	_leds_pub = nullptr;
+	int				_led_event_sub = -1;
 	uint8_t 		_n_leds = TAP_ESC_MAX_MOTOR_NUM; // One led for motor
+
+	struct led_event_s _events_prio_0 = {};
+	struct led_event_s _events_prio_1 = {};
+	struct led_event_s _events_prio_2 = {};
 
 
 	void 			set_color(rgbled_color_t ledcolor);
@@ -127,7 +133,8 @@ TapEscRGBLED::init()
 	CDev::init();
 	send_led_enable(false);
 	send_led_rgb();
-	return OK;
+	//schedule work call
+	return 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 100);
 }
 
 
@@ -202,8 +209,24 @@ TapEscRGBLED::led_trampoline(void *arg)
 void
 TapEscRGBLED::led()
 {
+	_running = true;
+
+	// subscribe to led_event topic
+	if (_led_event_sub < 0) {
+		_led_event_sub = orb_subscribe(ORB_ID(led_event));
+	}
+
+	bool updated;
+	orb_check(_led_event_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(led_event), _led_event_sub, &_events_prio_1);
+	}
+
 	if (!_should_run) {
 		_running = false;
+		// reschedule worker with freq 10Hz
+		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 100);
 		return;
 	}
 
