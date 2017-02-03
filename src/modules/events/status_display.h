@@ -63,10 +63,12 @@ namespace status
 class StatusDisplay
 {
 public:
-	void process(events::SubscriberHandler &sh);
+
+	StatusDisplay(const events::SubscriberHandler &subscriber_handler);
+	void process();
 
 protected:
-	bool check_for_updates(events::SubscriberHandler &sh);
+	bool check_for_updates();
 	void set_main_led();
 	void publish();
 	// TODO: review if there is a better variant that allocate this in the
@@ -81,6 +83,8 @@ protected:
 private:
 	orb_advert_t _main_led_pub = nullptr;
 	hrt_abstime _status_display_uptime = 0;
+
+	const events::SubscriberHandler &_subscriber_handler;
 };
 
 } /* status */

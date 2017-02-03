@@ -45,6 +45,8 @@ extern "C" __EXPORT int send_event_main(int argc, char *argv[]);
 class SendEvent
 {
 public:
+	SendEvent();
+
 	/** Initialize class in the same context as the work queue. And start the background listener.
 	 *
 	 * @return 0 if successfull, <0 on error */
@@ -85,7 +87,5 @@ private:
 	volatile bool _task_should_exit = false;
 	volatile bool _task_is_running = false;
 	static struct work_s _work;
-	int _updated_bitfield;
-	int _vehicle_command_sub = -1;
 	orb_advert_t _command_ack_pub = nullptr;
 };

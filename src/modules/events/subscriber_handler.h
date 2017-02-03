@@ -17,22 +17,27 @@
 namespace events
 {
 
+/**
+ * @class SubscriberHandler
+ * Contains a list of uORB subscriptions and maintains their update state.
+ */
 class SubscriberHandler
 {
 public:
 	void subscribe();
 	void unsubscribe();
 	void check_for_updates();
+
 	// TODO change to a generalized get subscriber method
-	int get_battery_status_sub();
-	int get_cpuload_sub();
-	int get_vehicle_command_sub();
-	int get_vehicle_status_sub();
-	int get_vehicle_status_flags_sub();
+	int get_battery_status_sub() const { return _battery_status_sub; }
+	int get_cpuload_sub() const { return _cpuload_sub; }
+	int get_vehicle_command_sub() const { return _vehicle_command_sub; }
+	int get_vehicle_status_sub() const { return _vehicle_status_sub; }
+	int get_vehicle_status_flags_sub() const { return _vehicle_status_flags_sub; }
 	// TODO: incorporate an add_topic method, this will push back the sub handler
 	// in the subscriber vector
 
-	uint32_t get_update_bitfield();
+	uint32_t get_update_bitfield() const;
 
 private:
 	// TODO: incorporate the subscriber into a vector of int

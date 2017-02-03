@@ -43,40 +43,45 @@
 
 using namespace status;
 
-bool StatusDisplay::check_for_updates(events::SubscriberHandler &sh)
+StatusDisplay::StatusDisplay(const events::SubscriberHandler &subscriber_handler)
+	: _subscriber_handler(subscriber_handler)
 {
-	uint32_t update_bitfield = sh.get_update_bitfield();
+}
+
+bool StatusDisplay::check_for_updates()
+{
+	uint32_t update_bitfield = _subscriber_handler.get_update_bitfield();
 
 	if ((update_bitfield & BATTERY_STATUS_MASK) == BATTERY_STATUS_MASK) {
-		orb_copy(ORB_ID(battery_status), sh.get_battery_status_sub(), &_battery_status);
+		orb_copy(ORB_ID(battery_status), _subscriber_handler.get_battery_status_sub(), &_battery_status);
 	}
 
 	if ((update_bitfield & CPU_LOAD_MASK) == CPU_LOAD_MASK) {
-		orb_copy(ORB_ID(cpuload), sh.get_cpuload_sub(), &_cpu_load);
+		orb_copy(ORB_ID(cpuload), _subscriber_handler.get_cpuload_sub(), &_cpu_load);
 	}
 
 	if ((update_bitfield & VEHICLE_STATUS_FLAGS_MASK) == VEHICLE_STATUS_FLAGS_MASK) {
-		orb_copy(ORB_ID(vehicle_status_flags), sh.get_vehicle_status_flags_sub(), &_vehicle_status_flags);
+		orb_copy(ORB_ID(vehicle_status_flags), _subscriber_handler.get_vehicle_status_flags_sub(), &_vehicle_status_flags);
 	}
 
 	// right now the criteria is to have some vehicle_status updates to process
 	// the LED status
 	if ((update_bitfield & VEHICLE_STATUS_MASK) == VEHICLE_STATUS_MASK) {
-		orb_copy(ORB_ID(vehicle_status), sh.get_vehicle_status_sub(), &_vehicle_status);
+		orb_copy(ORB_ID(vehicle_status), _subscriber_handler.get_vehicle_status_sub(), &_vehicle_status);
 		return true;
 	}
 
 	return false;
 }
 
-void StatusDisplay::process(events::SubscriberHandler &sh)
+void StatusDisplay::process()
 {
 	if (_status_display_uptime == 0) {
 		_status_display_uptime = hrt_absolute_time();
 	}
 
 	// if any update to the vehicle status topic exit
-	if (!check_for_updates(sh)) {
+	if (!check_for_updates()) {
 		return;
 	}
 

@@ -95,32 +95,7 @@ void SubscriberHandler::check_for_updates()
 	}
 }
 
-int SubscriberHandler::get_battery_status_sub()
-{
-	return _battery_status_sub;
-}
-
-int SubscriberHandler::get_cpuload_sub()
-{
-	return _cpuload_sub;
-}
-
-int SubscriberHandler::get_vehicle_command_sub()
-{
-	return _vehicle_command_sub;
-}
-
-int SubscriberHandler::get_vehicle_status_sub()
-{
-	return _vehicle_status_sub;
-}
-
-int SubscriberHandler::get_vehicle_status_flags_sub()
-{
-	return _vehicle_status_flags_sub;
-}
-
-uint32_t SubscriberHandler::get_update_bitfield()
+uint32_t SubscriberHandler::get_update_bitfield() const
 {
 	return _update_bitfield;
 }
