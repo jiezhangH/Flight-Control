@@ -7,13 +7,6 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_status_flags.h>
 
-// Definition of the bitfield
-#define VEHICLE_COMMAND_MASK (0x01 << 0)
-#define VEHICLE_STATUS_MASK (0x01 << 1)
-#define VEHICLE_STATUS_FLAGS_MASK (0x01 << 2)
-#define BATTERY_STATUS_MASK (0x01 << 3)
-#define CPU_LOAD_MASK (0x01 << 4)
-
 namespace events
 {
 
@@ -37,9 +30,23 @@ public:
 	// TODO: incorporate an add_topic method, this will push back the sub handler
 	// in the subscriber vector
 
-	uint32_t get_update_bitfield() const;
+	/* update checking methods */
+	bool battery_status_updated() const { return _update_bitfield & (uint32_t)StatusMask::BatteryStatus; }
+	bool cpuload_updated() const { return _update_bitfield & (uint32_t)StatusMask::CpuLoad; }
+	bool vehicle_command_updated() const { return _update_bitfield & (uint32_t)StatusMask::VehicleCommand; }
+	bool vehicle_status_updated() const { return _update_bitfield & (uint32_t)StatusMask::VehicleStatus; }
+	bool vehicle_status_flags_updated() const { return _update_bitfield & (uint32_t)StatusMask::VehicleStatusFlags; }
+
 
 private:
+	enum class StatusMask : uint32_t {
+		VehicleCommand = (0x01 << 0),
+		VehicleStatus = (0x01 << 1),
+		VehicleStatusFlags = (0x01 << 2),
+		BatteryStatus = (0x01 << 3),
+		CpuLoad = (0x01 << 4)
+	};
+
 	// TODO: incorporate the subscriber into a vector of int
 	int _battery_status_sub = -1;
 	int _cpuload_sub = -1;

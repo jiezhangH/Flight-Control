@@ -154,12 +154,11 @@ void SendEvent::cycle()
 
 void SendEvent::process_commands()
 {
-	struct vehicle_command_s cmd;
-	uint32_t update_bitfield = _subscriber_handler.get_update_bitfield();
-
-	if (!((update_bitfield & VEHICLE_COMMAND_MASK) == VEHICLE_COMMAND_MASK)) {
+	if (!_subscriber_handler.vehicle_command_updated()) {
 		return;
 	}
+
+	struct vehicle_command_s cmd;
 
 	orb_copy(ORB_ID(vehicle_command), _subscriber_handler.get_vehicle_command_sub(), &cmd);
 

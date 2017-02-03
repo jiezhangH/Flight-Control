@@ -63,39 +63,34 @@ void SubscriberHandler::check_for_updates()
 	orb_check(_vehicle_command_sub, &updated);
 
 	if (updated) {
-		_update_bitfield |= VEHICLE_COMMAND_MASK;
+		_update_bitfield |= (uint32_t)StatusMask::VehicleCommand;
 	}
 
 	updated = false;
 	orb_check(_vehicle_status_sub, &updated);
 
 	if (updated) {
-		_update_bitfield |= VEHICLE_STATUS_MASK;
+		_update_bitfield |= (uint32_t)StatusMask::VehicleStatus;
 	}
 
 	updated = false;
 	orb_check(_vehicle_status_flags_sub, &updated);
 
 	if (updated) {
-		_update_bitfield |= VEHICLE_STATUS_FLAGS_MASK;
+		_update_bitfield |= (uint32_t)StatusMask::VehicleStatusFlags;
 	}
 
 	updated = false;
 	orb_check(_battery_status_sub, &updated);
 
 	if (updated) {
-		_update_bitfield |= BATTERY_STATUS_MASK;
+		_update_bitfield |= (uint32_t)StatusMask::BatteryStatus;
 	}
 
 	updated = false;
 	orb_check(_cpuload_sub, &updated);
 
 	if (updated) {
-		_update_bitfield |= CPU_LOAD_MASK;
+		_update_bitfield |= (uint32_t)StatusMask::CpuLoad;
 	}
-}
-
-uint32_t SubscriberHandler::get_update_bitfield() const
-{
-	return _update_bitfield;
 }
