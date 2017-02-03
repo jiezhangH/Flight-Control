@@ -79,8 +79,8 @@ private:
 	/** return an ACK to a vehicle_command */
 	void answer_command(const vehicle_command_s &cmd, unsigned result);
 
-	events::SubscriberHandler _sh;
-	status::StatusDisplay _sd;
+	events::SubscriberHandler _subscriber_handler;
+	status::StatusDisplay _status_display;
 
 	volatile bool _task_should_exit = false;
 	volatile bool _task_is_running = false;
