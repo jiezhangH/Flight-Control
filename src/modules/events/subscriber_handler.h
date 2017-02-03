@@ -5,6 +5,7 @@
 #include <uORB/topics/cpuload.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/vehicle_status_flags.h>
 
 // Definition of the bitfield
 #define VEHICLE_COMMAND_MASK (0x01 << 0)
