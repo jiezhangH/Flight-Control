@@ -22,6 +22,10 @@ then
 	# Failsafe settings
 	# Land at current position
 	param set COM_LOW_BAT_ACT 2
+
+	# Mag calibration setting
+	# do two-side calibration
+	param set CAL_MAG_SIDES 34
 fi
 
 # temporarily force auto disarm off for existing setups
