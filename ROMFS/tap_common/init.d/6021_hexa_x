@@ -130,9 +130,12 @@ then
 	#
 	# Flight modes
 	#
+	# RTL
 	param set COM_FLTMODE1 5
+	# Position
 	param set COM_FLTMODE4 2
-	param set COM_FLTMODE6 0
+	# Smart
+	param set COM_FLTMODE6 13
 
 	#
 	# ST16 RC settings
