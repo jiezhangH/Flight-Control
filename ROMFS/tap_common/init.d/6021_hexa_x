@@ -82,6 +82,12 @@ then
 		param set MPC_XY_P 1.2
 		param set MPC_Z_P 1.5
 
+		# Manual stick input parameters
+		param set RC_FLT_SMP_RATE 33.0
+		param set RC_FLT_CUTOFF 5.0
+		param set MPC_HOLD_XY_DZ 0.005
+		param set MPC_XY_MAN_EXPO 0.69
+
 		# Position control velocity
 		param set MPC_XY_CRUISE 9.0
 		param set MPC_XY_VEL_MAX 12.0
