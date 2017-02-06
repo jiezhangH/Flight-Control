@@ -278,6 +278,7 @@ private:
 
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
+	float _yaw_smart;	/**< home yaw angle present when vehicle was armed (euler) */
 	bool _in_landing;	/**< the vehicle is in the landing descent */
 	bool _lnd_reached_ground; /**< controller assumes the vehicle has reached the ground after landing */
 	bool _takeoff_jumped;
@@ -440,6 +441,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_run_pos_control(true),
 	_run_alt_control(true),
 	_yaw(0.0f),
+	_yaw_smart(0.0f),
 	_in_landing(false),
 	_lnd_reached_ground(false),
 	_takeoff_jumped(false),
@@ -967,15 +969,22 @@ MulticopterPositionControl::control_manual(float dt)
 	/* limit velocity setpoint */
 	float req_vel_sp_norm = req_vel_sp.length();
 
+	/*_req_vel_sp is scaled to size 0..1 */
 	if (req_vel_sp_norm > 1.0f) {
 		req_vel_sp /= req_vel_sp_norm;
 	}
 
-	/* _req_vel_sp scaled to 0..1, scale it to max speed and rotate around yaw */
-	math::Matrix<3, 3> R_yaw_sp;
-	R_yaw_sp.from_euler(0.0f, 0.0f, _att_sp.yaw_body);
-	math::Vector<3> req_vel_sp_scaled = R_yaw_sp * req_vel_sp.emult(
-			_params.vel_cruise); // in NED and scaled to actual velocity
+	/* scale velocity setpoint to cruise speed (m/s) and rotate around yaw to NED frame */
+	math::Matrix<3, 3> R_input_fame;
+
+	if (_control_mode.flag_control_smart_enabled) {
+		R_input_fame.from_euler(0.0f, 0.0f, _yaw_smart);
+
+	} else {
+		R_input_fame.from_euler(0.0f, 0.0f, _att_sp.yaw_body);
+	}
+
+	math::Vector<3> req_vel_sp_scaled = R_input_fame * req_vel_sp.emult(_params.vel_cruise);
 
 
 	/*
@@ -2255,6 +2264,7 @@ MulticopterPositionControl::task_main()
 			_reset_int_z = true;
 			_reset_int_xy = true;
 			_reset_yaw_sp = true;
+			_yaw_smart = _yaw;
 		}
 
 		/* reset yaw and altitude setpoint for VTOL which are in fw mode */

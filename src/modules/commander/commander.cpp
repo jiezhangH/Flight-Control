@@ -536,6 +536,8 @@ int commander_main(int argc, char *argv[])
 				new_main_state = commander_state_s::MAIN_STATE_AUTO_TAKEOFF;
 			} else if (!strcmp(argv[2], "auto:land")) {
 				new_main_state = commander_state_s::MAIN_STATE_AUTO_LAND;
+			}else if (!strcmp(argv[2], "smart")) {
+				new_main_state = commander_state_s::MAIN_STATE_SMART;
 			} else {
 				warnx("argument %s unsupported.", argv[2]);
 			}
