@@ -28,7 +28,7 @@ then
 	param set CAL_MAG_SIDES 34
 
 	# Logger - prefer the new logging system
-	param set SYS_LOGGER 2
+	param set SYS_LOGGER 1
 fi
 
 # set environment variables (!= parameters)
