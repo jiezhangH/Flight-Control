@@ -127,11 +127,11 @@ else
 	set AUTOCNF no
 fi
 
-if param compare SYS_PARAM_VER 8
+if param compare SYS_PARAM_VER 9
 then
 	set NEW_DEFAULTS no
 else
-	param set SYS_PARAM_VER 8
+	param set SYS_PARAM_VER 9
 	set NEW_DEFAULTS yes
 fi
 

@@ -29,6 +29,9 @@ then
 
 	# Logger - prefer the new logging system
 	param set SYS_LOGGER 1
+
+	# GPS handling: disallow arming without GPS
+	param set COM_ARM_WO_GPS 0
 fi
 
 # set environment variables (!= parameters)
