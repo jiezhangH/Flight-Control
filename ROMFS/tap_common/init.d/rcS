@@ -88,6 +88,7 @@ fi
 if ver hwcmp TAP_V2
 then
 	tap_esc_tune start
+	camera_trigger start
 fi
 
 #
@@ -193,6 +194,10 @@ then
 	param set EKF2_ASP_DELAY 0
 	param set EKF2_EV_DELAY 0
 	param set SYS_MC_EST_GROUP 2
+
+	# camera trigger: forward via MAVLink
+	param set TRIG_INTERFACE 3
+	param set TRIG_MODE 4
 
 	param save
 fi
