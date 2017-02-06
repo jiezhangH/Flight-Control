@@ -26,6 +26,9 @@ then
 	# Mag calibration setting
 	# do two-side calibration
 	param set CAL_MAG_SIDES 34
+
+	# Logger - prefer the new logging system
+	param set SYS_LOGGER 2
 fi
 
 # set environment variables (!= parameters)

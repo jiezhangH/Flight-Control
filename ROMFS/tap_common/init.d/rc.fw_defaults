@@ -12,6 +12,13 @@ then
 	param set RTL_LAND_DELAY -1
 
 	param set NAV_ACC_RAD 50
+
+	# Mag calibration setting
+	# do two-side calibration
+	param set CAL_MAG_SIDES 34
+
+	# Logger - prefer the new logging system
+	param set SYS_LOGGER 2
 fi
 
 # This is the gimbal pass mixer
