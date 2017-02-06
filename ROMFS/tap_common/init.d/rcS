@@ -272,7 +272,7 @@ unset MAV_RATE
 if [ $START_LOGGER == 2 ]
 then
 	echo "Starting Logger"
-	if logger start -t -m mavlink -q 3
+	if logger start -t -q 3
 	then
 	fi
 fi
