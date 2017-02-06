@@ -94,7 +94,7 @@ static int board_button_irq(int irq, FAR void *context)
 			led_on(BOARD_LED_BLUE);
 
 			up_mdelay(200);
-			board_pwr(false);
+			px4_board_pwr(false);
 
 			while (1);
 		}
@@ -160,4 +160,6 @@ __EXPORT bool px4_board_pwr(bool on_not_off)
 
 		stm32_configgpio(POWER_OFF_GPIO);
 	}
+
+	return true;
 }
