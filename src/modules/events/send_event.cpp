@@ -171,6 +171,7 @@ void SendEvent::send_led_event()
 	}
 
 	event.timestamp = hrt_absolute_time();
+	event.enabled = 0xFF;
 
 	if (_led_event_pub != nullptr) {
 		orb_publish(ORB_ID(led_event), _led_event_pub, &event);
