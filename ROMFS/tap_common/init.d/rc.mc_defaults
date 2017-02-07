@@ -27,6 +27,10 @@ then
 	# do two-side calibration
 	param set CAL_MAG_SIDES 34
 
+	# camera trigger: forward via MAVLink
+	param set TRIG_INTERFACE 3
+	param set TRIG_MODE 4
+
 	# Logger - prefer the new logging system
 	param set SYS_LOGGER 1
 

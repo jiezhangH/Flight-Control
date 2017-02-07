@@ -128,11 +128,11 @@ else
 	set AUTOCNF no
 fi
 
-if param compare SYS_PARAM_VER 10
+if param compare SYS_PARAM_VER 11
 then
 	set NEW_DEFAULTS no
 else
-	param set SYS_PARAM_VER 10
+	param set SYS_PARAM_VER 11
 	set NEW_DEFAULTS yes
 fi
 
@@ -194,10 +194,6 @@ then
 	param set EKF2_ASP_DELAY 0
 	param set EKF2_EV_DELAY 0
 	param set SYS_MC_EST_GROUP 2
-
-	# camera trigger: forward via MAVLink
-	param set TRIG_INTERFACE 3
-	param set TRIG_MODE 4
 
 	param save
 fi
