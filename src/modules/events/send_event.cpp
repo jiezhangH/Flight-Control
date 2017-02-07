@@ -167,7 +167,7 @@ void SendEvent::send_led_event()
 
 	for (size_t i = 0; i < 8; i++) {
 		event.color[i] = (uint16_t)0x3800;
-		event.mode[i] = led_event_s::LED_MODE_BLINK_FAST;
+		event.mode[i] = led_event_s::LED_MODE_BLINK_NORMAL;
 	}
 
 	event.timestamp = hrt_absolute_time();
