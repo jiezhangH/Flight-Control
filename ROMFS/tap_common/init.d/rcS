@@ -28,13 +28,7 @@ sercon
 #set TUNE_ERR ML<<CP4CP4CP4CP4CP4
 set LOG_FILE /fs/microsd/bootlog.txt
 set DATAMAN_OPT -r
-set START_LOGGER 2
-
-# Start legacy logger
-if param compare SYS_LOGGER 0
-then
-	set START_LOGGER 1
-fi
+set START_LOGGER 0
 
 #
 # Try to mount the microSD card.
@@ -43,6 +37,7 @@ if mount -t vfat /dev/mmcsd0 /fs/microsd
 then
 	echo "microSD present"
 	unset DATAMAN_OPT
+	set START_LOGGER 1
 
 else
 	if mkfatfs /dev/mmcsd0
@@ -233,13 +228,6 @@ commander start
 load_mon start
 
 
-if [ $START_LOGGER == 1 ]
-then
-	if sdlog2 start -r 50 -a -b 4 -t
-	then
-	fi
-fi
-
 # mavlink baudrate for Gimbal UART
 set BAUDRATE 500000
 
@@ -260,8 +248,6 @@ mavlink_dup add -d /dev/ttyACM0 -p
 set MAV_RATE 40000
 if [ $BAUDRATE -lt 500000 ]
 then
-	# we use log streaming, and we cannot do that with a low mavlink baudrate
-	set START_LOGGER 0
 	set MAV_RATE 8000
 fi
 mavlink start -r $MAV_RATE -d /dev/mavlink_dup -m config -b $BAUDRATE
@@ -270,13 +256,23 @@ unset MAV_RATE
 #
 # Logging
 #
-if [ $START_LOGGER == 2 ]
+if [ $START_LOGGER == 1 ]
 then
 	echo "Starting Logger"
-	if logger start -t -q 3
+	if param compare SYS_LOGGER 0
 	then
+		if sdlog2 start -r 50 -a -b 4 -t
+		then
+		fi
+	fi
+	if param compare SYS_LOGGER 1
+	then
+		if logger start -t -q 3 -b 8
+		then
+		fi
 	fi
 fi
+
 unset START_LOGGER
 unset BAUDRATE
 
