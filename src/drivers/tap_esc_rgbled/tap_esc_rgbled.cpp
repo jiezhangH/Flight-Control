@@ -83,15 +83,17 @@ private:
 	orb_advert_t	_leds_pub = nullptr;
 	int				_led_event_sub = -1;
 	uint8_t 		_n_leds = TAP_ESC_MAX_MOTOR_NUM; // One led for motor
+	uint8_t 		_prio = 2;
 
 	struct led_event_s _events_prio_0 = {};
 	struct led_event_s _events_prio_1 = {};
 	struct led_event_s _events_prio_2 = {};
 
 
-	void 			set_color(rgbled_color_t ledcolor);
-	void			set_mode(rgbled_mode_t mode);
+	void 			set_color(rgbled_color_t ledcolor, struct led_event_s &led_event_prio);
+	void			set_mode(rgbled_mode_t mode, struct led_event_s &led_event_prio);
 	void			set_pattern(rgbled_pattern_t *pattern);
+	void set_mode_and_color(rgbled_mode_and_color_t *mode_color);
 
 	static void		led_trampoline(void *arg);
 	void			led();
@@ -136,7 +138,8 @@ TapEscRGBLED::init()
 	send_led_enable(false);
 	send_led_rgb();
 	//schedule work call with a fequency of 10Hz
-	return 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
+	return 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this,
+			   USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
 }
 
 
@@ -173,13 +176,17 @@ TapEscRGBLED::ioctl(struct file *filp, int cmd, unsigned long arg)
 	switch (cmd) {
 	case RGBLED_SET_COLOR:
 		/* set the specified color name */
-		set_color((rgbled_color_t)arg);
+		set_color((rgbled_color_t)arg, _events_prio_2);
 		send_led_rgb();
 		return OK;
 
 	case RGBLED_SET_MODE:
 		/* set the specified mode */
-		set_mode((rgbled_mode_t)arg);
+		set_mode((rgbled_mode_t)arg, _events_prio_2);
+		return OK;
+
+	case RGBLED_SET_MODE_AND_COLOR:
+		set_mode_and_color((rgbled_mode_and_color_t *)arg);
 		return OK;
 
 	case RGBLED_SET_PATTERN:
@@ -212,6 +219,24 @@ void
 TapEscRGBLED::led()
 {
 
+	// reset event
+	if (hrt_elapsed_time(&_events_prio_0.timestamp) > _events_prio_0.duration * 1000 && _events_prio_0.duration != 0) {
+		_events_prio_0 = {};
+
+		if (_events_prio_1 == {}) {
+			_prio = 2;
+
+		} else {
+			_prio = 1;
+		}
+	}
+
+	if (hrt_elapsed_time(&_events_prio_1.timestamp) > _events_prio_1.duration * 1000 && _events_prio_1.duration != 0) {
+		_prio = 2;
+		set_mode(RGBLED_MODE_ON, _events_prio_0);
+		_events_prio_1 = {};
+	}
+
 	// subscribe to led_event topic
 	if (_led_event_sub < 0) {
 		_led_event_sub = orb_subscribe(ORB_ID(led_event));
@@ -221,12 +246,23 @@ TapEscRGBLED::led()
 	orb_check(_led_event_sub, &updated);
 
 	if (updated) {
+		_prio = 1;
+		_mode = RGBLED_MODE_OFF;
 		orb_copy(ORB_ID(led_event), _led_event_sub, &_events_prio_1);
+
+		if (_events_prio_1.mode[0] == led_event_s::LED_MODE_BLINK_FAST) {
+			set_mode(RGBLED_MODE_BLINK_FAST, _events_prio_1);
+		}
 	}
 
 	if (!_should_run && !updated) {
 		_running = true;
 		// reschedule worker with freq 10Hz
+		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
+		return;
+
+	} else if (_mode == RGBLED_MODE_OFF || _mode == RGBLED_MODE_ON) {
+		_running = true;
 		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
 		return;
 	}
@@ -265,13 +301,13 @@ TapEscRGBLED::led()
 	case RGBLED_MODE_PATTERN:
 
 		/* don't run out of the pattern array and stop if the next frame is 0 */
-		if (_counter >= RGBLED_PATTERN_LENGTH || _pattern.duration[_counter] <= 0) {
-			_counter = 0;
-		}
-
-		set_color(_pattern.color[_counter]);
-		send_led_rgb();
-		_led_interval = _pattern.duration[_counter];
+		// if (_counter >= RGBLED_PATTERN_LENGTH || _pattern.duration[_counter] <= 0) {
+		// 	_counter = 0;
+		// }
+		//
+		// set_color(_pattern.color[_counter]);
+		// send_led_rgb();
+		// _led_interval = _pattern.duration[_counter];
 		break;
 
 	default:
@@ -288,43 +324,50 @@ TapEscRGBLED::led()
  * Parse color constant and set _led_color value
  */
 void
-TapEscRGBLED::set_color(rgbled_color_t color)
+TapEscRGBLED::set_color(rgbled_color_t color, struct led_event_s &led_event_prio)
 {
+	uint16_t led_color = 0;
+
 	switch (color) {
 	case RGBLED_COLOR_OFF:
-		_led_color = 0;
+		led_color = 0;
 		break;
 
 	case RGBLED_COLOR_RED:
-		_led_color = RUN_RED_LED_ON_MASK;
+		led_color = RUN_RED_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_YELLOW:
 
 	// amber case handaled as yellow
 	case RGBLED_COLOR_AMBER:
-		_led_color = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK;
+		led_color = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_PURPLE:
-		_led_color = RUN_RED_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+		led_color = RUN_RED_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_GREEN:
-		_led_color = RUN_GREEN_LED_ON_MASK;
+		led_color = RUN_GREEN_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_BLUE:
-		_led_color = RUN_BLUE_LED_ON_MASK;
+		led_color = RUN_BLUE_LED_ON_MASK;
 		break;
 
 	case RGBLED_COLOR_WHITE:
-		_led_color = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+		led_color = RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
 		break;
 
 	default:
 		PX4_WARN("color not supported");
 		break;
+	}
+
+	// set color in the event structure
+	for (size_t i = 0; i < _n_leds; i++) {
+		led_event_prio.color[i] = led_color;
 	}
 
 }
@@ -333,7 +376,7 @@ TapEscRGBLED::set_color(rgbled_color_t color)
  * Set mode, if mode not changed has no any effect (doesn't reset blinks phase)
  */
 void
-TapEscRGBLED::set_mode(rgbled_mode_t mode)
+TapEscRGBLED::set_mode(rgbled_mode_t mode, struct led_event_s &led_event_prio)
 {
 	if (mode != _mode) {
 		_mode = mode;
@@ -393,6 +436,10 @@ TapEscRGBLED::set_mode(rgbled_mode_t mode)
 			break;
 		}
 
+		for (size_t i = 0; i < _n_leds; i++) {
+			led_event_prio.mode[i] = mode;
+		}
+
 		/* if it should run now, start the workq */
 		if (_should_run && !_running) {
 			_running = true;
@@ -401,6 +448,36 @@ TapEscRGBLED::set_mode(rgbled_mode_t mode)
 			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 0);
 		}
 
+	}
+}
+
+void TapEscRGBLED::set_mode_and_color(rgbled_mode_and_color_t *mode_color)
+{
+	// NOTE: the prioritizing on the different ques is done in the commander
+	switch (mode_color->mode) {
+	case RGBLED_MODE_OFF:
+	case RGBLED_MODE_ON:
+	case RGBLED_MODE_BREATHE:
+		_prio = 2;
+		_events_prio_2.timestamp = hrt_absolute_time();
+		_events_prio_2.duration = 0;
+		set_color(mode_color->color, _events_prio_2);
+		set_mode(mode_color->mode, _events_prio_2);
+		break;
+
+	case RGBLED_MODE_BLINK_SLOW:
+	case RGBLED_MODE_BLINK_NORMAL:
+	case RGBLED_MODE_BLINK_FAST:
+		_prio = 0;
+		_events_prio_2.timestamp = hrt_absolute_time();
+		_events_prio_2.duration = 0;
+		set_color(mode_color->color, _events_prio_0);
+		set_mode(mode_color->mode, _events_prio_0);
+		break;
+
+	default:
+		PX4_WARN("mode unknown");
+		break;
 	}
 }
 
@@ -434,7 +511,16 @@ TapEscRGBLED::send_led_rgb()
 
 	if (_enable) {
 		for (uint8_t i = 0; i < _n_leds; i++) {
-			leds.color[i] = _led_color;
+			if (_prio == 0) {
+				leds.color[i] = _events_prio_0.color[i];
+
+			} else if (_prio == 1) {
+				leds.color[i] = _events_prio_1.color[i];
+
+			} else {
+				leds.color[i] = _events_prio_2.color[i];
+			}
+
 		}
 	}
 
