@@ -81,6 +81,8 @@ private:
 	/** return an ACK to a vehicle_command */
 	void answer_command(const vehicle_command_s &cmd, unsigned result);
 
+	void send_led_event();
+
 	events::SubscriberHandler _subscriber_handler;
 	status::StatusDisplay _status_display;
 
@@ -88,4 +90,5 @@ private:
 	volatile bool _task_is_running = false;
 	static struct work_s _work;
 	orb_advert_t _command_ack_pub = nullptr;
+	orb_advert_t _led_event_pub = nullptr;
 };

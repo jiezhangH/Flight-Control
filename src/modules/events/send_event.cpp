@@ -37,6 +37,7 @@
 #include <px4_getopt.h>
 #include <px4_log.h>
 #include <drivers/drv_hrt.h>
+#include <uORB/topics/led_event.h>
 
 static SendEvent *send_event_obj = nullptr;
 struct work_s SendEvent::_work = {};
@@ -135,6 +136,8 @@ SendEvent::cycle_trampoline(void *arg)
 
 void SendEvent::cycle()
 {
+	static int counter = 0;
+
 	if (_task_should_exit) {
 		_subscriber_handler.unsubscribe();
 
@@ -146,10 +149,35 @@ void SendEvent::cycle()
 
 	process_commands();
 
-	_status_display.process();
+	if (counter >= 300) {
+		counter = 0;
+		send_led_event();
+	}
 
+	_status_display.process();
+	counter++;
 	work_queue(LPWORK, &_work, (worker_t)&SendEvent::cycle_trampoline, this,
 		   USEC2TICK(SEND_EVENT_INTERVAL_US));
+}
+
+void SendEvent::send_led_event()
+{
+	struct led_event_s event;
+	event.duration = 2000; // 2 second event
+
+	for (size_t i = 0; i < 8; i++) {
+		event.color[i] = (uint16_t)0x3800;
+		event.mode[i] = led_event_s::LED_MODE_BLINK_FAST;
+	}
+
+	event.timestamp = hrt_absolute_time();
+
+	if (_led_event_pub != nullptr) {
+		orb_publish(ORB_ID(led_event), _led_event_pub, &event);
+
+	} else {
+		_led_event_pub = orb_advertise(ORB_ID(led_event), &event);
+	}
 }
 
 void SendEvent::process_commands()
