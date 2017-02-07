@@ -244,7 +244,6 @@ TapEscRGBLED::led()
 		// send_led_enable(true);
 	}
 
-
 	// subscribe to led_event topic
 	if (_led_event_sub < 0) {
 		_led_event_sub = orb_subscribe(ORB_ID(led_event));
@@ -453,7 +452,7 @@ TapEscRGBLED::set_mode(rgbled_mode_t mode, struct led_event_s &led_event_prio)
 			_running = true;
 			// kill active scheduled work
 			work_cancel(LPWORK, &_work);
-			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 0);
+			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 1);
 		}
 
 	}
