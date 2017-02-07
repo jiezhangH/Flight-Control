@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include <nuttx/wqueue.h>
+#include <px4_workqueue.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/tap_esc/drv_tap_esc.h>
 #include <drivers/drv_rgbled.h>
@@ -49,6 +49,9 @@
 #define RGBLED_ONTIME 120
 #define RGBLED_OFFTIME 120
 
+// if any event are not scheduled run with a frequency of 10Hz
+#define TAP_RGBLED_MIN_INTERVAL_US 100000
+
 class TapEscRGBLED : public device::CDev
 {
 public:
@@ -64,7 +67,7 @@ public:
 
 private:
 
-	work_s				_work;
+	struct work_s		_work = {};
 
 	rgbled_mode_t		_mode;
 	rgbled_pattern_t	_pattern;
@@ -72,7 +75,7 @@ private:
 	bool			_enable;
 	float			_brightness;
 
-	bool			_running;
+	volatile bool			_running;
 	int				_led_interval;
 	bool			_should_run;
 	int				_counter;
@@ -117,7 +120,6 @@ TapEscRGBLED::TapEscRGBLED() :
 	_should_run(false),
 	_counter(0)
 {
-	memset(&_work, 0, sizeof(_work));
 	memset(&_pattern, 0, sizeof(_pattern));
 }
 
@@ -133,8 +135,8 @@ TapEscRGBLED::init()
 	CDev::init();
 	send_led_enable(false);
 	send_led_rgb();
-	//schedule work call
-	return 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 100);
+	//schedule work call with a fequency of 10Hz
+	return 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
 }
 
 
@@ -209,7 +211,6 @@ TapEscRGBLED::led_trampoline(void *arg)
 void
 TapEscRGBLED::led()
 {
-	_running = true;
 
 	// subscribe to led_event topic
 	if (_led_event_sub < 0) {
@@ -223,10 +224,10 @@ TapEscRGBLED::led()
 		orb_copy(ORB_ID(led_event), _led_event_sub, &_events_prio_1);
 	}
 
-	if (!_should_run) {
-		_running = false;
+	if (!_should_run && !updated) {
+		_running = true;
 		// reschedule worker with freq 10Hz
-		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 100);
+		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
 		return;
 	}
 
@@ -395,7 +396,9 @@ TapEscRGBLED::set_mode(rgbled_mode_t mode)
 		/* if it should run now, start the workq */
 		if (_should_run && !_running) {
 			_running = true;
-			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 1);
+			// kill active scheduled work
+			work_cancel(LPWORK, &_work);
+			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 0);
 		}
 
 	}
@@ -427,8 +430,7 @@ TapEscRGBLED::send_led_enable(bool enable)
 int
 TapEscRGBLED::send_led_rgb()
 {
-	struct leds_s leds;
-	memset(&leds, 0, sizeof(leds));
+	struct leds_s leds = {};
 
 	if (_enable) {
 		for (uint8_t i = 0; i < _n_leds; i++) {
