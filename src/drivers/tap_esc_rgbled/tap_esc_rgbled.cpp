@@ -60,6 +60,7 @@ public:
 
 
 	virtual int		init();
+	void stop();
 	virtual int		probe();
 	virtual int		info();
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
@@ -75,7 +76,8 @@ private:
 	bool			_enable;
 	float			_brightness;
 
-	volatile bool	_running;
+	volatile bool 	_task_is_running;
+	volatile bool 	_task_should_exit;
 	int				_led_interval;
 	bool			_should_run;
 	int				_counter;
@@ -84,6 +86,7 @@ private:
 	int				_led_event_sub = -1;
 	uint8_t 		_n_leds = TAP_ESC_MAX_MOTOR_NUM; // One led for motor
 	uint8_t 		_prio = 2;
+	uint32_t		_computed_transition[3] = {0, 0, 0}; // just for the high and medium prio tasks
 
 	struct led_event_s _events_prio[3] = {{}, {}, {}};
 	struct led_event_s _events_prio_0 = {};
@@ -104,6 +107,7 @@ private:
 	int send_led_enable(bool enable);
 	int send_led_rgb();
 	int get(bool &on, bool &powersave, uint16_t &rgb);
+	int get_mode_ticks(rgbled_mode_t mode);
 };
 
 extern "C" __EXPORT int tap_esc_rgbled_main(int argc, char *argv[]);
@@ -120,7 +124,6 @@ TapEscRGBLED::TapEscRGBLED() :
 	_mode(RGBLED_MODE_OFF),
 	_enable(false),
 	_brightness(1.0f),
-	_running(false),
 	_led_interval(0),
 	_should_run(false),
 	_counter(0)
@@ -140,6 +143,8 @@ TapEscRGBLED::init()
 	CDev::init();
 	send_led_enable(false);
 	send_led_rgb();
+	_task_is_running = true;
+	_task_should_exit = false;
 	// make sure the enable field is set 0
 	_events_prio_0.enabled = 0;
 	_events_prio_1.enabled = 0;
@@ -226,6 +231,11 @@ TapEscRGBLED::led()
 {
 	bool event_expired = false;
 
+	if (_task_should_exit) {
+		_task_is_running = false;
+		return;
+	}
+
 	// reset event
 	if (hrt_elapsed_time(&_events_prio[0].timestamp) > _events_prio[0].duration * 1000 && _events_prio[0].duration != 0
 	    && _events_prio[0].enabled) {
@@ -241,7 +251,7 @@ TapEscRGBLED::led()
 
 	if (event_expired) {
 		set_mode(RGBLED_MODE_BREATHE, _events_prio[2]);
-		// send_led_enable(true);
+		send_led_enable(true);
 	}
 
 	// subscribe to led_event topic
@@ -253,68 +263,29 @@ TapEscRGBLED::led()
 	orb_check(_led_event_sub, &updated);
 
 	if (updated) {
-		_prio = 1;
 		_mode = RGBLED_MODE_OFF;
 		orb_copy(ORB_ID(led_event), _led_event_sub, &_events_prio[1]);
 
-		if (_events_prio[1].mode[0] == led_event_s::LED_MODE_BLINK_FAST) {
-			set_mode(RGBLED_MODE_BLINK_FAST, _events_prio[1]);
+		if (_events_prio[1].mode[0] == led_event_s::LED_MODE_BLINK_NORMAL) {
+			set_mode(RGBLED_MODE_BLINK_NORMAL, _events_prio[1]);
 		}
 	}
 
-	if (!_should_run && !updated) {
-		_running = true;
-		// reschedule worker with freq 10Hz
-		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
-		return;
+	int priority = active_events();
 
-	} else if (_mode == RGBLED_MODE_OFF || _mode == RGBLED_MODE_ON) {
-		_running = true;
-		work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
-		return;
-	}
-
-	switch (_mode) {
+	switch ((rgbled_mode_t)_events_prio[priority].mode[0]) {
 	case RGBLED_MODE_BLINK_SLOW:
+		send_led_enable((_counter % get_mode_ticks(RGBLED_MODE_BLINK_SLOW)) == (_counter % (2 * get_mode_ticks(
+					RGBLED_MODE_BLINK_SLOW))));
+		break;
+
 	case RGBLED_MODE_BLINK_NORMAL:
+		send_led_enable((_counter % get_mode_ticks(RGBLED_MODE_BLINK_NORMAL)) == (_counter % (2 * get_mode_ticks(
+					RGBLED_MODE_BLINK_NORMAL))));
+		break;
+
 	case RGBLED_MODE_BLINK_FAST:
-		if (_counter >= 2) {
-			_counter = 0;
-		}
-
-		send_led_enable(_counter == 0);
-
-		break;
-
-	case RGBLED_MODE_BREATHE:
-
-		if (_counter >= 62) {
-			_counter = 0;
-		}
-
-		int n;
-
-		if (_counter < 32) {
-			n = _counter;
-
-		} else {
-			n = 62 - _counter;
-		}
-
-		_brightness = n * n / (31.0f * 31.0f);
-//		send_led_rgb();
-		break;
-
-	case RGBLED_MODE_PATTERN:
-
-		/* don't run out of the pattern array and stop if the next frame is 0 */
-		// if (_counter >= RGBLED_PATTERN_LENGTH || _pattern.duration[_counter] <= 0) {
-		// 	_counter = 0;
-		// }
-		//
-		// set_color(_pattern.color[_counter]);
-		// send_led_rgb();
-		// _led_interval = _pattern.duration[_counter];
+		send_led_enable(_counter % (2 * get_mode_ticks(RGBLED_MODE_BLINK_FAST)));
 		break;
 
 	default:
@@ -323,8 +294,13 @@ TapEscRGBLED::led()
 
 	_counter++;
 
+	// prevent overflow TODO: not needed?
+	if (_counter > 9999) {
+		_counter = 0;
+	}
+
 	/* re-queue ourselves to run again later */
-	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, _led_interval);
+	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
 }
 
 /**
@@ -385,77 +361,34 @@ TapEscRGBLED::set_color(rgbled_color_t color, struct led_event_s &led_event_prio
 void
 TapEscRGBLED::set_mode(rgbled_mode_t mode, struct led_event_s &led_event_prio)
 {
-	if (mode != _mode) {
-		_mode = mode;
-
-		switch (mode) {
-		case RGBLED_MODE_OFF:
-			_should_run = false;
-			send_led_enable(false);
-			break;
-
-		case RGBLED_MODE_ON:
-			_brightness = 1.0f;
-			send_led_rgb();
-			send_led_enable(true);
-			break;
-
-		case RGBLED_MODE_BLINK_SLOW:
-			_should_run = true;
-			_counter = 0;
-			_led_interval = 2000;
-			_brightness = 1.0f;
-			send_led_rgb();
-			break;
-
-		case RGBLED_MODE_BLINK_NORMAL:
-			_should_run = true;
-			_counter = 0;
-			_led_interval = 500;
-			_brightness = 1.0f;
-			send_led_rgb();
-			break;
-
-		case RGBLED_MODE_BLINK_FAST:
-			_should_run = true;
-			_counter = 0;
-			_led_interval = 100;
-			_brightness = 1.0f;
-			send_led_rgb();
-			break;
-
-		case RGBLED_MODE_BREATHE:
-			_should_run = true;
-			_counter = 0;
-			_led_interval = 25;
-			send_led_enable(true);
-			break;
-
-		case RGBLED_MODE_PATTERN:
-			_should_run = true;
-			_counter = 0;
-			_brightness = 1.0f;
-			send_led_enable(true);
-			break;
-
-		default:
-			PX4_WARN("mode unknown");
-			break;
-		}
-
-		for (size_t i = 0; i < _n_leds; i++) {
-			led_event_prio.mode[i] = mode;
-		}
-
-		/* if it should run now, start the workq */
-		if (_should_run && !_running) {
-			_running = true;
-			// kill active scheduled work
-			work_cancel(LPWORK, &_work);
-			work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, 1);
-		}
-
+	for (size_t i = 0; i < _n_leds; i++) {
+		led_event_prio.mode[i] = mode;
 	}
+}
+
+int TapEscRGBLED::get_mode_ticks(rgbled_mode_t mode)
+{
+	int ticks = 1;
+
+	switch (mode) {
+	case RGBLED_MODE_BLINK_SLOW:
+		ticks = 20;
+		break;
+
+	case RGBLED_MODE_BLINK_NORMAL:
+		ticks = 5;
+		break;
+
+	case RGBLED_MODE_BLINK_FAST:
+		ticks = 1;
+		break;
+
+	default:
+		ticks = 1;
+		break;
+	}
+
+	return ticks;
 }
 
 void TapEscRGBLED::set_mode_and_color(rgbled_mode_and_color_t *mode_color)
@@ -466,6 +399,7 @@ void TapEscRGBLED::set_mode_and_color(rgbled_mode_and_color_t *mode_color)
 	_events_prio[index].duration = mode_color->duration;
 	set_color(mode_color->color, _events_prio[index]);
 	set_mode(mode_color->mode, _events_prio[index]);
+	_computed_transition[index] = 0;
 }
 
 int TapEscRGBLED::active_events()
@@ -534,6 +468,27 @@ TapEscRGBLED::get(bool &on, bool &powersave, uint16_t &rgb)
 	on = _enable;
 	rgb = _led_color;
 	return OK;
+}
+
+void TapEscRGBLED::stop()
+{
+	if (!_task_is_running) {
+		return;
+	}
+
+	_task_should_exit = true;
+	// Wait for task to exit
+	int i = 0;
+
+	do {
+		/* wait up to 3s */
+		usleep(100000);
+
+	} while (_task_is_running && ++i < 30);
+
+	if (i == 30) {
+		PX4_ERR("failed to stop");
+	}
 }
 
 void TapEscRGBLED::set_number_of_leds(uint8_t n_leds)
@@ -642,6 +597,7 @@ tap_esc_rgbled_main(int argc, char *argv[])
 
 		/* delete the rgbled object if stop was requested. In addition,turn off the LED. */
 		if (!strcmp(verb, "stop")) {
+			tap_esc_rgbled->stop();
 			delete tap_esc_rgbled;
 			tap_esc_rgbled = nullptr;
 			exit(0);
