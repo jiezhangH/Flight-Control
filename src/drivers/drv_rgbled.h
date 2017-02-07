@@ -127,6 +127,8 @@ typedef enum {
 typedef struct {
 	rgbled_mode_t mode;
 	rgbled_color_t color;
+	uint8_t prio;
+	uint32_t duration;
 } rgbled_mode_and_color_t;
 
 #define RGBLED_PATTERN_LENGTH 20

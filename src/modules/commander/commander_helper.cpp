@@ -81,7 +81,7 @@ using namespace DriverFramework;
 #define VEHICLE_TYPE_VTOL_RESERVED4 24
 #define VEHICLE_TYPE_VTOL_RESERVED5 25
 
-#define BLINK_MSG_TIME	700000	// 3 fast blinks
+#define BLINK_MSG_TIME	700	// 3 fast blinks time in ms
 
 bool is_multirotor(const struct vehicle_status_s *current_status)
 {
@@ -170,10 +170,11 @@ void set_tune(int tune)
 
 void tune_home_set(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_GREEN;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
@@ -183,10 +184,11 @@ void tune_home_set(bool use_buzzer)
 
 void tune_mission_ok(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_GREEN;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
@@ -196,10 +198,11 @@ void tune_mission_ok(bool use_buzzer)
 
 void tune_mission_fail(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_GREEN;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
@@ -212,10 +215,11 @@ void tune_mission_fail(bool use_buzzer)
  */
 void tune_positive(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_GREEN;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
@@ -228,10 +232,11 @@ void tune_positive(bool use_buzzer)
  */
 void tune_neutral(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_WHITE;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
@@ -244,10 +249,11 @@ void tune_neutral(bool use_buzzer)
  */
 void tune_negative(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_RED;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
@@ -257,10 +263,11 @@ void tune_negative(bool use_buzzer)
 
 void tune_failsafe(bool use_buzzer)
 {
-	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
 	rgbled_mode_and_color_t mode_color;
 	mode_color.mode = RGBLED_MODE_BLINK_FAST;
 	mode_color.color = RGBLED_COLOR_PURPLE;
+	mode_color.prio = 0;
+	mode_color.duration = BLINK_MSG_TIME;
 	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {

@@ -3162,6 +3162,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 	/* driving rgbled */
 	if (changed || last_overload != overload) {
 		rgbled_mode_and_color_t mode_color;
+		mode_color.prio = 2;
 		bool set_normal_color = false;
 		bool hotplug_timeout = hrt_elapsed_time(&commander_boot_timestamp) > HOTPLUG_SENS_TIMEOUT;
 
