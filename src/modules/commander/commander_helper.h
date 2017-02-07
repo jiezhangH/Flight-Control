@@ -76,6 +76,7 @@ int led_off(int led);
 
 void rgbled_set_color(rgbled_color_t color);
 void rgbled_set_mode(rgbled_mode_t mode);
+void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color);
 void rgbled_set_pattern(rgbled_pattern_t *pattern);
 
 #endif /* COMMANDER_HELPER_H_ */

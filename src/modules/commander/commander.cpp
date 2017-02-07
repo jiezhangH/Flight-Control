@@ -3161,6 +3161,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 
 	/* driving rgbled */
 	if (changed || last_overload != overload) {
+		rgbled_mode_and_color_t mode_color;
 		bool set_normal_color = false;
 		bool hotplug_timeout = hrt_elapsed_time(&commander_boot_timestamp) > HOTPLUG_SENS_TIMEOUT;
 
@@ -3168,45 +3169,55 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 
 		/* set mode */
 		if (overload && ((hrt_absolute_time() - overload_start) > overload_warn_delay)) {
-			rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
-			rgbled_set_color(RGBLED_COLOR_PURPLE);
+			mode_color.mode = RGBLED_MODE_BLINK_FAST;
+			mode_color.color = RGBLED_COLOR_PURPLE;
+			rgbled_set_mode_and_color(&mode_color);
 			set_normal_color = false;
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED) {
-			rgbled_set_mode(RGBLED_MODE_ON);
+			mode_color.mode = RGBLED_MODE_ON;
 			set_normal_color = true;
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR || (!status_flags.condition_system_sensors_initialized && hotplug_timeout)) {
-			rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
-			rgbled_set_color(RGBLED_COLOR_RED);
+			mode_color.mode = RGBLED_MODE_BLINK_FAST;
+			mode_color.color = RGBLED_COLOR_RED;
+			rgbled_set_mode_and_color(&mode_color);
+
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_STANDBY) {
-			rgbled_set_mode(RGBLED_MODE_BREATHE);
+			mode_color.mode = RGBLED_MODE_BREATHE;
 			set_normal_color = true;
 
 		} else if (!status_flags.condition_system_sensors_initialized && !hotplug_timeout) {
-			rgbled_set_mode(RGBLED_MODE_BREATHE);
+			mode_color.mode = RGBLED_MODE_BREATHE;
 			set_normal_color = true;
 
 		} else {	// STANDBY_ERROR and other states
-			rgbled_set_mode(RGBLED_MODE_BLINK_NORMAL);
-			rgbled_set_color(RGBLED_COLOR_RED);
+			mode_color.mode = RGBLED_MODE_BLINK_NORMAL;
+			mode_color.color = RGBLED_COLOR_RED;
+			rgbled_set_mode_and_color(&mode_color);
 		}
 
 		if (set_normal_color) {
 			/* set color */
 			if (status.failsafe) {
-				rgbled_set_color(RGBLED_COLOR_PURPLE);
+				mode_color.color = RGBLED_COLOR_PURPLE;
+				rgbled_set_mode_and_color(&mode_color);
+
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_LOW) {
-				rgbled_set_color(RGBLED_COLOR_AMBER);
+				mode_color.color = RGBLED_COLOR_AMBER;
+				rgbled_set_mode_and_color(&mode_color);
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
-				rgbled_set_color(RGBLED_COLOR_RED);
+				mode_color.color = RGBLED_COLOR_RED;
+				rgbled_set_mode_and_color(&mode_color);
 			} else {
 				if (status_flags.condition_home_position_valid && status_flags.condition_global_position_valid) {
-					rgbled_set_color(RGBLED_COLOR_GREEN);
+					mode_color.color = RGBLED_COLOR_GREEN;
+					rgbled_set_mode_and_color(&mode_color);
 
 				} else {
-					rgbled_set_color(RGBLED_COLOR_BLUE);
+					mode_color.color = RGBLED_COLOR_BLUE;
+					rgbled_set_mode_and_color(&mode_color);
 				}
 			}
 		}

@@ -171,8 +171,10 @@ void set_tune(int tune)
 void tune_home_set(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_GREEN);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_GREEN;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_HOME_SET);
@@ -182,8 +184,10 @@ void tune_home_set(bool use_buzzer)
 void tune_mission_ok(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_GREEN);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_GREEN;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
@@ -193,8 +197,10 @@ void tune_mission_ok(bool use_buzzer)
 void tune_mission_fail(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_GREEN);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_GREEN;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_NEGATIVE_TUNE);
@@ -207,8 +213,10 @@ void tune_mission_fail(bool use_buzzer)
 void tune_positive(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_GREEN);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_GREEN;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_POSITIVE_TUNE);
@@ -221,8 +229,10 @@ void tune_positive(bool use_buzzer)
 void tune_neutral(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_WHITE);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_WHITE;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
@@ -235,8 +245,10 @@ void tune_neutral(bool use_buzzer)
 void tune_negative(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_RED);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_RED;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_NEGATIVE_TUNE);
@@ -246,8 +258,10 @@ void tune_negative(bool use_buzzer)
 void tune_failsafe(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color(RGBLED_COLOR_PURPLE);
-	rgbled_set_mode(RGBLED_MODE_BLINK_FAST);
+	rgbled_mode_and_color_t mode_color;
+	mode_color.mode = RGBLED_MODE_BLINK_FAST;
+	mode_color.color = RGBLED_COLOR_PURPLE;
+	rgbled_set_mode_and_color(&mode_color);
 
 	if (use_buzzer) {
 		set_tune(TONE_BATTERY_WARNING_FAST_TUNE);
@@ -341,6 +355,10 @@ void rgbled_set_mode(rgbled_mode_t mode)
 {
 
 	h_rgbleds.ioctl(RGBLED_SET_MODE, (unsigned long)mode);
+}
+
+void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color){
+	h_rgbleds.ioctl(RGBLED_SET_MODE_AND_COLOR, (unsigned long)mode_color);
 }
 
 void rgbled_set_pattern(rgbled_pattern_t *pattern)

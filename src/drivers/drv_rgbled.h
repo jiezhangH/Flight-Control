@@ -80,6 +80,8 @@
 /** set pattern */
 #define RGBLED_SET_PATTERN		_RGBLEDIOC(7)
 
+#define RGBLED_SET_MODE_AND_COLOR _RGBLEDIOC(8)
+
 
 /*
   structure passed to RGBLED_SET_RGB ioctl()
@@ -121,6 +123,11 @@ typedef enum {
 	RGBLED_MODE_BREATHE,
 	RGBLED_MODE_PATTERN
 } rgbled_mode_t;
+
+typedef struct {
+	rgbled_mode_t mode;
+	rgbled_color_t color;
+} rgbled_mode_and_color_t;
 
 #define RGBLED_PATTERN_LENGTH 20
 
