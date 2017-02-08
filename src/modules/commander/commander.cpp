@@ -3195,7 +3195,10 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 		} else if (!status_flags.condition_system_sensors_initialized && !hotplug_timeout) {
 			mode_color.mode = RGBLED_MODE_BREATHE;
 			set_normal_color = true;
-
+		}else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_INIT) {
+			mode_color.prio = 2;
+			mode_color.mode = RGBLED_MODE_OFF;
+			rgbled_set_mode_and_color(&mode_color);
 		} else {	// STANDBY_ERROR and other states
 			mode_color.prio = 0;
 			mode_color.mode = RGBLED_MODE_BLINK_NORMAL;
