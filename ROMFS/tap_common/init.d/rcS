@@ -207,12 +207,49 @@ then
 	fi
 fi
 
-gps start -d /dev/ttyS0
+send_event start_listening
 
-# waypoint storage
-# REBOOTWORK this needs to start in parallel
-if dataman start $DATAMAN_OPT
+#
+# Check if we should start a thermal calibration
+#
+set DO_TEMP_CALIB 0
+set TEMP_CALIB_ARGS ""
+if param compare SYS_CAL_GYRO 1
 then
+	set TEMP_CALIB_ARGS "${TEMP_CALIB_ARGS} -g"
+	param set SYS_CAL_GYRO 0
+	set DO_TEMP_CALIB 1
+fi
+if param compare SYS_CAL_ACCEL 1
+then
+	set TEMP_CALIB_ARGS "${TEMP_CALIB_ARGS} -a"
+	param set SYS_CAL_ACCEL 0
+	set DO_TEMP_CALIB 1
+fi
+if param compare SYS_CAL_BARO 1
+then
+	set TEMP_CALIB_ARGS "${TEMP_CALIB_ARGS} -b"
+	param set SYS_CAL_BARO 0
+	set DO_TEMP_CALIB 1
+fi
+if [ "x$TEMP_CALIB_ARGS" != "x" ]
+then
+	send_event temperature_calibration ${TEMP_CALIB_ARGS}
+fi
+unset TEMP_CALIB_ARGS
+
+
+if [ $DO_TEMP_CALIB == 0 ]
+then
+
+	gps start -d /dev/ttyS0
+
+	# waypoint storage
+	# REBOOTWORK this needs to start in parallel
+	if dataman start $DATAMAN_OPT
+	then
+	fi
+
 fi
 
 #
@@ -220,7 +257,11 @@ fi
 #
 sh /etc/init.d/rc.sensors
 
-commander start
+
+if [ $DO_TEMP_CALIB == 0 ]
+then
+	commander start
+fi
 
 #
 # Start CPU load monitor
@@ -359,8 +400,12 @@ then
 	# Load mixer and configure outputs
 	sh /etc/init.d/rc.interface
 
-	# Start standard multicopter apps
-	sh /etc/init.d/rc.mc_apps
+
+	if [ $DO_TEMP_CALIB == 0 ]
+	then
+		# Start standard multicopter apps
+		sh /etc/init.d/rc.mc_apps
+	fi
 fi
 
 unset MIXER
@@ -384,11 +429,10 @@ pwm rate -c 1 -r 400
 #
 mixer load /dev/px4fmu /etc/mixers/gear.mix
 
-send_event start_listening
-
 # There is no further script processing, so we can free some RAM
 # XXX potentially unset all script variables.
 #unset TUNE_ERR
+unset DO_TEMP_CALIB
 
 if param compare SYS_COMPANION 1921600
 then
@@ -401,11 +445,14 @@ else
 		mavlink boot_complete
 		exit
 	else
-		#
-		# Start the navigator
-		#
-		if navigator start
+		if [ $DO_TEMP_CALIB == 0 ]
 		then
+			#
+			# Start the navigator
+			#
+			if navigator start
+			then
+			fi
 		fi
 	fi
 fi
