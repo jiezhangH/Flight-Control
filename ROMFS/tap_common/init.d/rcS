@@ -232,11 +232,6 @@ then
 	param set SYS_CAL_BARO 0
 	set DO_TEMP_CALIB 1
 fi
-if [ "x$TEMP_CALIB_ARGS" != "x" ]
-then
-	send_event temperature_calibration ${TEMP_CALIB_ARGS}
-fi
-unset TEMP_CALIB_ARGS
 
 
 if [ $DO_TEMP_CALIB == 0 ]
@@ -258,10 +253,16 @@ fi
 sh /etc/init.d/rc.sensors
 
 
-if [ $DO_TEMP_CALIB == 0 ]
+# make sure to start temperature calibration after the sensors
+if [ "x$TEMP_CALIB_ARGS" != "x" ]
 then
-	commander start
+	usleep 100000
+	send_event temperature_calibration ${TEMP_CALIB_ARGS}
 fi
+unset TEMP_CALIB_ARGS
+
+
+commander start
 
 #
 # Start CPU load monitor
@@ -308,9 +309,23 @@ then
 	fi
 	if param compare SYS_LOGGER 1
 	then
-		if logger start -t -q 3 -b 8
+		set LOGGER_ARGS ""
+		if param compare SDLOG_MODE 1
+		then
+			set LOGGER_ARGS "-e"
+		fi
+		if param compare SDLOG_MODE 2
+		then
+			set LOGGER_ARGS "-f"
+		fi
+		if param compare SDLOG_MODE 3
+		then
+			set LOGGER_ARGS "-f"
+		fi
+		if logger start -b 8 -q 3 -t ${LOGGER_ARGS}
 		then
 		fi
+		unset LOGGER_ARGS
 	fi
 fi
 
@@ -445,14 +460,11 @@ else
 		mavlink boot_complete
 		exit
 	else
-		if [ $DO_TEMP_CALIB == 0 ]
+		#
+		# Start the navigator
+		#
+		if navigator start
 		then
-			#
-			# Start the navigator
-			#
-			if navigator start
-			then
-			fi
 		fi
 	fi
 fi
