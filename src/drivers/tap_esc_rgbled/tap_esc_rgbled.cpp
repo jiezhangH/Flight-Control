@@ -297,10 +297,14 @@ TapEscRGBLED::led()
 			send_led_enable(true);
 		}
 
+		break;
+
 	case RGBLED_MODE_OFF:
 		if (_counter == 0) {
 			send_led_enable(false);
 		}
+
+		break;
 
 	default:
 		break;
