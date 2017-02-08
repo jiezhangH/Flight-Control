@@ -3162,6 +3162,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 	/* driving rgbled */
 	if (changed || last_overload != overload) {
 		rgbled_mode_and_color_t mode_color;
+		mode_color.enabled = 0xFF;
 		mode_color.prio = 2;
 		bool set_normal_color = false;
 		bool hotplug_timeout = hrt_elapsed_time(&commander_boot_timestamp) > HOTPLUG_SENS_TIMEOUT;
@@ -3170,6 +3171,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 
 		/* set mode */
 		if (overload && ((hrt_absolute_time() - overload_start) > overload_warn_delay)) {
+			mode_color.prio = 0;
 			mode_color.mode = RGBLED_MODE_BLINK_FAST;
 			mode_color.color = RGBLED_COLOR_PURPLE;
 			rgbled_set_mode_and_color(&mode_color);
@@ -3180,6 +3182,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 			set_normal_color = true;
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR || (!status_flags.condition_system_sensors_initialized && hotplug_timeout)) {
+			mode_color.prio = 0;
 			mode_color.mode = RGBLED_MODE_BLINK_FAST;
 			mode_color.color = RGBLED_COLOR_RED;
 			rgbled_set_mode_and_color(&mode_color);
@@ -3194,6 +3197,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 			set_normal_color = true;
 
 		} else {	// STANDBY_ERROR and other states
+			mode_color.prio = 0;
 			mode_color.mode = RGBLED_MODE_BLINK_NORMAL;
 			mode_color.color = RGBLED_COLOR_RED;
 			rgbled_set_mode_and_color(&mode_color);
@@ -3202,13 +3206,16 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 		if (set_normal_color) {
 			/* set color */
 			if (status.failsafe) {
+				mode_color.prio = 0;
 				mode_color.color = RGBLED_COLOR_PURPLE;
 				rgbled_set_mode_and_color(&mode_color);
 
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_LOW) {
+				mode_color.prio = 0;
 				mode_color.color = RGBLED_COLOR_AMBER;
 				rgbled_set_mode_and_color(&mode_color);
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
+				mode_color.prio = 0;
 				mode_color.color = RGBLED_COLOR_RED;
 				rgbled_set_mode_and_color(&mode_color);
 			} else {

@@ -125,6 +125,7 @@ typedef enum {
 } rgbled_mode_t;
 
 typedef struct {
+	uint8_t enabled;
 	rgbled_mode_t mode;
 	rgbled_color_t color;
 	uint8_t prio;

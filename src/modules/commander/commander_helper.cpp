@@ -171,6 +171,7 @@ void set_tune(int tune)
 static void set_tune_and_rgbled(bool use_buzzer, rgbled_color_t color, rgbled_mode_t mode, int tune)
 {
 	rgbled_mode_and_color_t mode_color;
+	mode_color.enabled = 0xFF;
 	mode_color.mode = mode;
 	mode_color.color = color;
 	mode_color.prio = 0;
