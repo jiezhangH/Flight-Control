@@ -3196,6 +3196,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 			mode_color.mode = RGBLED_MODE_BREATHE;
 			set_normal_color = true;
 		}else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_INIT) {
+			// if in init status it should not be in the error state
 			mode_color.prio = 2;
 			mode_color.mode = RGBLED_MODE_OFF;
 			rgbled_set_mode_and_color(&mode_color);
