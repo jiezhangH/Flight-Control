@@ -163,7 +163,7 @@ void SendEvent::cycle()
 void SendEvent::send_led_event()
 {
 	struct led_event_s event;
-	event.duration = 2000; // 2 second event
+	event.duration = 4; // 2 second event
 
 	for (size_t i = 0; i < 8; i++) {
 		event.color[i] = (uint16_t)0x3800;
