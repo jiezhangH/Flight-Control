@@ -81,7 +81,7 @@ using namespace DriverFramework;
 #define VEHICLE_TYPE_VTOL_RESERVED4 24
 #define VEHICLE_TYPE_VTOL_RESERVED5 25
 
-#define BLINK_MSG_TIME	700	// 3 fast blinks time in ms
+#define BLINK_MSG_TIME	7	// 3 fast blinks in ticks
 
 bool is_multirotor(const struct vehicle_status_s *current_status)
 {

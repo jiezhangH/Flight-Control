@@ -237,7 +237,7 @@ TapEscRGBLED::led()
 	}
 
 	// reset event
-	if (hrt_elapsed_time(&_events_prio[0].timestamp) > _events_prio[0].duration * 1000 && _events_prio[0].duration != 0
+	if (_computed_transition[0] > _events_prio[0].duration && _events_prio[0].duration != 0
 	    && _events_prio[0].enabled) {
 		_computed_transition[0] = 0;
 		_events_prio[0].enabled = 0;
@@ -268,6 +268,7 @@ TapEscRGBLED::led()
 		if (active_events() != 0) {
 			_counter = 0;
 		}
+
 		_mode = RGBLED_MODE_OFF;
 		orb_copy(ORB_ID(led_event), _led_event_sub, &_events_prio[1]);
 
@@ -275,8 +276,10 @@ TapEscRGBLED::led()
 			set_mode(RGBLED_MODE_BLINK_NORMAL, _events_prio[1]);
 		}
 	}
+
 	int priority = active_events();
 	rgbled_mode_t mode = (rgbled_mode_t)_events_prio[priority].mode[0];
+
 	switch (mode) {
 	case RGBLED_MODE_BLINK_SLOW:
 	case RGBLED_MODE_BLINK_NORMAL:
@@ -284,6 +287,7 @@ TapEscRGBLED::led()
 		send_led_enable((_counter % get_mode_ticks(mode)) == (_counter % (2 * get_mode_ticks(mode))));
 		_computed_transition[priority]++;
 		break;
+
 	case RGBLED_MODE_BREATHE:
 	case RGBLED_MODE_ON:
 		if (_counter == 0) {
