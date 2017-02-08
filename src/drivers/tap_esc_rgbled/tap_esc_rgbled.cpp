@@ -251,7 +251,6 @@ TapEscRGBLED::led()
 	if (event_expired) {
 		_led_was_enabled = false;
 		_counter = 0;
-		set_mode(RGBLED_MODE_BREATHE, _events_prio[2]);
 	}
 
 	// subscribe to led_event topic
@@ -263,13 +262,13 @@ TapEscRGBLED::led()
 	orb_check(_led_event_sub, &updated);
 
 	if (updated) {
+		// do not reset if an event with prio 0 is running
 		if (active_events() != 0) {
 			_counter = 0;
 			_led_was_enabled = false;
 		}
 
 		_computed_transition[1] = 0;
-		_mode = RGBLED_MODE_OFF;
 		orb_copy(ORB_ID(led_event), _led_event_sub, &_events_prio[1]);
 	}
 
@@ -313,9 +312,6 @@ TapEscRGBLED::led()
 	_counter++;
 
 	// prevent overflow TODO:check if needed?
-	if (_counter > 9999) {
-		_counter = 0;
-	}
 
 	/* re-queue ourselves to run again later */
 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this, USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
@@ -398,9 +394,6 @@ int TapEscRGBLED::get_mode_ticks(rgbled_mode_t mode)
 		break;
 
 	case RGBLED_MODE_BLINK_FAST:
-		ticks = 1;
-		break;
-
 	default:
 		ticks = 1;
 		break;
@@ -415,6 +408,7 @@ void TapEscRGBLED::set_mode_and_color(rgbled_mode_and_color_t *mode_color)
 	_events_prio[index].enabled = mode_color->enabled;
 	_events_prio[index].timestamp = hrt_absolute_time();
 	_events_prio[index].duration = mode_color->duration;
+	//set the same color to all the leds
 	set_color(mode_color->color, _events_prio[index]);
 	set_mode(mode_color->mode, _events_prio[index]);
 	_counter = 0;
@@ -515,7 +509,7 @@ void TapEscRGBLED::stop()
 
 void TapEscRGBLED::set_number_of_leds(uint8_t n_leds)
 {
-	_n_leds = n_leds;
+	_n_leds = n_leds > 8 ? 8 : n_leds;
 }
 
 void
