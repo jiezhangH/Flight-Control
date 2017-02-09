@@ -163,12 +163,27 @@ void SendEvent::cycle()
 void SendEvent::send_led_event()
 {
 	struct led_event_s event;
-	event.duration = 4; // 2 second event
+	event.duration = 40; // 2 second event
 
 	for (size_t i = 0; i < 8; i++) {
 		event.color[i] = (uint16_t)0x3800;
 		event.mode[i] = led_event_s::LED_MODE_BLINK_NORMAL;
 	}
+
+	event.color[0] = (uint16_t)0x0800;
+	event.mode[0] = led_event_s::LED_MODE_BLINK_FAST;
+
+	event.color[1] = (uint16_t)0x1000;
+	event.mode[1] = led_event_s::LED_MODE_BLINK_SLOW;
+
+	event.color[2] = (uint16_t)0x1800;
+
+	event.color[3] = (uint16_t)0x2800;
+	event.mode[3] = led_event_s::LED_MODE_BLINK_FAST;
+
+	event.mode[4] = led_event_s::LED_MODE_ON;
+
+	event.color[5] = (uint16_t)0x3000;
 
 	event.timestamp = hrt_absolute_time();
 	event.enabled = 0xFF;
