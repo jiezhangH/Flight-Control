@@ -113,6 +113,8 @@
 
 #include <systemlib/err.h>
 
+#define WAIT_DURATION_OFFSET 5000 ///< additional wait time for each tune, to account for timing inaccuracies (in us)
+
 class TapEscTune : public device::CDev
 {
 public:
@@ -557,7 +559,7 @@ TapEscTune::next_note()
 	set_tune_packet(frequency, (uint16_t)(duration / 1000), NOTE_STRENGTH);
 
 	// and arrange a callback when the note should stop
-	work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(duration));
+	work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(duration + WAIT_DURATION_OFFSET));
 	return;
 
 	// tune looks bad (unexpected EOF, bad character, etc.)

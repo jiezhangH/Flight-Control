@@ -651,7 +651,9 @@ TAP_ESC::cycle()
 
 
 
-	/* check if anything updated */
+	/* check if anything updated.
+	 * the timeout needs to be small in order to react promptly to tune requests
+	 */
 	int ret = ::poll(_poll_fds, _poll_fds_num, 5);
 
 
