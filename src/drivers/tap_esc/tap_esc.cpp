@@ -182,7 +182,6 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_leds_sub(-1),
 	_tunes_sub(-1),
 	_outputs_pub(nullptr),
-	_control_subs{ -1},
 	_esc_feedback_pub(nullptr),
 	_to_mixer_status(nullptr),
 	_mavlink_log_pub(nullptr),
@@ -206,6 +205,10 @@ TAP_ESC::TAP_ESC(int channels_count):
 	uartbuf.tail = 0;
 	uartbuf.dat_cnt = 0;
 	memset(uartbuf.esc_feedback_buf, 0, sizeof(uartbuf.esc_feedback_buf));
+
+	for (int i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS; ++i) {
+		_control_subs[i] =  -1;
+	}
 
 	for (size_t i = 0; i < sizeof(_outputs.output) / sizeof(_outputs.output[0]); i++) {
 		_outputs.output[i] = NAN;
@@ -397,7 +400,7 @@ TAP_ESC::subscribe()
 			_control_subs[i] = -1;
 		}
 
-		if (_control_subs[i] > 0) {
+		if (_control_subs[i] >= 0) {
 			_poll_fds[_poll_fds_num].fd = _control_subs[i];
 			_poll_fds[_poll_fds_num].events = POLLIN;
 			_poll_fds_num++;
@@ -640,7 +643,7 @@ TAP_ESC::cycle()
 		DEVICE_DEBUG("adjusted actuator update interval to %ums", update_rate_in_ms);
 
 		for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS; i++) {
-			if (_control_subs[i] > 0) {
+			if (_control_subs[i] >= 0) {
 				orb_set_interval(_control_subs[i], update_rate_in_ms);
 			}
 		}
@@ -667,7 +670,7 @@ TAP_ESC::cycle()
 		unsigned poll_id = 0;
 
 		for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS; i++) {
-			if (_control_subs[i] > 0) {
+			if (_control_subs[i] >= 0) {
 				if (_poll_fds[poll_id].revents & POLLIN) {
 					orb_copy(_control_topics[i], _control_subs[i], &_controls[i]);
 
@@ -862,7 +865,7 @@ TAP_ESC::cycle()
 void TAP_ESC::work_stop()
 {
 	for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS; i++) {
-		if (_control_subs[i] > 0) {
+		if (_control_subs[i] >= 0) {
 			orb_unsubscribe(_control_subs[i]);
 			_control_subs[i] = -1;
 		}
