@@ -135,16 +135,18 @@ int
 TapEscRGBLED::init()
 {
 	/* switch off LED on start */
-	CDev::init();
+	int ret = CDev::init();
+
+	if (ret != 0) {
+		return ret;
+	}
+
 	// set all LED off
 	struct leds_s leds = {};
 	publish_leds(leds);
 
 	_task_is_running = true;
 	_task_should_exit = false;
-	// make sure the enable field is set 0
-	_events_prio[0].enabled = 0;
-	_events_prio[1].enabled = 0;
 	//schedule work call with a fequency of 10Hz
 	return 	work_queue(LPWORK, &_work, (worker_t)&TapEscRGBLED::led_trampoline, this,
 			   USEC2TICK(TAP_RGBLED_MIN_INTERVAL_US));
@@ -508,12 +510,14 @@ tap_esc_rgbled_main(int argc, char *argv[])
 
 		if (tap_esc_rgbled == nullptr) {
 			tap_esc_rgbled = new TapEscRGBLED();
-			// TODO: get this information from getopt
-			tap_esc_rgbled->set_number_of_leds(6);
 
 			if (tap_esc_rgbled == nullptr) {
-				PX4_ERR("new failed");
+				PX4_ERR("alloc failed");
+				exit(1);
 			}
+
+			// TODO: get this information from getopt
+			tap_esc_rgbled->set_number_of_leds(6);
 
 			if (OK != tap_esc_rgbled->init()) {
 				delete tap_esc_rgbled;
