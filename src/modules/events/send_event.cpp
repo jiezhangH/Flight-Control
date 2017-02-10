@@ -57,12 +57,12 @@ int SendEvent::initialize()
 	int i = 0;
 
 	do {
-		/* wait up to 3s */
-		usleep(100000);
+		/* wait up to 1s */
+		usleep(2500);
 
-	} while (!send_event_obj->is_running() && ++i < 30);
+	} while ((!send_event_obj || !send_event_obj->is_running()) && ++i < 400);
 
-	if (i == 30) {
+	if (i == 400) {
 		PX4_ERR("failed to start");
 		return -1;
 	}
