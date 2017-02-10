@@ -92,6 +92,7 @@
 
 #include <drivers/device/device.h>
 #include <drivers/drv_tone_alarm.h>
+#include <drivers/drv_hrt.h>
 
 #include <sys/types.h>
 #include <stdint.h>
@@ -112,8 +113,6 @@
 #include <uORB/topics/tune.h>
 
 #include <systemlib/err.h>
-
-#define WAIT_DURATION_OFFSET 5000 ///< additional wait time for each tune, to account for timing inaccuracies (in us)
 
 class TapEscTune : public device::CDev
 {
@@ -344,6 +343,7 @@ void TapEscTune::set_tune_packet(uint16_t frequency, uint16_t duration, uint8_t 
 	// NOTE: duration for the tap_esc driver should be in ms
 	note.duration = duration;
 	note.strength = strength;
+	note.timestamp = hrt_absolute_time();
 
 	if (_tune_pub != nullptr) {
 		orb_publish(ORB_ID(tune), _tune_pub, &note);
@@ -559,7 +559,7 @@ TapEscTune::next_note()
 	set_tune_packet(frequency, (uint16_t)(duration / 1000), NOTE_STRENGTH);
 
 	// and arrange a callback when the note should stop
-	work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(duration + WAIT_DURATION_OFFSET));
+	work_queue(LPWORK, &_work, (worker_t)&TapEscTune::next_trampoline, this, USEC2TICK(duration));
 	return;
 
 	// tune looks bad (unexpected EOF, bad character, etc.)

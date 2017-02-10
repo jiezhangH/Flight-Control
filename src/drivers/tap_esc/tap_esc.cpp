@@ -157,6 +157,8 @@ private:
 				    uint8_t control_group,
 				    uint8_t control_index,
 				    float &input);
+
+	hrt_abstime _send_next_tune;
 };
 
 const uint8_t TAP_ESC::crcTable[256] = TAP_ESC_CRC;
@@ -192,7 +194,8 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_groups_subscribed(0),
 	_initialized(false),
 	_pwm_default_rate(400),
-	_current_update_rate(0)
+	_current_update_rate(0),
+	_send_next_tune(0)
 
 {
 	_control_topics[0] = ORB_ID(actuator_controls_0);
@@ -443,7 +446,7 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 	uint8_t motor_cnt = num_pwm;
 	static uint8_t which_to_respone = 0;
 	bool updated;
-	static struct leds_s leds;
+	static struct leds_s leds = {};
 
 	orb_check(_leds_sub, &updated);
 
@@ -846,17 +849,35 @@ TAP_ESC::cycle()
 	updated = false;
 	orb_check(_tunes_sub, &updated);
 
-	if (updated) {
+	hrt_abstime now = hrt_absolute_time();
+
+	// we need to make sure we don't send a new tune while another one is still in progress
+	if (updated && now > _send_next_tune) {
 		struct tune_s tune;
-		EscbusTunePacket esc_tune_packet;
 
 		orb_copy(ORB_ID(tune), _tunes_sub, &tune);
 
-		esc_tune_packet.frequency = tune.frequency;
-		esc_tune_packet.duration_ms = tune.duration;
-		esc_tune_packet.strength = tune.strength;
+		// decrease the next tune duration to make sure there is no overlap in time
+		uint16_t duration_decrement = (now - tune.timestamp) / 1000;
 
-		if (!_is_armed) {
+		if (!_is_armed && duration_decrement < tune.duration) {
+
+			tune.duration -= duration_decrement;
+			_send_next_tune = now + tune.duration * 1000 + 500; //add 0.5ms to avoid overlap
+
+			EscbusTunePacket esc_tune_packet;
+			esc_tune_packet.frequency = tune.frequency;
+			esc_tune_packet.duration_ms = tune.duration;
+			esc_tune_packet.strength = tune.strength;
+
+#if 0 // debug timing
+			hrt_abstime t = now;
+			static hrt_abstime last_t = t;
+			PX4_WARN("tune: T=%i ms, dt=%i, f=%i, d=%i ms, s=%i, dec=%i", (int)(t / 1000),
+				 (int)((t - last_t) / 1000), (int)tune.frequency, (int)tune.duration, (int)tune.strength,
+				 int(duration_decrement));
+			last_t = t;
+#endif
 			send_tune_packet(esc_tune_packet);
 		}
 	}
