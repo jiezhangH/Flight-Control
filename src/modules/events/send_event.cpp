@@ -37,7 +37,8 @@
 #include <px4_getopt.h>
 #include <px4_log.h>
 #include <drivers/drv_hrt.h>
-#include <uORB/topics/led_event.h>
+#include <drivers/drv_led.h>
+#include <uORB/topics/led_control.h>
 
 static SendEvent *send_event_obj = nullptr;
 struct work_s SendEvent::_work = {};
@@ -136,8 +137,6 @@ SendEvent::cycle_trampoline(void *arg)
 
 void SendEvent::cycle()
 {
-	static int counter = 0;
-
 	if (_task_should_exit) {
 		_subscriber_handler.unsubscribe();
 
@@ -149,51 +148,10 @@ void SendEvent::cycle()
 
 	process_commands();
 
-	if (counter >= 300) {
-		counter = 0;
-		send_led_event();
-	}
+	//_status_display.process();
 
-	_status_display.process();
-	counter++;
 	work_queue(LPWORK, &_work, (worker_t)&SendEvent::cycle_trampoline, this,
 		   USEC2TICK(SEND_EVENT_INTERVAL_US));
-}
-
-void SendEvent::send_led_event()
-{
-	struct led_event_s event;
-	event.duration = 40; // 2 second event
-
-	for (size_t i = 0; i < 8; i++) {
-		event.color[i] = (uint16_t)0x3800;
-		event.mode[i] = led_event_s::LED_MODE_BLINK_NORMAL;
-	}
-
-	event.color[0] = (uint16_t)0x0800;
-	event.mode[0] = led_event_s::LED_MODE_BLINK_FAST;
-
-	event.color[1] = (uint16_t)0x1000;
-	event.mode[1] = led_event_s::LED_MODE_BLINK_SLOW;
-
-	event.color[2] = (uint16_t)0x1800;
-
-	event.color[3] = (uint16_t)0x2800;
-	event.mode[3] = led_event_s::LED_MODE_BLINK_FAST;
-
-	event.mode[4] = led_event_s::LED_MODE_ON;
-
-	event.color[5] = (uint16_t)0x3000;
-
-	event.timestamp = hrt_absolute_time();
-	event.enabled = 0xFF;
-
-	if (_led_event_pub != nullptr) {
-		orb_publish(ORB_ID(led_event), _led_event_pub, &event);
-
-	} else {
-		_led_event_pub = orb_advertise(ORB_ID(led_event), &event);
-	}
 }
 
 void SendEvent::process_commands()

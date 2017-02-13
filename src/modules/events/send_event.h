@@ -81,8 +81,6 @@ private:
 	/** return an ACK to a vehicle_command */
 	void answer_command(const vehicle_command_s &cmd, unsigned result);
 
-	void send_led_event();
-
 	events::SubscriberHandler _subscriber_handler;
 	status::StatusDisplay _status_display;
 

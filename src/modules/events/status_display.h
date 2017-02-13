@@ -47,7 +47,7 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/cpuload.h>
-#include <uORB/topics/main_led.h>
+#include <uORB/topics/led_control.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_status_flags.h>
 
@@ -69,7 +69,7 @@ public:
 
 protected:
 	bool check_for_updates();
-	void set_main_led();
+	void set_leds();
 	void publish();
 	// TODO: review if there is a better variant that allocate this in the
 	// memory
@@ -78,10 +78,10 @@ protected:
 	struct vehicle_status_s _vehicle_status = {};
 	struct vehicle_status_flags_s _vehicle_status_flags = {};
 
-	struct main_led_s _rgb;
+	struct led_control_s _led_control = {};
 
 private:
-	orb_advert_t _main_led_pub = nullptr;
+	orb_advert_t _led_control_pub = nullptr;
 	hrt_abstime _status_display_uptime = 0;
 
 	const events::SubscriberHandler &_subscriber_handler;

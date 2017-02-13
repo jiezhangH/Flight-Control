@@ -40,12 +40,16 @@
 
 #include "status_display.h"
 #include <px4_log.h>
+#include <drivers/drv_led.h>
 
 using namespace status;
 
 StatusDisplay::StatusDisplay(const events::SubscriberHandler &subscriber_handler)
 	: _subscriber_handler(subscriber_handler)
 {
+	_led_control.priority = 1;
+	_led_control.num_blinks = 3;
+	_led_control.led_mask = 0xff;
 }
 
 bool StatusDisplay::check_for_updates()
@@ -83,11 +87,11 @@ void StatusDisplay::process()
 		return;
 	}
 
-	set_main_led();
+	set_leds();
 	publish();
 }
 
-void StatusDisplay::set_main_led()
+void StatusDisplay::set_leds()
 {
 	static hrt_abstime overload_start = 0;
 	bool hotplug_timeout = hrt_elapsed_time(&_status_display_uptime) > HOTPLUG_SENS_TIMEOUT;
@@ -107,46 +111,46 @@ void StatusDisplay::set_main_led()
 
 	/* set mode */
 	if (overload && ((hrt_absolute_time() - overload_start) > overload_warn_delay)) {
-		_rgb.mode = main_led_s::LED_MODE_BLINK_FAST;
-		_rgb.color = main_led_s::LED_COLOR_PURPLE;
+		_led_control.mode = led_control_s::MODE_BLINK_FAST;
+		_led_control.color = led_control_s::COLOR_PURPLE;
 		set_normal_color = false;
 
 	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED) {
-		_rgb.mode = main_led_s::LED_MODE_ON;
+		_led_control.mode = led_control_s::MODE_ON;
 		set_normal_color = true;
 
 	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR ||
 		   (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
 		      == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && hotplug_timeout)) {
-		_rgb.mode = main_led_s::LED_MODE_BLINK_FAST;
-		_rgb.color = main_led_s::LED_COLOR_RED;
+		_led_control.mode = led_control_s::MODE_BLINK_FAST;
+		_led_control.color = led_control_s::COLOR_RED;
 		set_normal_color = false;
 
 	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_STANDBY) {
-		_rgb.mode = main_led_s::LED_MODE_BREATHE;
+		_led_control.mode = led_control_s::MODE_ON;
 		set_normal_color = true;
 
 	} else if (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
 		     == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && !hotplug_timeout) {
-		_rgb.mode = main_led_s::LED_MODE_BREATHE;
+		_led_control.mode = led_control_s::MODE_ON;
 		set_normal_color = true;
 
 	} else {	// STANDBY_ERROR and other states
-		_rgb.mode = main_led_s::LED_MODE_BLINK_NORMAL;
-		_rgb.color = main_led_s::LED_COLOR_RED;
+		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+		_led_control.color = led_control_s::COLOR_RED;
 		set_normal_color = false;
 	}
 
 	if (set_normal_color) {
 		/* set color */
 		if (_vehicle_status.failsafe) {
-			_rgb.color = main_led_s::LED_COLOR_PURPLE;
+			_led_control.color = led_control_s::COLOR_PURPLE;
 
 		} else if (_battery_status.warning == battery_status_s::BATTERY_WARNING_LOW) {
-			_rgb.color = main_led_s::LED_COLOR_YELLOW;
+			_led_control.color = led_control_s::COLOR_YELLOW;
 
 		} else if (_battery_status.warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
-			_rgb.color = main_led_s::LED_COLOR_RED;
+			_led_control.color = led_control_s::COLOR_RED;
 
 		} else {
 			// TODO: check this condition
@@ -154,10 +158,10 @@ void StatusDisplay::set_main_led()
 			     vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK) &&
 			    ((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_GLOBAL_POSITION_VALID_MASK) ==
 			     vehicle_status_flags_s::CONDITION_GLOBAL_POSITION_VALID_MASK)) {
-				_rgb.color = main_led_s::LED_COLOR_GREEN;
+				_led_control.color = led_control_s::COLOR_GREEN;
 
 			} else {
-				_rgb.color = main_led_s::LED_COLOR_BLUE;
+				_led_control.color = led_control_s::COLOR_BLUE;
 			}
 		}
 	}
@@ -165,10 +169,12 @@ void StatusDisplay::set_main_led()
 
 void StatusDisplay::publish()
 {
-	if (_main_led_pub != nullptr) {
-		orb_publish(ORB_ID(main_led), _main_led_pub, &_rgb);
+	_led_control.timestamp = hrt_absolute_time();
+
+	if (_led_control_pub != nullptr) {
+		orb_publish(ORB_ID(led_control), _led_control_pub, &_led_control);
 
 	} else {
-		_main_led_pub =  orb_advertise(ORB_ID(main_led), &_rgb);
+		_led_control_pub =  orb_advertise_queue(ORB_ID(led_control), &_led_control, LED_UORB_QUEUE_LENGTH);
 	}
 }
