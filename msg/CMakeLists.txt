@@ -67,10 +67,7 @@ set(msg_file_names
 	home_position.msg
 	input_rc.msg
 	led_control.msg
-	led_event.msg
-	leds.msg
 	log_message.msg
-	main_led.msg
 	manual_control_setpoint.msg
 	mavlink_log.msg
 	mc_att_ctrl_status.msg
