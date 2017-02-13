@@ -89,12 +89,6 @@ then
 	camera_trigger start
 fi
 
-#
-# Start system state indicator
-#
-if tap_esc_rgbled start
-then
-fi
 
 #
 # Set parameters and env variables for selected AUTOSTART
