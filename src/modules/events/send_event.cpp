@@ -37,8 +37,6 @@
 #include <px4_getopt.h>
 #include <px4_log.h>
 #include <drivers/drv_hrt.h>
-#include <drivers/drv_led.h>
-#include <uORB/topics/led_control.h>
 
 static SendEvent *send_event_obj = nullptr;
 struct work_s SendEvent::_work = {};
