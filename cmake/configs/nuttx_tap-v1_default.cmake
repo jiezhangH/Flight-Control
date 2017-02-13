@@ -35,6 +35,7 @@ set(config_module_list
 	# System commands
 	#
 	systemcmds/bl_update
+	systemcmds/led_control
 	systemcmds/mixer
 	systemcmds/param
 	systemcmds/perf
@@ -101,6 +102,7 @@ set(config_module_list
 	lib/geo_lookup
 	lib/conversion
 	lib/launchdetection
+	lib/led
 	lib/rc
 	lib/runway_takeoff
 	lib/tailsitter_recovery

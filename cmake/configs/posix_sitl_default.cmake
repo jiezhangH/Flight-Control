@@ -23,6 +23,7 @@ set(config_module_list
 	platforms/posix/work_queue
 
 	systemcmds/esc_calib
+	systemcmds/led_control
 	systemcmds/mixer
 	systemcmds/param
 	systemcmds/perf
@@ -66,6 +67,7 @@ set(config_module_list
 	lib/geo
 	lib/geo_lookup
 	lib/launchdetection
+	lib/led
 	lib/mathlib
 	lib/mathlib/math/filter
 	lib/rc
