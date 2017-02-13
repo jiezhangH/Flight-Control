@@ -18,7 +18,6 @@ set(config_module_list
 	platforms/posix/drivers/gpssim
 	platforms/posix/drivers/gyrosim
 	platforms/posix/drivers/ledsim
-	platforms/posix/drivers/rgbledsim
 	platforms/posix/drivers/tonealrmsim
 	platforms/posix/px4_layer
 	platforms/posix/work_queue
