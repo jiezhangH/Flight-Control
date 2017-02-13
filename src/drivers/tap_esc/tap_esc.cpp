@@ -41,13 +41,14 @@
 #include <cmath>	// NAN
 
 #include <lib/mathlib/mathlib.h>
+#include <lib/led/led.h>
 #include <systemlib/px4_macros.h>
 #include <drivers/device/device.h>
 #include <uORB/uORB.h>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_outputs.h>
 #include <uORB/topics/actuator_armed.h>
-#include <uORB/topics/leds.h>
+#include <uORB/topics/led_control.h>
 #include <uORB/topics/test_motor.h>
 #include <uORB/topics/tune.h>
 #include <uORB/topics/input_rc.h>
@@ -112,11 +113,14 @@ private:
 	// subscriptions
 	int	_armed_sub;
 	int _test_motor_sub;
-	int _leds_sub;
+	int _led_control_sub;
 	int _tunes_sub;
-	orb_advert_t        	_outputs_pub = nullptr;
+	orb_advert_t        	_outputs_pub;
 	actuator_outputs_s      _outputs;
 	static actuator_armed_s	_armed;
+
+	LedControlData _led_control_data;
+	LedController _led_controller;
 
 	//todo:refactor dynamic based on _channels_count
 	// It needs to support the numbe of ESC
@@ -128,7 +132,7 @@ private:
 
 	orb_id_t	_control_topics[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
 
-	orb_advert_t        _esc_feedback_pub = nullptr;
+	orb_advert_t        _esc_feedback_pub;
 	orb_advert_t      _to_mixer_status; 	///< mixer status flags
 	orb_advert_t    	_mavlink_log_pub;
 	esc_status_s      _esc_feedback;
@@ -181,9 +185,10 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_mode(MODE_4PWM), //FIXME: what is this mode used for???
 	_armed_sub(-1),
 	_test_motor_sub(-1),
-	_leds_sub(-1),
+	_led_control_sub(-1),
 	_tunes_sub(-1),
 	_outputs_pub(nullptr),
+	_led_control_data{},
 	_esc_feedback_pub(nullptr),
 	_to_mixer_status(nullptr),
 	_mavlink_log_pub(nullptr),
@@ -445,14 +450,8 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 	memset(rpm, 0, sizeof(rpm));
 	uint8_t motor_cnt = num_pwm;
 	static uint8_t which_to_respone = 0;
-	bool updated;
-	static struct leds_s leds = {};
 
-	orb_check(_leds_sub, &updated);
-
-	if (updated) {
-		orb_copy(ORB_ID(leds), _leds_sub, &leds);
-	}
+	_led_controller.update(_led_control_data);
 
 	for (uint8_t i = 0; i < motor_cnt; i++) {
 		rpm[i] = pwm[i];
@@ -464,8 +463,42 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 			rpm[i] = RPMSTOPPED;
 		}
 
-		// make sure that only the LED bit are modified
-		rpm[i] |= (leds.color[i] & RUN_LED_ON_MASK);
+		// apply the led color
+		if (i < BOARD_MAX_LEDS) {
+			switch (_led_control_data.leds[i].color) {
+			case led_control_s::COLOR_RED:
+				rpm[i] |= RUN_RED_LED_ON_MASK;
+				break;
+
+			case led_control_s::COLOR_GREEN:
+				rpm[i] |= RUN_GREEN_LED_ON_MASK;
+				break;
+
+			case led_control_s::COLOR_BLUE:
+				rpm[i] |= RUN_BLUE_LED_ON_MASK;
+				break;
+
+			case led_control_s::COLOR_AMBER: //make it the same as yellow
+			case led_control_s::COLOR_YELLOW:
+				rpm[i] |= RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK;
+				break;
+
+			case led_control_s::COLOR_PURPLE:
+				rpm[i] |= RUN_RED_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+				break;
+
+			case led_control_s::COLOR_CYAN:
+				rpm[i] |= RUN_GREEN_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+				break;
+
+			case led_control_s::COLOR_WHITE:
+				rpm[i] |= RUN_RED_LED_ON_MASK | RUN_GREEN_LED_ON_MASK | RUN_BLUE_LED_ON_MASK;
+				break;
+
+			default: // led_control_s::COLOR_OFF
+				break;
+			}
+		}
 	}
 
 	rpm[which_to_respone] |= RUN_FEEDBACK_ENABLE_MASK;
@@ -616,7 +649,8 @@ TAP_ESC::cycle()
 		_to_mixer_status = orb_advertise(ORB_ID(multirotor_motor_limits), &multirotor_motor_limits);
 		_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
 		_test_motor_sub = orb_subscribe(ORB_ID(test_motor));
-		_leds_sub = orb_subscribe(ORB_ID(leds));
+		_led_control_sub = orb_subscribe(ORB_ID(led_control));
+		_led_controller.init(_led_control_sub);
 		_tunes_sub = orb_subscribe(ORB_ID(tune));
 		_initialized = true;
 	}
@@ -896,6 +930,16 @@ void TAP_ESC::work_stop()
 	_armed_sub = -1;
 	orb_unsubscribe(_test_motor_sub);
 	_test_motor_sub = -1;
+	orb_unsubscribe(_tunes_sub);
+	_tunes_sub = -1;
+	orb_unsubscribe(_led_control_sub);
+	_led_control_sub = -1;
+	orb_unadvertise(_outputs_pub);
+	_outputs_pub = nullptr;
+	orb_unadvertise(_esc_feedback_pub);
+	_esc_feedback_pub = nullptr;
+	orb_unadvertise(_to_mixer_status);
+	_to_mixer_status = nullptr;
 
 	DEVICE_LOG("stopping");
 	_initialized = false;
