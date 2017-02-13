@@ -55,6 +55,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/vehicle_control_mode.h>
+#include <uORB/topics/led_control.h>
 #include <systemlib/err.h>
 #include <systemlib/param/param.h>
 #include <drivers/drv_hrt.h>
@@ -111,8 +112,9 @@ static int tune_current = TONE_STOP_TUNE;		// currently playing tune, can be int
 static unsigned int tune_durations[TONE_NUMBER_OF_TUNES];
 
 static DevHandle h_leds;
-static DevHandle h_rgbleds;
 static DevHandle h_buzzer;
+static led_control_s led_control = {};
+static orb_advert_t led_control_pub = nullptr;
 
 int buzzer_init()
 {
@@ -243,6 +245,12 @@ int led_init()
 {
 	blink_msg_end = 0;
 
+	led_control.led_mask = 0xff;
+	led_control.mode = led_control_s::MODE_OFF;
+	led_control.priority = 0;
+	led_control.timestamp = hrt_absolute_time();
+	led_control_pub = orb_advertise_queue(ORB_ID(led_control), &led_control, LED_UORB_QUEUE_LENGTH);
+
 #ifndef CONFIG_ARCH_BOARD_RPI
 	/* first open normal LEDs */
 	DevMgr::getHandle(LED0_DEVICE_PATH, h_leds);
@@ -268,23 +276,15 @@ int led_init()
 	led_off(LED_AMBER);
 #endif
 
-	/* then try RGB LEDs, this can fail on FMUv1*/
-	DevHandle h;
-	DevMgr::getHandle(RGBLED0_DEVICE_PATH, h_rgbleds);
-
-	if (!h_rgbleds.isValid()) {
-		PX4_WARN("No RGB LED found at " RGBLED0_DEVICE_PATH);
-	}
-
 	return 0;
 }
 
 void led_deinit()
 {
+	orb_unadvertise(led_control_pub);
 #ifndef CONFIG_ARCH_BOARD_RPI
 	DevMgr::releaseHandle(h_leds);
 #endif
-	DevMgr::releaseHandle(h_rgbleds);
 }
 
 int led_toggle(int led)
@@ -304,22 +304,114 @@ int led_off(int led)
 
 void rgbled_set_color(rgbled_color_t color)
 {
-
-	h_rgbleds.ioctl(RGBLED_SET_COLOR, (unsigned long)color);
+	led_control.mode = led_control_s::MODE_ON;
+	switch(color) {
+		case RGBLED_COLOR_OFF:
+			led_control.mode = led_control_s::MODE_OFF;
+			break;
+		case RGBLED_COLOR_RED:
+			led_control.color = led_control_s::COLOR_RED;
+			break;
+		case RGBLED_COLOR_YELLOW:
+			led_control.color = led_control_s::COLOR_YELLOW;
+			break;
+		case RGBLED_COLOR_PURPLE:
+			led_control.color = led_control_s::COLOR_PURPLE;
+			break;
+		case RGBLED_COLOR_GREEN:
+			led_control.color = led_control_s::COLOR_GREEN;
+			break;
+		case RGBLED_COLOR_BLUE:
+			led_control.color = led_control_s::COLOR_BLUE;
+			break;
+		case RGBLED_COLOR_WHITE:
+			led_control.color = led_control_s::COLOR_WHITE;
+			break;
+		case RGBLED_COLOR_AMBER:
+			led_control.color = led_control_s::COLOR_AMBER;
+			break;
+		default:
+			break;
+	}
+	led_control.timestamp = hrt_absolute_time();
+	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }
 
 void rgbled_set_mode(rgbled_mode_t mode)
 {
-
-	h_rgbleds.ioctl(RGBLED_SET_MODE, (unsigned long)mode);
+	switch(mode) {
+		case RGBLED_MODE_OFF:
+			led_control.mode = led_control_s::MODE_OFF;
+			break;
+		case RGBLED_MODE_ON:
+			led_control.mode = led_control_s::MODE_ON;
+			break;
+		case RGBLED_MODE_BLINK_SLOW:
+			led_control.mode = led_control_s::MODE_BLINK_SLOW;
+			break;
+		case RGBLED_MODE_BLINK_NORMAL:
+			led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+			break;
+		case RGBLED_MODE_BLINK_FAST:
+			led_control.mode = led_control_s::MODE_BLINK_FAST;
+			break;
+		default:
+			break;
+	}
+	led_control.timestamp = hrt_absolute_time();
+	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }
 
-void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color){
-	h_rgbleds.ioctl(RGBLED_SET_MODE_AND_COLOR, (unsigned long)mode_color);
-}
-
-void rgbled_set_pattern(rgbled_pattern_t *pattern)
+void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color)
 {
-
-	h_rgbleds.ioctl(RGBLED_SET_PATTERN, (unsigned long)pattern);
+	switch(mode_color->mode) {
+		case RGBLED_MODE_OFF:
+			led_control.mode = led_control_s::MODE_OFF;
+			break;
+		case RGBLED_MODE_ON:
+			led_control.mode = led_control_s::MODE_ON;
+			break;
+		case RGBLED_MODE_BLINK_SLOW:
+			led_control.mode = led_control_s::MODE_BLINK_SLOW;
+			break;
+		case RGBLED_MODE_BLINK_NORMAL:
+			led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+			break;
+		case RGBLED_MODE_BLINK_FAST:
+			led_control.mode = led_control_s::MODE_BLINK_FAST;
+			break;
+		default:
+			break;
+	}
+	switch(mode_color->color) {
+		case RGBLED_COLOR_OFF:
+			led_control.mode = led_control_s::MODE_OFF;
+			break;
+		case RGBLED_COLOR_RED:
+			led_control.color = led_control_s::COLOR_RED;
+			break;
+		case RGBLED_COLOR_YELLOW:
+			led_control.color = led_control_s::COLOR_YELLOW;
+			break;
+		case RGBLED_COLOR_PURPLE:
+			led_control.color = led_control_s::COLOR_PURPLE;
+			break;
+		case RGBLED_COLOR_GREEN:
+			led_control.color = led_control_s::COLOR_GREEN;
+			break;
+		case RGBLED_COLOR_BLUE:
+			led_control.color = led_control_s::COLOR_BLUE;
+			break;
+		case RGBLED_COLOR_WHITE:
+			led_control.color = led_control_s::COLOR_WHITE;
+			break;
+		case RGBLED_COLOR_AMBER:
+			led_control.color = led_control_s::COLOR_AMBER;
+			break;
+		default:
+			break;
+	}
+	led_control.timestamp = hrt_absolute_time();
+	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }
+
