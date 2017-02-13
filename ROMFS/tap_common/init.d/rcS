@@ -306,8 +306,16 @@ then
 	echo "Starting Logger"
 	if param compare SYS_LOGGER 0
 	then
-		if sdlog2 start -r 50 -a -b 4 -t
+		# check if we should increase logging rate for ekf2 replay message logging
+		if param greater EKF2_REC_RPL 0
 		then
+			if sdlog2 start -r 500 -e -b 10 -t
+			then
+			fi
+		else
+			if sdlog2 start -r 50 -a -b 4 -t
+			then
+			fi
 		fi
 	fi
 	if param compare SYS_LOGGER 1
