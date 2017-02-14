@@ -344,6 +344,7 @@ void rgbled_set_mode(rgbled_mode_t mode)
 			led_control.mode = led_control_s::MODE_OFF;
 			break;
 		case RGBLED_MODE_ON:
+		case RGBLED_MODE_BREATHE:
 			led_control.mode = led_control_s::MODE_ON;
 			break;
 		case RGBLED_MODE_BLINK_SLOW:
@@ -370,6 +371,7 @@ void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color)
 			led_control.mode = led_control_s::MODE_OFF;
 			break;
 		case RGBLED_MODE_ON:
+		case RGBLED_MODE_BREATHE:
 			led_control.mode = led_control_s::MODE_ON;
 			break;
 		case RGBLED_MODE_BLINK_SLOW:
