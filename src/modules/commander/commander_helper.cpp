@@ -358,6 +358,7 @@ void rgbled_set_mode(rgbled_mode_t mode)
 		default:
 			break;
 	}
+	led_control.num_blinks = 3;
 	led_control.timestamp = hrt_absolute_time();
 	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }
@@ -383,6 +384,7 @@ void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color)
 		default:
 			break;
 	}
+	led_control.num_blinks = 3;
 	switch(mode_color->color) {
 		case RGBLED_COLOR_OFF:
 			led_control.mode = led_control_s::MODE_OFF;
