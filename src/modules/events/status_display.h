@@ -53,7 +53,7 @@
 
 #define CPU_OVERLOAD_VALUE 0.80f
 #define RAM_OVERLOAD_VALUE 0.98f
-/**< wait for hotplug sensors to come online for upto 8 seconds */
+/**< wait for hotplug sensors to come online for up to 8 seconds */
 #define HOTPLUG_SENS_TIMEOUT (8 * 1000 * 1000)
 
 

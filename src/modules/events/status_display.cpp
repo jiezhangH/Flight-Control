@@ -33,7 +33,7 @@
 
 /**
  * @file status_display.cpp
- * Status Display decouple the LED and tune form the original commander
+ * Status Display: this decouples the LED and tune logic from the control logic in commander
  *
  * @author Simone Guscetti <simone@px4.io>
  */
@@ -99,29 +99,31 @@ void StatusDisplay::process()
 	}
 
 	set_leds();
+	//TODO: publish only when led state changed...
 	publish();
 }
 
 void StatusDisplay::set_leds()
 {
 	static hrt_abstime overload_start = 0;
-	bool hotplug_timeout = hrt_elapsed_time(&_status_display_uptime) > HOTPLUG_SENS_TIMEOUT;
-	bool overload = (_cpu_load.load > CPU_OVERLOAD_VALUE) || (_cpu_load.ram_usage > RAM_OVERLOAD_VALUE);
+	bool hotplug_timed_out = hrt_elapsed_time(&_status_display_uptime) > HOTPLUG_SENS_TIMEOUT;
+	bool is_overloaded = (_cpu_load.load > CPU_OVERLOAD_VALUE) || (_cpu_load.ram_usage > RAM_OVERLOAD_VALUE);
 
-	if (overload_start == 0 && overload) {
+	if (overload_start == 0 && is_overloaded) {
 		overload_start = hrt_absolute_time();
 
-	} else if (!overload) {
+	} else if (!is_overloaded) {
 		overload_start = 0;
 	}
 
 	// Ported from commander
 	bool set_normal_color = false;
 
+	//TODO: why is this needed?
 	int overload_warn_delay = (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED) ? 1000 : 250000;
 
 	/* set mode */
-	if (overload && ((hrt_absolute_time() - overload_start) > overload_warn_delay)) {
+	if (is_overloaded && ((hrt_absolute_time() - overload_start) > overload_warn_delay)) {
 		_led_control.mode = led_control_s::MODE_BLINK_FAST;
 		_led_control.color = led_control_s::COLOR_PURPLE;
 		set_normal_color = false;
@@ -130,9 +132,11 @@ void StatusDisplay::set_leds()
 		_led_control.mode = led_control_s::MODE_ON;
 		set_normal_color = true;
 
+		// TODO: simplify this condition (create some bools, ...), below as well
+
 	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR ||
 		   (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
-		      == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && hotplug_timeout)) {
+		      == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && hotplug_timed_out)) {
 		_led_control.mode = led_control_s::MODE_BLINK_FAST;
 		_led_control.color = led_control_s::COLOR_RED;
 		set_normal_color = false;
@@ -142,7 +146,7 @@ void StatusDisplay::set_leds()
 		set_normal_color = true;
 
 	} else if (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
-		     == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && !hotplug_timeout) {
+		     == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && !hotplug_timed_out) {
 		_led_control.mode = led_control_s::MODE_ON;
 		set_normal_color = true;
 
