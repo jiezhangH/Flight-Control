@@ -166,7 +166,8 @@ void TemperatureCalibration::task_main()
 	}
 
 	if (_gyro) {
-		calibrators[num_calibrators] = new TemperatureCalibrationGyro(min_temp_rise, min_start_temp, max_start_temp, gyro_sub, num_gyro);
+		calibrators[num_calibrators] = new TemperatureCalibrationGyro(min_temp_rise, min_start_temp, max_start_temp, gyro_sub,
+				num_gyro);
 
 		if (calibrators[num_calibrators]) {
 			++num_calibrators;
@@ -199,6 +200,7 @@ void TemperatureCalibration::task_main()
 	int leds_completed = 0;
 
 	bool abort_calibration = false;
+
 	while (!_force_task_exit) {
 		/* we poll on the gyro(s), since this is the sensor with the highest update rate.
 		 * Each individual sensor will then check on its own if there's new data.
