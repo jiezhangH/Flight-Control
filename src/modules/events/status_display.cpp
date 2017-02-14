@@ -47,9 +47,15 @@ using namespace status;
 StatusDisplay::StatusDisplay(const events::SubscriberHandler &subscriber_handler)
 	: _subscriber_handler(subscriber_handler)
 {
+	// set the base color
+	_led_control.priority = 0;
+	_led_control.led_mask = 0xff;
+	_led_control.color = led_control_s::COLOR_CYAN;
+	_led_control.mode = led_control_s::MODE_ON;
+	publish();
+
 	_led_control.priority = 1;
 	_led_control.num_blinks = 3;
-	_led_control.led_mask = 0xff;
 }
 
 bool StatusDisplay::check_for_updates()
