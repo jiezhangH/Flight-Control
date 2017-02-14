@@ -75,6 +75,12 @@ fi
 #
 # Load parameters
 #
+
+if ver hwcmp TAP_V2
+then
+	param select /fs/microsd/params
+fi
+
 if param load
 then
 else

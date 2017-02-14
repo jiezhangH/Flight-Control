@@ -289,8 +289,6 @@ extern  bool esc_disabled_for_console;
 
 #define SD_CARD_POWER_CTRL(on_true)    px4_arch_gpiowrite(GPIO_SD_PW_EN, (on_true))
 
-#define  FLASH_BASED_PARAMS
-
 #define BOARD_MAX_LEDS 6 // Number external of LED's this board has
 
 __BEGIN_DECLS
