@@ -80,7 +80,7 @@ using namespace DriverFramework;
 #define VEHICLE_TYPE_VTOL_RESERVED4 24
 #define VEHICLE_TYPE_VTOL_RESERVED5 25
 
-#define BLINK_MSG_TIME	7	// 3 fast blinks in ticks
+#define BLINK_MSG_TIME	700000	// 3 fast blinks (in us)
 
 bool is_multirotor(const struct vehicle_status_s *current_status)
 {
@@ -168,34 +168,34 @@ void set_tune(int tune)
 	}
 }
 
-static void set_tune_and_rgbled(bool use_buzzer, rgbled_color_t color, rgbled_mode_t mode, int tune)
-{
-	rgbled_mode_and_color_t mode_color;
-	mode_color.enabled = 0xFF;
-	mode_color.mode = mode;
-	mode_color.color = color;
-	mode_color.prio = 0;
-	mode_color.duration = BLINK_MSG_TIME;
-	rgbled_set_mode_and_color(&mode_color);
-
-	if (use_buzzer) {
-		set_tune(tune);
-	}
-}
-
 void tune_home_set(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_GREEN, RGBLED_MODE_BLINK_FAST, TONE_HOME_SET);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_HOME_SET);
+	}
 }
 
 void tune_mission_ok(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_GREEN, RGBLED_MODE_BLINK_FAST, TONE_NOTIFY_NEUTRAL_TUNE);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
+	}
 }
 
 void tune_mission_fail(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_GREEN, RGBLED_MODE_BLINK_FAST, TONE_NOTIFY_NEGATIVE_TUNE);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_NOTIFY_NEGATIVE_TUNE);
+	}
 }
 
 /**
@@ -203,7 +203,12 @@ void tune_mission_fail(bool use_buzzer)
  */
 void tune_positive(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_GREEN, RGBLED_MODE_BLINK_FAST, TONE_NOTIFY_POSITIVE_TUNE);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_NOTIFY_POSITIVE_TUNE);
+	}
 }
 
 /**
@@ -211,7 +216,12 @@ void tune_positive(bool use_buzzer)
  */
 void tune_neutral(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_WHITE, RGBLED_MODE_BLINK_FAST, TONE_NOTIFY_NEUTRAL_TUNE);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
+	}
 }
 
 /**
@@ -219,12 +229,22 @@ void tune_neutral(bool use_buzzer)
  */
 void tune_negative(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_RED, RGBLED_MODE_BLINK_FAST, TONE_NOTIFY_NEGATIVE_TUNE);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_RED, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_NOTIFY_NEGATIVE_TUNE);
+	}
 }
 
 void tune_failsafe(bool use_buzzer)
 {
-	set_tune_and_rgbled(use_buzzer, RGBLED_COLOR_PURPLE, RGBLED_MODE_BLINK_FAST, TONE_BATTERY_WARNING_FAST_TUNE);
+	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
+	rgbled_set_color_and_mode(led_control_s::COLOR_PURPLE, led_control_s::MODE_BLINK_FAST);
+
+	if (use_buzzer) {
+		set_tune(TONE_BATTERY_WARNING_FAST_TUNE);
+	}
 }
 
 int blink_msg_state()
@@ -302,119 +322,12 @@ int led_off(int led)
 	return h_leds.ioctl(LED_OFF, led);
 }
 
-void rgbled_set_color(rgbled_color_t color)
+void rgbled_set_color_and_mode(uint8_t color, uint8_t mode)
 {
-	led_control.mode = led_control_s::MODE_ON;
-	switch(color) {
-		case RGBLED_COLOR_OFF:
-			led_control.mode = led_control_s::MODE_OFF;
-			break;
-		case RGBLED_COLOR_RED:
-			led_control.color = led_control_s::COLOR_RED;
-			break;
-		case RGBLED_COLOR_YELLOW:
-			led_control.color = led_control_s::COLOR_YELLOW;
-			break;
-		case RGBLED_COLOR_PURPLE:
-			led_control.color = led_control_s::COLOR_PURPLE;
-			break;
-		case RGBLED_COLOR_GREEN:
-			led_control.color = led_control_s::COLOR_GREEN;
-			break;
-		case RGBLED_COLOR_BLUE:
-			led_control.color = led_control_s::COLOR_BLUE;
-			break;
-		case RGBLED_COLOR_WHITE:
-			led_control.color = led_control_s::COLOR_WHITE;
-			break;
-		case RGBLED_COLOR_AMBER:
-			led_control.color = led_control_s::COLOR_AMBER;
-			break;
-		default:
-			break;
-	}
-	led_control.timestamp = hrt_absolute_time();
-	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
-}
-
-void rgbled_set_mode(rgbled_mode_t mode)
-{
-	switch(mode) {
-		case RGBLED_MODE_OFF:
-			led_control.mode = led_control_s::MODE_OFF;
-			break;
-		case RGBLED_MODE_ON:
-		case RGBLED_MODE_BREATHE:
-			led_control.mode = led_control_s::MODE_ON;
-			break;
-		case RGBLED_MODE_BLINK_SLOW:
-			led_control.mode = led_control_s::MODE_BLINK_SLOW;
-			break;
-		case RGBLED_MODE_BLINK_NORMAL:
-			led_control.mode = led_control_s::MODE_BLINK_NORMAL;
-			break;
-		case RGBLED_MODE_BLINK_FAST:
-			led_control.mode = led_control_s::MODE_BLINK_FAST;
-			break;
-		default:
-			break;
-	}
-	led_control.num_blinks = 3;
-	led_control.timestamp = hrt_absolute_time();
-	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
-}
-
-void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color)
-{
-	switch(mode_color->mode) {
-		case RGBLED_MODE_OFF:
-			led_control.mode = led_control_s::MODE_OFF;
-			break;
-		case RGBLED_MODE_ON:
-		case RGBLED_MODE_BREATHE:
-			led_control.mode = led_control_s::MODE_ON;
-			break;
-		case RGBLED_MODE_BLINK_SLOW:
-			led_control.mode = led_control_s::MODE_BLINK_SLOW;
-			break;
-		case RGBLED_MODE_BLINK_NORMAL:
-			led_control.mode = led_control_s::MODE_BLINK_NORMAL;
-			break;
-		case RGBLED_MODE_BLINK_FAST:
-			led_control.mode = led_control_s::MODE_BLINK_FAST;
-			break;
-		default:
-			break;
-	}
-	led_control.num_blinks = 3;
-	switch(mode_color->color) {
-		case RGBLED_COLOR_OFF:
-			led_control.mode = led_control_s::MODE_OFF;
-			break;
-		case RGBLED_COLOR_RED:
-			led_control.color = led_control_s::COLOR_RED;
-			break;
-		case RGBLED_COLOR_YELLOW:
-			led_control.color = led_control_s::COLOR_YELLOW;
-			break;
-		case RGBLED_COLOR_PURPLE:
-			led_control.color = led_control_s::COLOR_PURPLE;
-			break;
-		case RGBLED_COLOR_GREEN:
-			led_control.color = led_control_s::COLOR_GREEN;
-			break;
-		case RGBLED_COLOR_BLUE:
-			led_control.color = led_control_s::COLOR_BLUE;
-			break;
-		case RGBLED_COLOR_WHITE:
-			led_control.color = led_control_s::COLOR_WHITE;
-			break;
-		case RGBLED_COLOR_AMBER:
-			led_control.color = led_control_s::COLOR_AMBER;
-			break;
-		default:
-			break;
-	}
+	led_control.mode = mode;
+	led_control.color = color;
+	led_control.num_blinks = 0;
+	led_control.priority = 0;
 	led_control.timestamp = hrt_absolute_time();
 	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }

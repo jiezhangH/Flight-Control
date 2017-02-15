@@ -76,53 +76,11 @@ int led_toggle(int led);
 int led_on(int led);
 int led_off(int led);
 
-// TODO: these will be removed and handled in events module instead
-typedef struct {
-	uint8_t red;
-	uint8_t green;
-	uint8_t blue;
-} rgbled_rgbset_t;
-
-/* enum passed to RGBLED_SET_COLOR ioctl()*/
-typedef enum {
-	RGBLED_COLOR_OFF,
-	RGBLED_COLOR_RED,
-	RGBLED_COLOR_YELLOW,
-	RGBLED_COLOR_PURPLE,
-	RGBLED_COLOR_GREEN,
-	RGBLED_COLOR_BLUE,
-	RGBLED_COLOR_WHITE,
-	RGBLED_COLOR_AMBER,
-	RGBLED_COLOR_DIM_RED,
-	RGBLED_COLOR_DIM_YELLOW,
-	RGBLED_COLOR_DIM_PURPLE,
-	RGBLED_COLOR_DIM_GREEN,
-	RGBLED_COLOR_DIM_BLUE,
-	RGBLED_COLOR_DIM_WHITE,
-	RGBLED_COLOR_DIM_AMBER
-} rgbled_color_t;
-
-/* enum passed to RGBLED_SET_MODE ioctl()*/
-typedef enum {
-	RGBLED_MODE_OFF,
-	RGBLED_MODE_ON,
-	RGBLED_MODE_BLINK_SLOW,
-	RGBLED_MODE_BLINK_NORMAL,
-	RGBLED_MODE_BLINK_FAST,
-	RGBLED_MODE_BREATHE,
-	RGBLED_MODE_PATTERN
-} rgbled_mode_t;
-
-typedef struct {
-	uint8_t enabled;
-	rgbled_mode_t mode;
-	rgbled_color_t color;
-	uint8_t prio;
-	uint32_t duration;
-} rgbled_mode_and_color_t;
-
-void rgbled_set_color(rgbled_color_t color);
-void rgbled_set_mode(rgbled_mode_t mode);
-void rgbled_set_mode_and_color(rgbled_mode_and_color_t *mode_color);
+/**
+ * set the LED color & mode
+ * @param color @see led_control_s::COLOR_*
+ * @param mode @see led_control_s::MODE_*
+ */
+void rgbled_set_color_and_mode(uint8_t color, uint8_t mode);
 
 #endif /* COMMANDER_HELPER_H_ */
