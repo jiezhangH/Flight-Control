@@ -36,11 +36,13 @@
  * Status Display: this decouples the LED and tune logic from the control logic in commander
  *
  * @author Simone Guscetti <simone@px4.io>
+ * @author Beat Küng <beat-kueng@gmx.net>
  */
 
 #include "status_display.h"
 #include <px4_log.h>
 #include <drivers/drv_led.h>
+#include <matrix/math.hpp>
 
 using namespace status;
 
@@ -77,10 +79,13 @@ bool StatusDisplay::check_for_updates()
 		got_updates = true;
 	}
 
-	// right now the criteria is to have some vehicle_status updates to process
-	// the LED status
 	if (_subscriber_handler.vehicle_status_updated()) {
 		orb_copy(ORB_ID(vehicle_status), _subscriber_handler.get_vehicle_status_sub(), &_vehicle_status);
+		got_updates = true;
+	}
+
+	if (_subscriber_handler.vehicle_attitude_updated()) {
+		orb_copy(ORB_ID(vehicle_attitude), _subscriber_handler.get_vehicle_attitude_sub(), &_vehicle_attitude);
 		got_updates = true;
 	}
 
@@ -89,97 +94,84 @@ bool StatusDisplay::check_for_updates()
 
 void StatusDisplay::process()
 {
-	if (_status_display_uptime == 0) {
-		_status_display_uptime = hrt_absolute_time();
-	}
-
-	// if any update to the vehicle status topic exit
 	if (!check_for_updates()) {
 		return;
 	}
 
 	set_leds();
-	//TODO: publish only when led state changed...
-	publish();
 }
 
 void StatusDisplay::set_leds()
 {
-	static hrt_abstime overload_start = 0;
-	bool hotplug_timed_out = hrt_elapsed_time(&_status_display_uptime) > HOTPLUG_SENS_TIMEOUT;
-	bool is_overloaded = (_cpu_load.load > CPU_OVERLOAD_VALUE) || (_cpu_load.ram_usage > RAM_OVERLOAD_VALUE);
+	bool is_armed = _vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED;
+	bool reset_leds = false;
 
-	if (overload_start == 0 && is_overloaded) {
-		overload_start = hrt_absolute_time();
+	if (is_armed != _arming_state) {
+		if (!is_armed) {
+			reset_leds = true;
+		}
 
-	} else if (!is_overloaded) {
-		overload_start = 0;
+		_arming_state = is_armed;
 	}
 
-	// Ported from commander
-	bool set_normal_color = false;
+	if (is_armed) {
+		// check attitude
+		matrix::Eulerf euler = matrix::Quatf(_vehicle_attitude.q);
 
-	//TODO: why is this needed?
-	int overload_warn_delay = (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED) ? 1000 : 250000;
+		uint8_t led_mask_blinking = 0;
+		uint8_t led_mask_normal = 0;
+		bool is_tilted = false;
 
-	/* set mode */
-	if (is_overloaded && ((hrt_absolute_time() - overload_start) > overload_warn_delay)) {
-		_led_control.mode = led_control_s::MODE_BLINK_FAST;
-		_led_control.color = led_control_s::COLOR_PURPLE;
-		set_normal_color = false;
+		// fly left
+		if (fabsf(euler.theta() * 57.3f) < 6.0f && (euler.phi() * 57.3f) < -5.0f) {
+			led_mask_normal = (1 << 0) | (1 << 1) | (1 << 2);
+			led_mask_blinking = (1 << 3) | (1 << 4) | (1 << 5);
+			is_tilted = true;
+		}
 
-	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED) {
-		_led_control.mode = led_control_s::MODE_ON;
-		set_normal_color = true;
+		// fly right
+		if (fabsf(euler.theta() * 57.3f) < 6.0f && (euler.phi() * 57.3f) > 5.0f) {
+			led_mask_normal = (1 << 3) | (1 << 4) | (1 << 5);
+			led_mask_blinking = (1 << 0) | (1 << 1) | (1 << 2);
+			is_tilted = true;
+		}
 
-		// TODO: simplify this condition (create some bools, ...), below as well
+		// fly forward
+		if (fabsf(euler.phi() * 57.3f) < 6.0f && (euler.theta() * 57.3f) < -5.0f) {
+			led_mask_normal = (1 << 0) | (1 << 1) | (1 << 4) | (1 << 5);
+			led_mask_blinking = (1 << 2) | (1 << 3);
+			is_tilted = true;
+		}
 
-	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR ||
-		   (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
-		      == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && hotplug_timed_out)) {
-		_led_control.mode = led_control_s::MODE_BLINK_FAST;
-		_led_control.color = led_control_s::COLOR_RED;
-		set_normal_color = false;
+		// fly back
+		if (fabsf(euler.phi() * 57.3f) < 6.0f && (euler.theta() * 57.3f) > 5.0f) {
+			led_mask_normal = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
+			led_mask_blinking = (1 << 0) | (1 << 5);
+			is_tilted = true;
+		}
 
-	} else if (_vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_STANDBY) {
-		_led_control.mode = led_control_s::MODE_ON;
-		set_normal_color = true;
-
-	} else if (!((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK)
-		     == vehicle_status_flags_s::CONDITION_SYSTEM_SENSORS_INITIALIZED_MASK) && !hotplug_timed_out) {
-		_led_control.mode = led_control_s::MODE_ON;
-		set_normal_color = true;
-
-	} else {	// STANDBY_ERROR and other states
-		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
-		_led_control.color = led_control_s::COLOR_RED;
-		set_normal_color = false;
-	}
-
-	if (set_normal_color) {
-		/* set color */
-		if (_vehicle_status.failsafe) {
+		if (is_tilted) {
+			_led_control.led_mask = led_mask_normal;
+			_led_control.mode = led_control_s::MODE_ON;
+			_led_control.color = led_control_s::COLOR_GREEN;
+			publish();
+			_led_control.led_mask = led_mask_blinking;
+			_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
 			_led_control.color = led_control_s::COLOR_PURPLE;
-
-		} else if (_battery_status.warning == battery_status_s::BATTERY_WARNING_LOW) {
-			_led_control.color = led_control_s::COLOR_YELLOW;
-
-		} else if (_battery_status.warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
-			_led_control.color = led_control_s::COLOR_RED;
+			_led_control.num_blinks = 0;
+			publish();
 
 		} else {
-			// TODO: check this condition
-			if (((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK) ==
-			     vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK) &&
-			    ((_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_GLOBAL_POSITION_VALID_MASK) ==
-			     vehicle_status_flags_s::CONDITION_GLOBAL_POSITION_VALID_MASK)) {
-				_led_control.color = led_control_s::COLOR_GREEN;
-
-			} else {
-				_led_control.color = led_control_s::COLOR_BLUE;
-			}
+			reset_leds = true;
 		}
 	}
+
+	if (reset_leds) {
+		_led_control.led_mask = 0xff;
+		_led_control.mode = led_control_s::MODE_DISABLED;
+		publish();
+	}
+
 }
 
 void StatusDisplay::publish()

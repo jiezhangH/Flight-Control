@@ -146,7 +146,7 @@ void SendEvent::cycle()
 
 	process_commands();
 
-	//_status_display.process();
+	_status_display.process();
 
 	work_queue(LPWORK, &_work, (worker_t)&SendEvent::cycle_trampoline, this,
 		   USEC2TICK(SEND_EVENT_INTERVAL_US));

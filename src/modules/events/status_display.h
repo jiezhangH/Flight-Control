@@ -65,26 +65,40 @@ class StatusDisplay
 public:
 
 	StatusDisplay(const events::SubscriberHandler &subscriber_handler);
+
+	/** regularily called to handle state updates */
 	void process();
 
 protected:
+	/**
+	 * check for topic updates
+	 * @return true if one or more topic got updated
+	 */
 	bool check_for_updates();
+
+	/**
+	 * handle LED logic changes & call publish()
+	 */
 	void set_leds();
+
+	/** publish LED control */
 	void publish();
-	// TODO: review if there is a better variant that allocate this in the
-	// memory
+
+	// TODO: review if there is a better variant that allocate this in the memory
 	struct battery_status_s _battery_status = {};
 	struct cpuload_s _cpu_load = {};
 	struct vehicle_status_s _vehicle_status = {};
 	struct vehicle_status_flags_s _vehicle_status_flags = {};
+	struct vehicle_attitude_s _vehicle_attitude = {};
 
 	struct led_control_s _led_control = {};
 
 private:
 	orb_advert_t _led_control_pub = nullptr;
-	hrt_abstime _status_display_uptime = 0;
 
 	const events::SubscriberHandler &_subscriber_handler;
+
+	bool _arming_state = false;
 };
 
 } /* status */
