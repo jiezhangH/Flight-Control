@@ -114,7 +114,7 @@ static unsigned int tune_durations[TONE_NUMBER_OF_TUNES];
 static DevHandle h_leds;
 static DevHandle h_buzzer;
 static led_control_s led_control = {};
-static orb_advert_t led_control_pub = nullptr;
+//static orb_advert_t led_control_pub = nullptr;
 
 int buzzer_init()
 {
