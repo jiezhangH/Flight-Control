@@ -26,6 +26,10 @@ void SubscriberHandler::subscribe()
 	if (_vehicle_status_flags_sub < 0) {
 		_vehicle_status_flags_sub = orb_subscribe(ORB_ID(vehicle_status_flags));
 	}
+
+	if (_vehicle_attitude_sub < 0) {
+		_vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+	}
 }
 
 void SubscriberHandler::unsubscribe()
@@ -53,6 +57,11 @@ void SubscriberHandler::unsubscribe()
 	if (_vehicle_status_flags_sub >= 0) {
 		orb_unsubscribe(_vehicle_status_flags_sub);
 		_vehicle_status_flags_sub = -1;
+	}
+
+	if (_vehicle_attitude_sub >= 0) {
+		orb_unsubscribe(_vehicle_attitude_sub);
+		_vehicle_attitude_sub = -1;
 	}
 }
 
@@ -92,5 +101,12 @@ void SubscriberHandler::check_for_updates()
 
 	if (updated) {
 		_update_bitfield |= (uint32_t)StatusMask::CpuLoad;
+	}
+
+	updated = false;
+	orb_check(_vehicle_attitude_sub, &updated);
+
+	if (updated) {
+		_update_bitfield |= (uint32_t)StatusMask::VehicleAttitude;
 	}
 }
