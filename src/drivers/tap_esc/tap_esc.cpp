@@ -902,7 +902,7 @@ TAP_ESC::cycle()
 	unsigned frequency = 0, duration = 0, silence = 0;
 	EscbusTunePacket esc_tune_packet;
 
-	if ((now >= _next_tone) && _play_tone) {
+	if ((now >= _next_tone) && _play_tone && !_is_armed) {
 		_play_tone = false;
 
 		if (_tunes.parse_cmd(_tune, frequency, duration, silence) > 0) {
@@ -913,9 +913,7 @@ TAP_ESC::cycle()
 			_next_tone = now + silence + duration;
 			_play_tone = true;
 
-			if (!_is_armed) {
-				send_tune_packet(esc_tune_packet);
-			}
+			send_tune_packet(esc_tune_packet);
 		}
 	}
 }
