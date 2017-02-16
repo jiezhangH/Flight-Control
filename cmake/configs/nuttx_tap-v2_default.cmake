@@ -51,6 +51,7 @@ set(config_module_list
 	systemcmds/ver
 	systemcmds/sd_bench
 	systemcmds/topic_listener
+	systemcmds/tune_control
 
 	#
 	# General system control
