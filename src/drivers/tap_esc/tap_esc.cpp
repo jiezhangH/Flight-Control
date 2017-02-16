@@ -42,6 +42,7 @@
 
 #include <lib/mathlib/mathlib.h>
 #include <lib/led/led.h>
+#include <lib/tunes/tunes.h>
 #include <systemlib/px4_macros.h>
 #include <drivers/device/device.h>
 #include <uORB/uORB.h>
@@ -50,7 +51,7 @@
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/led_control.h>
 #include <uORB/topics/test_motor.h>
-#include <uORB/topics/tune.h>
+#include <uORB/topics/tune_control.h>
 #include <uORB/topics/input_rc.h>
 #include <uORB/topics/esc_status.h>
 #include <uORB/topics/multirotor_motor_limits.h>
@@ -114,7 +115,7 @@ private:
 	int	_armed_sub;
 	int _test_motor_sub;
 	int _led_control_sub;
-	int _tunes_sub;
+	int _tune_control_sub;
 	orb_advert_t        	_outputs_pub;
 	actuator_outputs_s      _outputs;
 	static actuator_armed_s	_armed;
@@ -122,6 +123,12 @@ private:
 	LedControlData _led_control_data;
 	LedController _led_controller;
 
+	output::Tunes _tunes;
+
+	tune_control_s _tune;
+	volatile hrt_abstime _now;
+	volatile hrt_abstime _next_tone;
+	volatile bool _play_tone = false;
 	//todo:refactor dynamic based on _channels_count
 	// It needs to support the numbe of ESC
 	int	_control_subs[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
@@ -186,7 +193,7 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_armed_sub(-1),
 	_test_motor_sub(-1),
 	_led_control_sub(-1),
-	_tunes_sub(-1),
+	_tune_control_sub(-1),
 	_outputs_pub(nullptr),
 	_led_control_data{},
 	_esc_feedback_pub(nullptr),
@@ -222,6 +229,8 @@ TAP_ESC::TAP_ESC(int channels_count):
 		_outputs.output[i] = NAN;
 	}
 
+	// initialise the tune library with the adjusted parameter for TAP
+	_tunes = output::Tunes(120, 2, 4, output::NoteMode::MODE_NORMAL);
 	_outputs.noutputs = 0;
 }
 
@@ -651,7 +660,7 @@ TAP_ESC::cycle()
 		_test_motor_sub = orb_subscribe(ORB_ID(test_motor));
 		_led_control_sub = orb_subscribe(ORB_ID(led_control));
 		_led_controller.init(_led_control_sub);
-		_tunes_sub = orb_subscribe(ORB_ID(tune));
+		_tune_control_sub = orb_subscribe(ORB_ID(tune_control));
 		_initialized = true;
 	}
 
@@ -881,38 +890,32 @@ TAP_ESC::cycle()
 	}
 
 	updated = false;
-	orb_check(_tunes_sub, &updated);
-
+	orb_check(_tune_control_sub, &updated);
 	hrt_abstime now = hrt_absolute_time();
 
-	// we need to make sure we don't send a new tune while another one is still in progress
-	if (updated && now > _send_next_tune) {
-		struct tune_s tune;
+	if (updated) {
+		orb_copy(ORB_ID(tune_control), _tune_control_sub, &_tune);
+		_next_tone = hrt_absolute_time();
+		_play_tone = true;
+	}
 
-		orb_copy(ORB_ID(tune), _tunes_sub, &tune);
+	unsigned frequency = 0, duration = 0, silence = 0;
+	EscbusTunePacket esc_tune_packet;
 
-		// decrease the next tune duration to make sure there is no overlap in time
-		uint16_t duration_decrement = (now - tune.timestamp) / 1000;
+	if ((now >= _next_tone) && _play_tone) {
+		_play_tone = false;
 
-		if (!_is_armed && duration_decrement < tune.duration) {
+		if (_tunes.parse_cmd(_tune, frequency, duration, silence) > 0) {
+			esc_tune_packet.frequency = frequency;
+			esc_tune_packet.duration_ms = (uint16_t)(duration / 1000); // convert to ms
+			esc_tune_packet.strength = _tune.strength;
+			// set next tone time
+			_next_tone = now + silence + duration;
+			_play_tone = true;
 
-			tune.duration -= duration_decrement;
-			_send_next_tune = now + tune.duration * 1000 + 500; //add 0.5ms to avoid overlap
-
-			EscbusTunePacket esc_tune_packet;
-			esc_tune_packet.frequency = tune.frequency;
-			esc_tune_packet.duration_ms = tune.duration;
-			esc_tune_packet.strength = tune.strength;
-
-#if 0 // debug timing
-			hrt_abstime t = now;
-			static hrt_abstime last_t = t;
-			PX4_WARN("tune: T=%i ms, dt=%i, f=%i, d=%i ms, s=%i, dec=%i", (int)(t / 1000),
-				 (int)((t - last_t) / 1000), (int)tune.frequency, (int)tune.duration, (int)tune.strength,
-				 int(duration_decrement));
-			last_t = t;
-#endif
-			send_tune_packet(esc_tune_packet);
+			if (!_is_armed) {
+				send_tune_packet(esc_tune_packet);
+			}
 		}
 	}
 }
@@ -930,8 +933,8 @@ void TAP_ESC::work_stop()
 	_armed_sub = -1;
 	orb_unsubscribe(_test_motor_sub);
 	_test_motor_sub = -1;
-	orb_unsubscribe(_tunes_sub);
-	_tunes_sub = -1;
+	orb_unsubscribe(_tune_control_sub);
+	_tune_control_sub = -1;
 	orb_unsubscribe(_led_control_sub);
 	_led_control_sub = -1;
 	orb_unadvertise(_outputs_pub);
