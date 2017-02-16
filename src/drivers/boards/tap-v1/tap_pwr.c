@@ -101,7 +101,7 @@ static int board_button_irq(int irq, FAR void *context)
 			up_mdelay(50);
 
 			// shut down power and wait for it to go down
-			board_pwr(false);
+			px4_board_pwr(false);
 
 			while (1);
 		}
