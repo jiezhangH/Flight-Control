@@ -88,5 +88,4 @@ private:
 	volatile bool _task_is_running = false;
 	static struct work_s _work;
 	orb_advert_t _command_ack_pub = nullptr;
-	orb_advert_t _led_event_pub = nullptr;
 };
