@@ -78,14 +78,27 @@ fi
 
 if ver hwcmp TAP_V2
 then
-	param select /fs/microsd/params
-fi
-
-if param load
-then
-else
-	if param reset
+	# load the temperature calibration data from EEPROM.
+	if param load /fs/mtd_caldata
 	then
+	else
+		if param reset
+		then
+		fi
+	fi
+
+	# now load from SD card, which can override the temp calib params
+	param select /fs/microsd/params
+	# we need to use param import (instead of load), because load will cause a reset
+	param import
+else
+# tap v1
+	if param load
+	then
+	else
+		if param reset
+		then
+		fi
 	fi
 fi
 
@@ -119,8 +132,8 @@ fi
 #
 if param compare SYS_AUTOCONFIG 1
 then
-	# Wipe out params except RC*
-	param reset_nostart RC*
+	# Wipe out params except RC* and TC_* (temperature calibration)
+	param reset_nostart RC* TC_*
 	set AUTOCNF yes
 else
 	set AUTOCNF no
