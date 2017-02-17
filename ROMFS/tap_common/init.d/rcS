@@ -90,7 +90,9 @@ then
 	# now load from SD card, which can override the temp calib params
 	param select /fs/microsd/params
 	# we need to use param import (instead of load), because load will cause a reset
-	param import
+	if param import
+	then
+	fi
 else
 # tap v1
 	if param load
