@@ -106,7 +106,6 @@ fi
 
 if ver hwcmp TAP_V2
 then
-	tap_esc_tune start
 	camera_trigger start
 fi
 
