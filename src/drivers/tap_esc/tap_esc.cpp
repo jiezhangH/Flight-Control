@@ -904,14 +904,19 @@ TAP_ESC::cycle()
 
 	if ((now >= _next_tone) && _play_tone && !_is_armed) {
 		_play_tone = false;
+		int parse_ret_val = _tunes.parse_cmd(_tune, frequency, duration, silence);
 
-		if (_tunes.parse_cmd(_tune, frequency, duration, silence) > 0) {
+		// the return value is 0 if one tone need to be played and 1 if the sequence needs to continue
+		if (parse_ret_val >= 0) {
 			esc_tune_packet.frequency = frequency;
 			esc_tune_packet.duration_ms = (uint16_t)(duration / 1000); // convert to ms
 			esc_tune_packet.strength = _tune.strength;
 			// set next tone time
 			_next_tone = now + silence + duration;
-			_play_tone = true;
+
+			if (parse_ret_val > 0) {
+				_play_tone = true;
+			}
 
 			send_tune_packet(esc_tune_packet);
 		}
