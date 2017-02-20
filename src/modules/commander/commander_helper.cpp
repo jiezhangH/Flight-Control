@@ -114,7 +114,7 @@ static unsigned int tune_durations[TONE_NUMBER_OF_TUNES];
 static DevHandle h_leds;
 static DevHandle h_buzzer;
 static led_control_s led_control = {};
-//static orb_advert_t led_control_pub = nullptr;
+static orb_advert_t led_control_pub = nullptr;
 
 int buzzer_init()
 {
@@ -269,7 +269,7 @@ int led_init()
 	led_control.mode = led_control_s::MODE_OFF;
 	led_control.priority = 0;
 	led_control.timestamp = hrt_absolute_time();
-	//led_control_pub = orb_advertise_queue(ORB_ID(led_control), &led_control, LED_UORB_QUEUE_LENGTH);
+	led_control_pub = orb_advertise_queue(ORB_ID(led_control), &led_control, LED_UORB_QUEUE_LENGTH);
 
 #ifndef CONFIG_ARCH_BOARD_RPI
 	/* first open normal LEDs */
@@ -301,7 +301,7 @@ int led_init()
 
 void led_deinit()
 {
-	//orb_unadvertise(led_control_pub);
+	orb_unadvertise(led_control_pub);
 #ifndef CONFIG_ARCH_BOARD_RPI
 	DevMgr::releaseHandle(h_leds);
 #endif
@@ -329,6 +329,5 @@ void rgbled_set_color_and_mode(uint8_t color, uint8_t mode)
 	led_control.num_blinks = 0;
 	led_control.priority = 0;
 	led_control.timestamp = hrt_absolute_time();
-	//orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
+	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }
-
