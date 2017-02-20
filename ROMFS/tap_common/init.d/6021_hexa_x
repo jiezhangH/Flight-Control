@@ -156,21 +156,20 @@ then
 	param set RC_MAP_AUX3 9
 	param set RC_MAP_AUX4 10
 
-	param set RC1_MAX 1833.0
-	param set RC1_MIN 1163.0
+	param set RC1_MAX 1827.0
+	param set RC1_MIN 1162.0
 	param set RC1_REV 1.0
-	# 1156.0 would be better but fails RC calibration check
-	param set RC1_TRIM 1163.0
-	param set RC2_MAX 1833.0
-	param set RC2_MIN 1163.0
+	param set RC1_TRIM 1162.0
+	param set RC2_MAX 1827.0
+	param set RC2_MIN 1168.0
 	param set RC2_REV -1.0
 	param set RC2_TRIM 1500.0
-	param set RC3_MAX 1833.0
-	param set RC3_MIN 1163.0
+	param set RC3_MAX 1827.0
+	param set RC3_MIN 1168.0
 	param set RC3_REV 1.0
 	param set RC3_TRIM 1500.0
-	param set RC4_MAX 1764.0
-	param set RC4_MIN 1233.0
+	param set RC4_MAX 1827.0
+	param set RC4_MIN 1168.0
 	param set RC4_REV -1.0
 	param set RC4_TRIM 1500.0
 	param set RC5_MAX 1833.0
