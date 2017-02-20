@@ -116,6 +116,12 @@ then
 	#
 	param set MPC_THR_MAX 0.94
 	param set MPC_THR_MIN 0.1
+	
+	#
+	# RTL settings
+	#
+	param set MIS_LTRMIN_ALT 3.0
+	param set RTL_LAND_DELAY 3.0
 
 	#
 	# Maximum tilt angle
