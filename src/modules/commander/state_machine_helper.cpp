@@ -152,14 +152,6 @@ transition_result_t arming_state_transition(struct vehicle_status_s *status,
 		 */
 		int prearm_ret = OK;
 
-		/* only perform the pre-arm check if we have to */
-		if (fRunPreArmChecks && new_arming_state == vehicle_status_s::ARMING_STATE_ARMED
-		    && status->hil_state == vehicle_status_s::HIL_STATE_OFF) {
-
-			prearm_ret = preflight_check(status, mavlink_log_pub, true /* pre-arm */, false /* force_report */,
-						     status_flags, battery, can_arm_without_gps, time_since_boot);
-		}
-
 		/* re-run the pre-flight check as long as sensors are failing */
 		if (!status_flags->condition_system_sensors_initialized
 		    && (new_arming_state == vehicle_status_s::ARMING_STATE_ARMED
@@ -176,6 +168,14 @@ transition_result_t arming_state_transition(struct vehicle_status_s *status,
 			} else {
 				prearm_ret = last_prearm_ret;
 			}
+		}
+
+		/* only perform the pre-arm check if we have to */
+		if (fRunPreArmChecks && new_arming_state == vehicle_status_s::ARMING_STATE_ARMED
+		    && status->hil_state == vehicle_status_s::HIL_STATE_OFF) {
+
+			prearm_ret = preflight_check(status, mavlink_log_pub, true /* pre-arm */, true /* force_report */,
+						     status_flags, battery, can_arm_without_gps, time_since_boot);
 		}
 
 		/*
