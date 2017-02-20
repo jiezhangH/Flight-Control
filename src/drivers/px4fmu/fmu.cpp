@@ -1350,8 +1350,6 @@ PX4FMU::cycle()
 				// DSM pairing command
 				dsm_bind_ioctl((int)cmd.param2);
 
-				st24_bind(); // TODO: Take this out as soon as the stable QGC can demand the ST24 bind command
-
 			} else if ((int)cmd.param1 == 1) {
 				st24_bind();
 			}
