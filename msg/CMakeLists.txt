@@ -106,7 +106,6 @@ set(msg_file_names
 	time_offset.msg
 	transponder_report.msg
 	tune_control.msg
-	tune.msg
 	uavcan_parameter_request.msg
 	uavcan_parameter_value.msg
 	ulog_stream.msg

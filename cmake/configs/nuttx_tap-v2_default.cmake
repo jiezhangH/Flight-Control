@@ -29,7 +29,6 @@ set(config_module_list
 	drivers/camera_trigger
 	drivers/protocol_splitter
 	drivers/mavlink_dup
-	drivers/tap_esc_tune
 
 	#
 	# System commands
