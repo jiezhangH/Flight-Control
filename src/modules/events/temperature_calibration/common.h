@@ -45,11 +45,14 @@
 
 #include "polyfit.hpp"
 
+using namespace matrix;
+
 #define SENSOR_COUNT_MAX		3
+#define MAX_GYRO_DIFF_THRESHOLD        0.061f  //3.5f * M_DEG_TO_RAD_F
 
 
 #define TC_ERROR_INITIAL_TEMP_TOO_HIGH 110 ///< starting temperature was above the configured allowed temperature
-
+#define TC_ERROR_GYRO_UNSTABLE         111
 /**
  * Base class for temperature calibration types with abstract methods (for all different sensor types)
  */
@@ -176,6 +179,7 @@ protected:
 		float high_temp = 0.f; ///< highest temperature recorded during calibration (deg C)
 		float ref_temp = 0.f; /**< calibration reference temperature, nominally in the middle of the
 							calibration temperature range (deg C) */
+		Vector3f last_value = {0.f, 0.f, 0.f}; ///< cache for sensor value
 	};
 
 	PerSensorData _data[SENSOR_COUNT_MAX];
