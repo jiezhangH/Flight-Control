@@ -69,7 +69,7 @@ then
 		# yaw angle & rate setting
 		param set MC_YAWRATE_P 0.14
 		param set MC_YAWRATE_I 0.05
-		param set MC_YAWRATE_MAX 120.0
+		param set MC_YAWRATE_MAX 90.0
 		param set MC_YAW_P 6
 
 		# hover thrust
