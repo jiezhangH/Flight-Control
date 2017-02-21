@@ -89,8 +89,8 @@ then
 		param set MPC_XY_MAN_EXPO 0.69
 
 		# Position control velocity
-		param set MPC_XY_CRUISE 13.5
-		param set MPC_XY_VEL_MAX 12.0
+		param set MPC_XY_CRUISE 9.0
+		param set MPC_XY_VEL_MAX 13.5
 		param set MPC_Z_VEL_MAX_UP 5.0
 		param set MPC_Z_VEL_MAX 3.0
 		param set MPC_Z_VEL_MAX_DN 2.0
