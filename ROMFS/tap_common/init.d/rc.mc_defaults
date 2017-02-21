@@ -25,7 +25,7 @@ then
 
 	# Mag calibration setting
 	# do two-side calibration
-	param set CAL_MAG_SIDES 34
+	param set CAL_MAG_SIDES 63
 
 	# camera trigger: forward via MAVLink
 	param set TRIG_INTERFACE 3
