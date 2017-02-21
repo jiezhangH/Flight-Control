@@ -636,13 +636,18 @@ protected:
 			msg.battery_remaining = (battery_status.connected) ? battery_status.remaining * 100.0f : -1;
 			// TODO: fill in something useful in the fields below
 			msg.drop_rate_comm = 0;
+#ifdef MAVLINK_TX_BYTE_COUNT_ENABLED
 			msg.errors_comm = _mavlink->get_bytes_tx_comm();
+#else
+			msg.errors_comm = 0;
+#endif
 			msg.errors_count1 = 0;
 			msg.errors_count2 = 0;
 			msg.errors_count3 = 0;
 			msg.errors_count4 = 0;
-
+#ifdef MAVLINK_TX_BYTE_COUNT_ENABLED
 			_mavlink->set_bytes_tx_comm(0);
+#endif
 
 			mavlink_msg_sys_status_send_struct(_mavlink->get_channel(), &msg);
 

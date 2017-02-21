@@ -228,7 +228,9 @@ Mavlink::Mavlink() :
 	_protocol_version_switch(-1),
 	_protocol_version(0),
 	_bytes_tx(0),
+#ifdef MAVLINK_TX_BYTE_COUNT_ENABLED
 	_bytes_tx_comm(0),
+#endif
 	_bytes_txerr(0),
 	_bytes_rx(0),
 	_bytes_timestamp(0),
