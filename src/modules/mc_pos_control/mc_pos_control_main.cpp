@@ -278,7 +278,7 @@ private:
 
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
-	float _yaw_smart;	/**< home yaw angle present when vehicle was armed (euler) */
+	float _yaw_takeoff;	/**< home yaw angle present when vehicle was taking off (euler) */
 	bool _in_landing;	/**< the vehicle is in the landing descent */
 	bool _lnd_reached_ground; /**< controller assumes the vehicle has reached the ground after landing */
 	bool _takeoff_jumped;
@@ -438,7 +438,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_run_pos_control(true),
 	_run_alt_control(true),
 	_yaw(0.0f),
-	_yaw_smart(0.0f),
+	_yaw_takeoff(0.0f),
 	_in_landing(false),
 	_lnd_reached_ground(false),
 	_takeoff_jumped(false),
@@ -940,25 +940,25 @@ MulticopterPositionControl::control_manual(float dt)
 		reset_pos_sp();
 	}
 
-	/* limit velocity setpoint */
-	float req_vel_sp_norm = req_vel_sp.length();
-
-	/*_req_vel_sp is scaled to size 0..1 */
-	if (req_vel_sp_norm > 1.0f) {
-		req_vel_sp /= req_vel_sp_norm;
-	}
+	/* scale requested velocity setpoint to cruisespeed and rotate around yaw */
+	math::Vector<3> vel_cruise(_params.vel_cruise(0),
+				   _params.vel_cruise(1),
+				   (req_vel_sp_z > 0.0f) ? _params.vel_max_down : _params.vel_max_up);
+	math::Vector<3> req_vel_sp_scaled(req_vel_sp_xy(0), req_vel_sp_xy(1), req_vel_sp_z);
 
 	/* scale velocity setpoint to cruise speed (m/s) and rotate around yaw to NED frame */
 	math::Matrix<3, 3> R_input_fame;
 
-	if (_control_mode.flag_control_smart_enabled) {
-		R_input_fame.from_euler(0.0f, 0.0f, _yaw_smart);
+	if (_control_mode.flag_control_fixed_hdg_enabled) {
+		R_input_fame.from_euler(0.0f, 0.0f, _yaw_takeoff);
 
 	} else {
 		R_input_fame.from_euler(0.0f, 0.0f, _att_sp.yaw_body);
+
 	}
 
-	math::Vector<3> req_vel_sp_scaled = R_input_fame * req_vel_sp.emult(_params.vel_cruise);
+	req_vel_sp_scaled = R_input_fame * req_vel_sp_scaled.emult(
+				    vel_cruise); // in NED and scaled to actual velocity;
 
 	/*
 	 * assisted velocity mode: user controls velocity, but if	velocity is small enough, position
@@ -1525,8 +1525,8 @@ void MulticopterPositionControl::control_auto(float dt)
 			_do_reset_alt_pos_flag = true;
 		}
 
-		// TODO FIXME: leave the landing gear down if the relative altitude is less than 5 meters.
-		const bool high_enough_for_landing_gear = (_pos(2) < -5.0f);
+		// Handle the landing gear based on the manual landing alt
+		const bool high_enough_for_landing_gear = (_pos(2) < _manual_land_alt.get() * 2.0f);
 
 		// During a mission or in loiter it's safe to retract the landing gear.
 		if ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION ||
@@ -2255,7 +2255,7 @@ MulticopterPositionControl::task_main()
 			_reset_int_z = true;
 			_reset_int_xy = true;
 			_reset_yaw_sp = true;
-			_yaw_smart = _yaw;
+			_yaw_takeoff = _yaw;
 		}
 
 		/* reset yaw and altitude setpoint for VTOL which are in fw mode */
