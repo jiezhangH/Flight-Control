@@ -72,6 +72,8 @@
 #include "mavlink_shell.h"
 #include "mavlink_ulog.h"
 
+// #define MAVLINK_TX_BYTE_COUNT_ENABLED
+
 enum Protocol {
 	SERIAL = 0,
 	UDP,
