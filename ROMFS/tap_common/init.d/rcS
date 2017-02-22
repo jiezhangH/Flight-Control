@@ -81,10 +81,6 @@ then
 	# load the temperature calibration data from EEPROM.
 	if param load /fs/mtd_caldata
 	then
-	else
-		if param reset
-		then
-		fi
 	fi
 
 	# now load from SD card, which can override the temp calib params
