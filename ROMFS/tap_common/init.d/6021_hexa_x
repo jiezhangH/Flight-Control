@@ -53,21 +53,21 @@ then
 	else
 		# TAP v2
 		# pitch angle & rate setting
-		param set MC_PITCHRATE_P 0.14
+		param set MC_PITCHRATE_P 0.13
 		param set MC_PITCHRATE_I 0.05
 		param set MC_PITCHRATE_D 0.001
 		param set MC_PITCHRATE_MAX 360.0
 		param set MC_PITCH_P 8
 
 		# roll angle & rate setting
-		param set MC_ROLLRATE_P 0.14
+		param set MC_ROLLRATE_P 0.13
 		param set MC_ROLLRATE_I 0.05
 		param set MC_ROLLRATE_D 0.001
 		param set MC_ROLLRATE_MAX 360.0
 		param set MC_ROLL_P 8
 
 		# yaw angle & rate setting
-		param set MC_YAWRATE_P 0.14
+		param set MC_YAWRATE_P 0.13
 		param set MC_YAWRATE_I 0.05
 		param set MC_YAWRATE_MAX 90.0
 		param set MC_YAW_P 6
@@ -97,10 +97,10 @@ then
 		param set MPC_LAND_SPEED 0.8
 
 		# Throttle pid attenuation
-		param set MC_TPA_RATE_P 0.4
+		param set MC_TPA_RATE_P 0.8
 		param set MC_TPA_RATE_I 0.5
 		param set MC_TPA_RATE_D 0.2
-		param set MC_TPA_BREAK_P 0.65
+		param set MC_TPA_BREAK_P 0.45
 		param set MC_TPA_BREAK_I 0.6
 		param set MC_TPA_BREAK_D 0.65
 
