@@ -75,7 +75,6 @@ void TemperatureCalibrationGyro::reset_calibration()
 int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int sensor_sub)
 {
 	bool finished = data.hot_soaked;
-	Vector3f current_value, diff;
 
 	bool updated;
 	orb_check(sensor_sub, &updated);
@@ -99,10 +98,6 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 	data.sensor_sample_filt[2] = gyro_data.z;
 	data.sensor_sample_filt[3] = gyro_data.temperature;
 
-	current_value(0) = data.sensor_sample_filt[0];
-	current_value(1) = data.sensor_sample_filt[1];
-	current_value(2) = data.sensor_sample_filt[2];
-
 	// wait for min start temp to be reached before starting calibration
 	if (data.sensor_sample_filt[3] < _min_start_temperature) {
 		return 1;
@@ -120,22 +115,12 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 				data.low_temp = data.sensor_sample_filt[3]; // Record the low temperature
 				data.high_temp = data.low_temp; // Initialise the high temperature to the initial temperature
 				data.ref_temp = data.sensor_sample_filt[3] + 0.5f * _min_temperature_rise;
-				data.last_value = current_value;
 				return 1;
 			}
 
 		} else {
 			return 1;
 		}
-	}
-
-	// check still
-	diff = current_value - data.last_value;
-	data.last_value = current_value;
-
-	if (diff.length() > MAX_GYRO_DIFF_THRESHOLD) {
-		printf("Calibration failed: not still, gyro_diff=%8.4f\n", (double)diff.length());
-		rerurn -TC_ERROR_GYRO_UNSTABLE;
 	}
 
 	// check if temperature increased
