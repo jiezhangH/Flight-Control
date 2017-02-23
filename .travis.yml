@@ -6,6 +6,12 @@ language: cpp
 git:
   depth: 2000
 
+# white list
+branches:
+  only:
+  - master
+  - tap
+
 matrix:
   fast_finish: true
   include:
