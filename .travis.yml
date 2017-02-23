@@ -9,7 +9,6 @@ git:
 # white list
 branches:
   only:
-  - master
   - tap
 
 matrix:
