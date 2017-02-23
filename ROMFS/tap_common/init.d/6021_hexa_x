@@ -206,6 +206,10 @@ then
 	#
 	param set RC_MAP_ARM_SW 12
 	param set COM_ARM_SWISBTN 1
+
+	# Set landing detection stick down threshold
+	# to account for values in ST16 turtle mode
+	param set LNDMC_MAN_DWNTHR 0.25
 fi
 
 if tap_esc start -d ${ESC_TTY} -n 6
