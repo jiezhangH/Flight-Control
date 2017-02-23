@@ -138,7 +138,10 @@ public:
 	int update()
 	{
 		int num_not_complete = 0;
-
+	
+		if(_num_sensor_instances == 0)
+			return -TC_ERROR_COMMUNICATION;
+		
 		for (unsigned uorb_index = 0; uorb_index < _num_sensor_instances; uorb_index++) {
 			int status = update_sensor_instance(_data[uorb_index], _sensor_subs[uorb_index]);
 
