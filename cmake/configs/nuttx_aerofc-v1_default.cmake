@@ -104,6 +104,8 @@ set(config_module_list
 	lib/version
 	lib/DriverFramework/framework
 	lib/rc
+	lib/led
+	lib/tunes
 	platforms/nuttx
 
 	# had to add for cmake, not sure why wasn't in original config
