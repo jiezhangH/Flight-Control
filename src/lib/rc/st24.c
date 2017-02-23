@@ -74,7 +74,6 @@ const char *decode_states[] = {"UNSYNCED",
 
 static enum ST24_DECODE_STATE _decode_state = ST24_DECODE_STATE_UNSYNCED;
 static uint8_t _rxlen;
-static uint16_t _last_throttle_raw = 0;
 
 static ReceiverFcPacket _rxpacket;
 static ReceiverFcPacket _txpacket;
@@ -209,12 +208,11 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 					 * needs to be used in combination with RC_MAP_ARM_SW mapped to the channel and parameter COM_ARM_SWISBTN enabled */
 					if (channels[0] == 0) {
 						channels[ST16_VIRTUAL_ARM_BUTTON_CHANNEL] = (uint16_t)ST24_RANGE_MAX;
-						/* preserve the throttle value when ST16 arm button pressed */
-						channels[0] = _last_throttle_raw;
+						/* set a low throttle value when ST16 arm button pressed to descend */
+						channels[0] = ST16_ARM_BUTTON_THROTTLE_VALUE_RAW;
 
 					} else {
 						channels[ST16_VIRTUAL_ARM_BUTTON_CHANNEL] = (uint16_t)ST24_RANGE_MIN;
-						_last_throttle_raw = channels[0];
 					}
 
 					/* convert values from 0-4096 serial value to 1000-2000 ppm encoding */
