@@ -32,6 +32,7 @@ then
 	set DATAMAN_OPT -r
 fi
 set START_LOGGER 0
+set PARAM_FILE /fs/microsd/params
 
 #
 # Try to mount the microSD card.
@@ -53,9 +54,11 @@ else
 			echo "ERROR [init] Format failed"
 			#tone_alarm MNBG
 			set LOG_FILE /dev/null
+			set PARAM_FILE /dev/null
 		fi
 	else
 		set LOG_FILE /dev/null
+		set PARAM_FILE /dev/null
 	fi
 fi
 
@@ -84,7 +87,7 @@ then
 	fi
 
 	# now load from SD card, which can override the temp calib params
-	param select /fs/microsd/params
+	param select $PARAM_FILE
 	# we need to use param import (instead of load), because load will cause a reset
 	if param import
 	then
@@ -99,6 +102,8 @@ else
 		fi
 	fi
 fi
+
+unset PARAM_FILE
 
 if ver hwcmp TAP_V2
 then
