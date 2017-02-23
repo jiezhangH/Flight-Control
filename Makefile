@@ -176,6 +176,7 @@ qgc_firmware: \
 	check_px4fmu-v3_default \
 	check_px4fmu-v4_default \
 	check_tap-v1_default \
+	check_tap-v2_default \
 	check_sizes
 
 # Other NuttX firmware
