@@ -99,6 +99,14 @@ int TemperatureCalibrationAccel::update_sensor_instance(PerSensorData &data, int
 	sensor_accel_s accel_data;
 	orb_copy(ORB_ID(sensor_accel), sensor_sub, &accel_data);
 
+	// ACCEL datas are always zero or are bad
+	if(fabsf(accel_data.x) > TC_ACC_XY_THRESHOLD || fabsf(accel_data.y) > TC_ACC_XY_THRESHOLD ||
+			fabsf(accel_data.z) > TC_ACC_Z_MAX_THRESHOLD || fabsf(accel_data.z) < TC_ACC_Z_MIN_THRESHOLD ||
+			fabsf(accel_data.x) < TC_SENSOR_VALUE_THRESHOLD || fabsf(accel_data.y) < TC_SENSOR_VALUE_THRESHOLD ||
+			fabsf(accel_data.z) < TC_SENSOR_VALUE_THRESHOLD) {
+		return -TC_ERROR_DATA_EXCEPTION;
+	}
+
 	if (finished) {
 		// if we're done, return, but we need to return after orb_copy because of poll()
 		return 0;

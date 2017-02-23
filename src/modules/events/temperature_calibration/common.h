@@ -46,9 +46,19 @@
 #include "polyfit.hpp"
 
 #define SENSOR_COUNT_MAX		3
-
+#define GRAVITY_ACC                     9.80665f
 
 #define TC_ERROR_INITIAL_TEMP_TOO_HIGH 110 ///< starting temperature was above the configured allowed temperature
+#define TC_ERROR_COMMUNICATION         112 ///< the communication of IIC or SPI is lost
+#define TC_ERROR_DATA_EXCEPTION        113 ///< the performance of sensor is bad
+
+#define TC_SENSOR_VALUE_THRESHOLD      0.000001f ///sensor data is always zero
+
+#define TC_ACC_XY_THRESHOLD            1.0f ///accel XY threshold m/s/s
+#define TC_ACC_Z_MIN_THRESHOLD         (GRAVITY_ACC - 1.0f) ///accel Z min threshold m/s/s
+#define TC_ACC_Z_MAX_THRESHOLD         (GRAVITY_ACC + 1.0f) ///accel Z max threshold m/s/s
+
+#define TC_GYRO_XYZ_THRESHOLD          0.1f ///gyro XYZ threshold rad/s
 
 /**
  * Base class for temperature calibration types with abstract methods (for all different sensor types)
@@ -132,11 +142,9 @@ public:
 		for (unsigned uorb_index = 0; uorb_index < _num_sensor_instances; uorb_index++) {
 			int status = update_sensor_instance(_data[uorb_index], _sensor_subs[uorb_index]);
 
-			if (status == -1) {
-				return -1;
+			if (status < 0) {
+				return -status;
 
-			} else if (status == -TC_ERROR_INITIAL_TEMP_TOO_HIGH) {
-				return -TC_ERROR_INITIAL_TEMP_TOO_HIGH;
 			}
 
 			num_not_complete += status;

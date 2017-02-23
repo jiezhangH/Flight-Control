@@ -86,6 +86,13 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 	sensor_gyro_s gyro_data;
 	orb_copy(ORB_ID(sensor_gyro), sensor_sub, &gyro_data);
 
+	// GYRO datas are always zero or are bad
+	if(fabsf(gyro_data.x) > TC_GYRO_XYZ_THRESHOLD || fabsf(gyro_data.y) > TC_GYRO_XYZ_THRESHOLD ||
+			fabsf(gyro_data.z) > TC_GYRO_XYZ_THRESHOLD ||fabsf(gyro_data.x) < TC_SENSOR_VALUE_THRESHOLD ||
+			fabsf(gyro_data.y) < TC_SENSOR_VALUE_THRESHOLD || fabsf(gyro_data.z) < TC_SENSOR_VALUE_THRESHOLD) {
+		return -TC_ERROR_DATA_EXCEPTION;
+	}
+
 	if (finished) {
 		// if we're done, return, but we need to return after orb_copy because of poll()
 		return 0;
