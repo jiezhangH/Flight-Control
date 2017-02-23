@@ -105,20 +105,20 @@ int Tunes::parse_cmd(struct tune_control_s &tune_control, unsigned &frequency, u
 	int continue_sequnece = 0;
 
 	switch (tune_control.tune_id) {
-	case tune_control_s::STARTUP:
-	case tune_control_s::ERROR:
-	case tune_control_s::NOTIFY_POSITIVE:
-	case tune_control_s::NOTIFY_NEUTRAL:
-	case tune_control_s::NOTIFY_NEGATIVE:
-	case tune_control_s::ARMING_WARNING:
-	case tune_control_s::BATTERY_WARNING_SLOW:
-	case tune_control_s::BATTERY_WARNING_FAST:
-	case tune_control_s::GPS_WARNING:
-	case tune_control_s::PARACHUTE_RELEASE:
-	case tune_control_s::EKF_WARNING:
-	case tune_control_s::BARO_WARNING:
-	case tune_control_s::SINGLE_BEEP:
-	case tune_control_s::HOME_SET:
+	case tune_control_s::TUNE_ID_STARTUP:
+	case tune_control_s::TUNE_ID_ERROR:
+	case tune_control_s::TUNE_ID_NOTIFY_POSITIVE:
+	case tune_control_s::TUNE_ID_NOTIFY_NEUTRAL:
+	case tune_control_s::TUNE_ID_NOTIFY_NEGATIVE:
+	case tune_control_s::TUNE_ID_ARMING_WARNING:
+	case tune_control_s::TUNE_ID_BATTERY_WARNING_SLOW:
+	case tune_control_s::TUNE_ID_BATTERY_WARNING_FAST:
+	case tune_control_s::TUNE_ID_GPS_WARNING:
+	case tune_control_s::TUNE_ID_PARACHUTE_RELEASE:
+	case tune_control_s::TUNE_ID_EKF_WARNING:
+	case tune_control_s::TUNE_ID_BARO_WARNING:
+	case tune_control_s::TUNE_ID_SINGLE_BEEP:
+	case tune_control_s::TUNE_ID_HOME_SET:
 
 		// set tune string the first time
 		if (_tune == nullptr) {
@@ -129,7 +129,7 @@ int Tunes::parse_cmd(struct tune_control_s &tune_control, unsigned &frequency, u
 		continue_sequnece = next_note(frequency, duration, silence);
 		break;
 
-	case tune_control_s::CUSTOM:
+	case tune_control_s::TUNE_ID_CUSTOM:
 	default:
 		frequency = (unsigned)tune_control.frequency;
 		duration = (unsigned)tune_control.duration;
