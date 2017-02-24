@@ -123,12 +123,11 @@ private:
 	LedControlData _led_control_data;
 	LedController _led_controller;
 
-	output::Tunes _tunes;
+	Tunes _tunes;
 
 	tune_control_s _tune;
-	volatile hrt_abstime _now;
-	volatile hrt_abstime _next_tone;
-	volatile bool _play_tone = false;
+	hrt_abstime _next_tone;
+	bool _play_tone = false;
 	//todo:refactor dynamic based on _channels_count
 	// It needs to support the numbe of ESC
 	int	_control_subs[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
@@ -196,6 +195,7 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_tune_control_sub(-1),
 	_outputs_pub(nullptr),
 	_led_control_data{},
+	_tunes(120, 2, 4, Tunes::NoteMode::NORMAL),
 	_esc_feedback_pub(nullptr),
 	_to_mixer_status(nullptr),
 	_mavlink_log_pub(nullptr),
@@ -229,8 +229,6 @@ TAP_ESC::TAP_ESC(int channels_count):
 		_outputs.output[i] = NAN;
 	}
 
-	// initialise the tune library with the adjusted parameter for TAP
-	_tunes = output::Tunes(120, 2, 4, output::NoteMode::MODE_NORMAL);
 	_outputs.noutputs = 0;
 }
 
@@ -556,7 +554,7 @@ void TAP_ESC::read_data_from_uart()
 	}
 }
 
-bool TAP_ESC:: parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscPacket *packetdata)
+bool TAP_ESC::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscPacket *packetdata)
 {
 	static PARSR_ESC_STATE state = HEAD;
 	static uint8_t data_index = 0;
@@ -928,6 +926,10 @@ TAP_ESC::cycle()
 
 			send_tune_packet(esc_tune_packet);
 		}
+
+	} else if (_is_armed) {
+		// if tune melody is interrupted durin arming don't play it after disarm
+		_play_tone = false;
 	}
 }
 
