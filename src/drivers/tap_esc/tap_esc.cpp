@@ -909,7 +909,7 @@ TAP_ESC::cycle()
 	unsigned frequency = 0, duration = 0, silence = 0;
 	EscbusTunePacket esc_tune_packet;
 
-	if ((now >= _next_tone) && _play_tone && !_is_armed) {
+	if ((now >= _next_tone) && _play_tone) {
 		_play_tone = false;
 		int parse_ret_val = _tunes.get_next_tune(frequency, duration, silence);
 
@@ -918,19 +918,17 @@ TAP_ESC::cycle()
 			esc_tune_packet.frequency = frequency;
 			esc_tune_packet.duration_ms = (uint16_t)(duration / 1000); // convert to ms
 			esc_tune_packet.strength = _tune.strength;
-			// set next tone time
+			// set next tone call time
 			_next_tone = now + silence + duration;
 
 			if (parse_ret_val > 0) {
 				_play_tone = true;
 			}
 
-			send_tune_packet(esc_tune_packet);
+			if (!_is_armed) {
+				send_tune_packet(esc_tune_packet);
+			}
 		}
-
-	} else if (_is_armed) {
-		// if tune melody is interrupted durin arming don't play it after disarm
-		_play_tone = false;
 	}
 }
 
