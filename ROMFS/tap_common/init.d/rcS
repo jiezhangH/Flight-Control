@@ -457,6 +457,13 @@ unset MAV_TYPE
 unset OUTPUT_MODE
 
 #
+# Play start up tune
+#
+if tune_control play -m "MFT240L8 O2aO3dc O2aO3dc O2aO3dc L16dcdcdcdc"
+then
+fi
+
+#
 # Start the RC input driver
 #
 if fmu mode_pwm1
