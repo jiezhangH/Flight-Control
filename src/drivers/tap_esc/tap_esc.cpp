@@ -901,6 +901,7 @@ TAP_ESC::cycle()
 
 	if (updated) {
 		orb_copy(ORB_ID(tune_control), _tune_control_sub, &_tune);
+		_tunes.set_control(_tune);
 		_next_tone = hrt_absolute_time();
 		_play_tone = true;
 	}
@@ -910,7 +911,7 @@ TAP_ESC::cycle()
 
 	if ((now >= _next_tone) && _play_tone && !_is_armed) {
 		_play_tone = false;
-		int parse_ret_val = _tunes.parse_cmd(_tune, frequency, duration, silence);
+		int parse_ret_val = _tunes.get_next_tune(frequency, duration, silence);
 
 		// the return value is 0 if one tone need to be played and 1 if the sequence needs to continue
 		if (parse_ret_val >= 0) {
