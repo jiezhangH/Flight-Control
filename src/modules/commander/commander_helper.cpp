@@ -143,6 +143,7 @@ void set_tune_override(int tune)
 {
 	tune_control.tune_id = tune;
 	tune_control.strength = 40;
+	tune_control.tune_override = 1;
 	tune_control.timestamp = hrt_absolute_time();
 	orb_publish(ORB_ID(tune_control), tune_control_pub, &tune_control);
 }
@@ -157,6 +158,7 @@ void set_tune(int tune)
 		if (tune != tune_current || new_tune_duration != 0) {
 			tune_control.tune_id = tune;
 			tune_control.strength = 40;
+			tune_control.tune_override = 0;
 			tune_control.timestamp = hrt_absolute_time();
 			orb_publish(ORB_ID(tune_control), tune_control_pub, &tune_control);
 		}
