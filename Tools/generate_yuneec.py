@@ -65,8 +65,10 @@ def main():
     # Parse commandline
     parser = argparse.ArgumentParser(
         description="Generate .yuneec file using .px4 JSON.")
-    parser.add_argument("px4", action="store", help="the .px4 file")
-    parser.add_argument("key", action="store", help="the 16 byte AES key")
+    parser.add_argument("px4", action="store",
+                        help="the .px4 file")
+    parser.add_argument("key", action="store",
+                        help="the 16 byte AES key as 32 hex chars")
     args = parser.parse_args()
 
     # Check arguments
