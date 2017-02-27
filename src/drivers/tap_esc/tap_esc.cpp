@@ -836,7 +836,15 @@ TAP_ESC::cycle()
 
 				if (feed_back_data.channelID < esc_status_s::CONNECTED_ESC_MAX) {
 					_esc_feedback.esc[feed_back_data.channelID].esc_rpm = feed_back_data.speed;
-//					_esc_feedback.esc[feed_back_data.channelID].esc_voltage = feed_back_data.voltage;
+#ifdef ESC_HAVE_VOLTAGE_SENSOR
+					_esc_feedback.esc[feed_back_data.channelID].esc_voltage = feed_back_data.voltage;
+#endif
+#ifdef ESC_HAVE_CURRENT_SENSOR
+					_esc_feedback.esc[feed_back_data.channelID].esc_current = feed_back_data.current;
+#endif
+#ifdef ESC_HAVE_TEMPERATURE_SENSOR
+					_esc_feedback.esc[feed_back_data.channelID].esc_temperature = feed_back_data.temperature;
+#endif
 					_esc_feedback.esc[feed_back_data.channelID].esc_state = feed_back_data.ESCStatus;
 					_esc_feedback.esc[feed_back_data.channelID].esc_vendor = esc_status_s::ESC_VENDOR_TAP;
 					// printf("vol is %d\n",feed_back_data.voltage );
