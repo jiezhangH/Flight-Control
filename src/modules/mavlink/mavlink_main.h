@@ -72,6 +72,10 @@
 #include "mavlink_shell.h"
 #include "mavlink_ulog.h"
 
+/**
+ *  For debug purpuse: this enable the bytes count of the transmitted bytes
+ *  and append it to the errors_comm field
+ */
 // #define MAVLINK_TX_BYTE_COUNT_ENABLED
 
 enum Protocol {
@@ -384,15 +388,15 @@ public:
 #ifdef MAVLINK_TX_BYTE_COUNT_ENABLED
 		_bytes_tx_comm += n;
 #endif
-	};
+	}
 
 #ifdef MAVLINK_TX_BYTE_COUNT_ENABLED
-	unsigned get_bytes_tx_comm() {return _bytes_tx_comm;};
+	unsigned		get_bytes_tx_comm() {return _bytes_tx_comm;};
 
-	void set_bytes_tx_comm(unsigned val)
+	void			set_bytes_tx_comm(unsigned val)
 	{
 		_bytes_tx_comm = val;
-	};
+	}
 #endif
 
 	/**
