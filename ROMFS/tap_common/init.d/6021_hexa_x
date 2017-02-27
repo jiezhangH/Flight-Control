@@ -215,6 +215,14 @@ fi
 if tap_esc start -d ${ESC_TTY} -n 6
 then
 fi
+
+#
+# Play startup tune
+#
+if tune_control play -m "MFT240L8 O2aO3dc O2aO3dc O2aO3dc L16dcdcdcdc" &
+then
+fi
+
 set OUTPUT_MODE tap_esc
 
 set MIXER hexa_x
