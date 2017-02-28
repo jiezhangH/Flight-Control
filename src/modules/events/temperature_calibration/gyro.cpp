@@ -87,9 +87,10 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 	orb_copy(ORB_ID(sensor_gyro), sensor_sub, &gyro_data);
 
 	// GYRO datas are always zero or are bad
-	if(fabsf(gyro_data.x) > TC_GYRO_XYZ_THRESHOLD || fabsf(gyro_data.y) > TC_GYRO_XYZ_THRESHOLD ||
-			fabsf(gyro_data.z) > TC_GYRO_XYZ_THRESHOLD ||fabsf(gyro_data.x) < TC_SENSOR_VALUE_THRESHOLD ||
-			fabsf(gyro_data.y) < TC_SENSOR_VALUE_THRESHOLD || fabsf(gyro_data.z) < TC_SENSOR_VALUE_THRESHOLD) {
+	if(gyro_data.x > TC_GYRO_TOL_MAX || gyro_data.y > TC_GYRO_TOL_MAX || gyro_data.x > TC_GYRO_TOL_MAX ||
+			gyro_data.x < TC_GYRO_TOL_MIN || gyro_data.y < TC_GYRO_TOL_MIN || gyro_data.x < TC_GYRO_TOL_MIN ||
+			fabsf(gyro_data.x) < TC_SENSOR_VALUE_TOL || fabsf(gyro_data.y) < TC_SENSOR_VALUE_TOL || 
+			fabsf(gyro_data.z) < TC_SENSOR_VALUE_TOL) {
 		return -TC_ERROR_DATA_EXCEPTION;
 	}
 

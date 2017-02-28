@@ -100,10 +100,10 @@ int TemperatureCalibrationAccel::update_sensor_instance(PerSensorData &data, int
 	orb_copy(ORB_ID(sensor_accel), sensor_sub, &accel_data);
 
 	// ACCEL datas are always zero or are bad
-	if(fabsf(accel_data.x) > TC_ACC_XY_THRESHOLD || fabsf(accel_data.y) > TC_ACC_XY_THRESHOLD ||
-			fabsf(accel_data.z) > TC_ACC_Z_MAX_THRESHOLD || fabsf(accel_data.z) < TC_ACC_Z_MIN_THRESHOLD ||
-			fabsf(accel_data.x) < TC_SENSOR_VALUE_THRESHOLD || fabsf(accel_data.y) < TC_SENSOR_VALUE_THRESHOLD ||
-			fabsf(accel_data.z) < TC_SENSOR_VALUE_THRESHOLD) {
+	if(accel_data.x > TC_ACC_TOL_MAX || accel_data.y > TC_ACC_TOL_MAX || (CONSTANTS_ONE_G + accel_data.z) > TC_ACC_TOL_MAX ||
+		accel_data.x < TC_ACC_TOL_MIN || accel_data.y < TC_ACC_TOL_MIN || (CONSTANTS_ONE_G + accel_data.z) < TC_ACC_TOL_MIN ||  
+		fabsf(accel_data.x) < TC_SENSOR_VALUE_TOL || fabsf(accel_data.y) < TC_SENSOR_VALUE_TOL ||
+		fabsf(accel_data.z) < TC_SENSOR_VALUE_TOL) {
 		return -TC_ERROR_DATA_EXCEPTION;
 	}
 
