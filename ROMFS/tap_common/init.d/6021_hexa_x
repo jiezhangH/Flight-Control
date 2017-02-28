@@ -212,6 +212,12 @@ then
 	# Set landing detection stick down threshold
 	# to account for values in ST16 turtle mode
 	param set LNDMC_MAN_DWNTHR 0.25
+
+	# sensor thermal calibration
+	param set SYS_CAL_TDEL 60
+	param set SYS_CAL_ACC_TOL 1
+	param set SYS_CAL_GYRO_TOL 0.1
+
 fi
 
 if tap_esc start -d ${ESC_TTY} -n 6
