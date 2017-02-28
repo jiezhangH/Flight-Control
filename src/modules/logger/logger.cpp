@@ -203,11 +203,36 @@ int Logger::start(char *const *argv)
 {
 	ASSERT(logger_task == -1);
 
+	// get log priority boost parameter. This can be used to avoid message drops
+	// in the log file. However, it should never be used on production vehicles.
+	param_t prio_boost_handle = param_find("SDLOG_PRIO");
+	int prio_boost = 0;
+	param_get(prio_boost_handle, &prio_boost);
+	int task_priority = SCHED_PRIORITY_DEFAULT - 30;
+
+	switch (prio_boost) {
+	case 1:
+		task_priority = SCHED_PRIORITY_DEFAULT;
+		break;
+
+	case 2:
+		task_priority = SCHED_PRIORITY_DEFAULT + (SCHED_PRIORITY_MAX - SCHED_PRIORITY_DEFAULT) / 2;
+		break;
+
+	case 3:
+		task_priority = SCHED_PRIORITY_MAX;
+		break;
+
+	default:
+		// use default priority already set above
+		break;
+	}
+
 	/* start the task */
 	logger_task = px4_task_spawn_cmd("logger",
 					 SCHED_DEFAULT,
-					 SCHED_PRIORITY_MAX - 5,
-					 3600,
+					 task_priority,
+					 3900,
 					 (px4_main_t)&Logger::run_trampoline,
 					 (char *const *)argv);
 

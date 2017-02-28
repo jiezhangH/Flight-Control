@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012-2016 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@
  * @unit min
  * @min -1000
  * @max  1000
- * @group SD Logging
+ * @group Logging
  */
 PARAM_DEFINE_INT32(SDLOG_UTC_OFFSET, 0);
 
@@ -65,9 +65,26 @@ PARAM_DEFINE_INT32(SDLOG_UTC_OFFSET, 0);
  * @min 0
  * @max 3
  * @reboot_required true
- * @group SD Logging
+ * @group Logging
  */
 PARAM_DEFINE_INT32(SDLOG_MODE, 0);
+
+/**
+ * Give logging app higher thread priority to avoid data loss.
+ * This is used for gathering replay logs for the ekf2 module.
+ *
+ * A value of 0 indicates that the default priority is used.
+ * Increasing the parameter in steps of one increases the priority.
+ *
+ * @min 0
+ * @max  3
+ * @value 0 Low priority
+ * @value 1 Default priority
+ * @value 2 Medium priority
+ * @value 3 Max priority
+ * @group Logging
+ */
+PARAM_DEFINE_INT32(SDLOG_PRIO, 2);
 
 /**
  * Log UUID
@@ -75,6 +92,6 @@ PARAM_DEFINE_INT32(SDLOG_MODE, 0);
  * If set to 1, add an ID to the log, which uniquely identifies the vehicle
  *
  * @boolean
- * @group SD Logging
+ * @group Logging
  */
 PARAM_DEFINE_INT32(SDLOG_UUID, 1);
