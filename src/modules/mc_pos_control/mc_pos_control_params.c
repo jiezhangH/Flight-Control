@@ -518,3 +518,43 @@ PARAM_DEFINE_INT32(MPC_ALT_MODE, 0);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_XY_MAN_EXPO, 0.0f);
+
+/**
+ * The height is close to ground and get into the descent land
+ * @unit m
+ *
+ * @min 0
+ * @max 122
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ALT_DESLD, 10.0f);
+/**
+ * The hight close to ground and at a low speed to down
+ * @unit m
+ *
+ * @min 0
+ * @max 122
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ALT_LAND, 5.0f);
+/**
+ * close to ground and at a low speed to down
+ * @unit m
+ * @min 0
+ * @max 10
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_VELZ_DESLD, 1.4f);
+/**
+ * close to ground and at a low speed to down
+ * @unit m
+ *
+ * @min 0
+ * @max 10
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_VELZ_LAND, 0.7f);
