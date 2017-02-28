@@ -45,8 +45,9 @@
 #include <drivers/drv_hrt.h>
 
 TemperatureCalibrationGyro::TemperatureCalibrationGyro(float min_temperature_rise, float min_start_temperature,
-		float max_start_temperature, int gyro_subs[], int num_gyros)
-	: TemperatureCalibrationCommon(min_temperature_rise, min_start_temperature, max_start_temperature)
+		float readout_tolerance, float max_start_temperature, int gyro_subs[], int num_gyros)
+	: TemperatureCalibrationCommon(min_temperature_rise, min_start_temperature, max_start_temperature),
+	  _readout_tolerance(readout_tolerance)
 {
 	for (int i = 0; i < num_gyros; ++i) {
 		_sensor_subs[i] = gyro_subs[i];
@@ -86,13 +87,20 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 	sensor_gyro_s gyro_data;
 	orb_copy(ORB_ID(sensor_gyro), sensor_sub, &gyro_data);
 
-	// GYRO datas are always zero or are bad
-	if(gyro_data.x > TC_GYRO_TOL_MAX || gyro_data.y > TC_GYRO_TOL_MAX || gyro_data.x > TC_GYRO_TOL_MAX ||
-			gyro_data.x < TC_GYRO_TOL_MIN || gyro_data.y < TC_GYRO_TOL_MIN || gyro_data.x < TC_GYRO_TOL_MIN ||
-			fabsf(gyro_data.x) < TC_SENSOR_VALUE_TOL || fabsf(gyro_data.y) < TC_SENSOR_VALUE_TOL || 
-			fabsf(gyro_data.z) < TC_SENSOR_VALUE_TOL) {
+	// check value tolerance
+	if (_readout_tolerance > 0.f) {
+		if (gyro_data.x > _readout_tolerance || gyro_data.y > _readout_tolerance || gyro_data.x > _readout_tolerance ||
+		    gyro_data.x < -_readout_tolerance || gyro_data.y < -_readout_tolerance || gyro_data.x < -_readout_tolerance) {
+			return -TC_ERROR_DATA_EXCEPTION;
+		}
+	}
+
+	// check for 0 readout
+	if (fabsf(gyro_data.x) < TC_SENSOR_VALUE_TOL || fabsf(gyro_data.y) < TC_SENSOR_VALUE_TOL ||
+	    fabsf(gyro_data.z) < TC_SENSOR_VALUE_TOL) {
 		return -TC_ERROR_DATA_EXCEPTION;
 	}
+
 
 	if (finished) {
 		// if we're done, return, but we need to return after orb_copy because of poll()

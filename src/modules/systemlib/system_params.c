@@ -240,3 +240,30 @@ PARAM_DEFINE_INT32(SYS_CAL_TMIN, 5);
  * @group System
  */
 PARAM_DEFINE_INT32(SYS_CAL_TMAX, 10);
+
+
+/**
+ * Accel value readout tolerance for thermal calibration.
+ *
+ * If > 0, this defines the maximum readout tolerance for sensor values (one G is used in z direction).
+ * Note that this also requires the board to be level during calibration.
+ * If <= 0, the check is disabled.
+ *
+ * @unit m/s/s
+ * @group System
+ */
+PARAM_DEFINE_FLOAT(SYS_CAL_ACC_TOL, -1);
+
+
+/**
+ * Gyro value readout tolerance for thermal calibration.
+ *
+ * If > 0, this defines the maximum readout tolerance for sensor values.
+ * If <= 0, the check is disabled.
+ *
+ * @unit rad/s
+ * @group System
+ */
+PARAM_DEFINE_FLOAT(SYS_CAL_GYRO_TOL, -1);
+
+

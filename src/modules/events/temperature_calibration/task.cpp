@@ -139,13 +139,20 @@ void TemperatureCalibration::task_main()
 	int32_t max_start_temp = 10;
 	param_get(param_find("SYS_CAL_TMAX"), &max_start_temp);
 
+	float accel_readout_tolerance = -1.f;
+	param_get(param_find("SYS_CAL_ACC_TOL"), &accel_readout_tolerance);
+
+	float gyro_readout_tolerance = -1.f;
+	param_get(param_find("SYS_CAL_GYRO_TOL"), &gyro_readout_tolerance);
+
 	//init calibrators
 	TemperatureCalibrationBase *calibrators[3];
 	bool error_reported[3] = {};
 	int num_calibrators = 0;
 
 	if (_accel) {
-		calibrators[num_calibrators] = new TemperatureCalibrationAccel(min_temp_rise, min_start_temp, max_start_temp);
+		calibrators[num_calibrators] = new TemperatureCalibrationAccel(min_temp_rise, min_start_temp, max_start_temp,
+				accel_readout_tolerance);
 
 		if (calibrators[num_calibrators]) {
 			++num_calibrators;
@@ -167,8 +174,8 @@ void TemperatureCalibration::task_main()
 	}
 
 	if (_gyro) {
-		calibrators[num_calibrators] = new TemperatureCalibrationGyro(min_temp_rise, min_start_temp, max_start_temp, gyro_sub,
-				num_gyro);
+		calibrators[num_calibrators] = new TemperatureCalibrationGyro(min_temp_rise, min_start_temp, max_start_temp,
+				gyro_readout_tolerance, gyro_sub, num_gyro);
 
 		if (calibrators[num_calibrators]) {
 			++num_calibrators;
@@ -237,19 +244,19 @@ void TemperatureCalibration::task_main()
 		for (int i = 0; i < num_calibrators; ++i) {
 			ret = calibrators[i]->update();
 
-			if(ret == -TC_ERROR_DATA_EXCEPTION) {
+			if (ret == -TC_ERROR_DATA_EXCEPTION) {
 				abort_calibration = true;
 				PX4_ERR("Calibration won't start - sensor data exception");
 				_force_task_exit = true;
 				break;
 
-			}else if(ret == -TC_ERROR_COMMUNICATION) {
+			} else if (ret == -TC_ERROR_COMMUNICATION) {
 				abort_calibration = true;
 				PX4_ERR("Calibration won't start - sensor bad or communication error");
 				_force_task_exit = true;
 				break;
 
-			}else if (ret == -TC_ERROR_INITIAL_TEMP_TOO_HIGH) {
+			} else if (ret == -TC_ERROR_INITIAL_TEMP_TOO_HIGH) {
 				abort_calibration = true;
 				PX4_ERR("Calibration won't start - sensor temperature too high");
 				_force_task_exit = true;
