@@ -326,8 +326,8 @@ private:
 	static float	scale_control(float ctl, float end, float dz, float dy);
 	static float    throttle_curve(float ctl, float ctr);
 	float _limit_velocity_dn();
-	float _velocity_limit_dependheight(float input_alt, float buffer, float des_min_alt, float des_min_vel,
-					   float des_max_vel);
+	float _velocity_limit_depend_altitude(float input_alt, float buffer, float des_min_alt, float des_min_vel,
+					      float des_max_vel);
 	/**
 	 * Update reference for local position projection
 	 */
@@ -977,19 +977,20 @@ MulticopterPositionControl::_limit_velocity_dn()
 		//alt:5~10m limit velocity 1.4m/s
 
 	} else if (-_pos(2) <= _params.z_alt_descent_start && (-_pos(2) >= _params.z_land_limit_vel)) {
-		velocity = _velocity_limit_dependheight(-_pos(2), temp_height, _params.z_alt_descent_start, _params.z_land_vel_descent,
-							_params.vel_max_down);
+		velocity = _velocity_limit_depend_altitude(-_pos(2), temp_height, _params.z_alt_descent_start,
+				_params.z_land_vel_descent,
+				_params.vel_max_down);
 
 	} else if (-_pos(2) < _params.z_land_limit_vel) {
-		velocity = _velocity_limit_dependheight(-_pos(2), temp_height, _params.z_land_limit_vel, _params.z_land_vel_slow,
-							_params.z_land_vel_descent);
+		velocity = _velocity_limit_depend_altitude(-_pos(2), temp_height, _params.z_land_limit_vel, _params.z_land_vel_slow,
+				_params.z_land_vel_descent);
 	}
 
 	return velocity;
 }
 
 float
-MulticopterPositionControl::_velocity_limit_dependheight(float input_alt, float buffer_land, float dow_alt,
+MulticopterPositionControl::_velocity_limit_depend_altitude(float input_alt, float buffer_land, float dow_alt,
 		float dow_min_vel, float dow_max_vel)
 {
 	float temp_min = dow_alt - buffer_land;
@@ -1797,14 +1798,16 @@ MulticopterPositionControl::control_position(float dt)
 	 */
 	bool close_to_descent = (-_pos(2) + _home_pos.z) <= _params.z_alt_descent_start;
 
+	//Judge the velocity is down
 	if (close_to_descent && _vel_sp(2) > FLT_EPSILON) {
-		//calculate the down velocity base on height if in the descent height.
-		float vel_limit = _limit_velocity_dn();
+		//calculate the down velocity base on height below the descent height.
+		if (_vel_sp(2) > _params.z_land_vel_descent) {
+			float vel_limit = _limit_velocity_dn();
 
-		// judge the set velocity and the calculate
-		if (_vel_sp(2) > vel_limit) {
-			_vel_sp(2) = vel_limit;
-
+			// judge the set velocity and the calculate
+			if (_vel_sp(2) > vel_limit) {
+				_vel_sp(2) = vel_limit;
+			}
 		}
 	}
 

@@ -540,8 +540,9 @@ PARAM_DEFINE_FLOAT(MPC_ALT_DESLD, 10.0f);
  */
 PARAM_DEFINE_FLOAT(MPC_ALT_LAND, 5.0f);
 /**
- * close to ground and at a low speed to down
- * @unit m
+ * the height is close to the altitude of  the parameter "MPC_ALT_DESLD"
+ * and get start a descent down speed
+ * @unit m/s
  * @min 0
  * @max 10
  * @decimal 2
@@ -549,8 +550,8 @@ PARAM_DEFINE_FLOAT(MPC_ALT_LAND, 5.0f);
  */
 PARAM_DEFINE_FLOAT(MPC_VELZ_DESLD, 1.4f);
 /**
- * close to ground and at a low speed to down
- * @unit m
+ * The height is close to ground(the parameter "MPC_ALT_LAND") and at a low speed to down
+ * @unit m/s
  *
  * @min 0
  * @max 10
