@@ -2121,6 +2121,7 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("NAMED_VALUE_FLOAT", 50.0f);
 		configure_stream("VFR_HUD", 20.0f);
 		configure_stream("WIND_COV", 10.0f);
+		configure_stream("POSITION_TARGET_LOCAL_NED", 5.0f);
 		configure_stream("CAMERA_TRIGGER", 500.0f);
 		configure_stream("MISSION_ITEM", 50.0f);
 		configure_stream("ACTUATOR_CONTROL_TARGET0", 30.0f);
