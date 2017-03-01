@@ -198,6 +198,8 @@ then
 	param set MNT_MAN_YAW 1
 
 	# ekf2
+	param set EKF2_AID_MASK 5
+	param set EKF2_GPS_POS_X -0.06
 	param set EKF2_MIN_OBS_DT 50
 	param set EKF2_MAG_DELAY 0
 	param set EKF2_BARO_DELAY 0
