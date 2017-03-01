@@ -970,6 +970,7 @@ MulticopterPositionControl::_limit_velocity_dn()
 {
 	float velocity = 0.0f;
 	float temp_height = 1.0;
+	float temp_heigt_1 = 1.5;
 
 	//judge the alt: alt>10m; limit velocity:3m/s
 	if (-_pos(2) > _params.z_alt_descent_start) {
@@ -977,7 +978,7 @@ MulticopterPositionControl::_limit_velocity_dn()
 		//alt:5~10m limit velocity 1.4m/s
 
 	} else if (-_pos(2) <= _params.z_alt_descent_start && (-_pos(2) >= _params.z_land_limit_vel)) {
-		velocity = _velocity_limit_depend_altitude(-_pos(2), temp_height, _params.z_alt_descent_start,
+		velocity = _velocity_limit_depend_altitude(-_pos(2), temp_heigt_1, _params.z_alt_descent_start,
 				_params.z_land_vel_descent,
 				_params.vel_max_down);
 
