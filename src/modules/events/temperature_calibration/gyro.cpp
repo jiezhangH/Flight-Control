@@ -45,9 +45,9 @@
 #include <drivers/drv_hrt.h>
 
 TemperatureCalibrationGyro::TemperatureCalibrationGyro(float min_temperature_rise, float min_start_temperature,
-		float readout_tolerance, float max_start_temperature, int gyro_subs[], int num_gyros)
+		float max_start_temperature, float readout_tolerance, int gyro_exce_num, int gyro_subs[], int num_gyros)
 	: TemperatureCalibrationCommon(min_temperature_rise, min_start_temperature, max_start_temperature),
-	  _readout_tolerance(readout_tolerance)
+	  _readout_tolerance(readout_tolerance),_gyro_exce_num(gyro_exce_num)
 {
 	for (int i = 0; i < num_gyros; ++i) {
 		_sensor_subs[i] = gyro_subs[i];
@@ -98,7 +98,15 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 	// check for 0 readout
 	if (fabsf(gyro_data.x) < TC_SENSOR_VALUE_TOL || fabsf(gyro_data.y) < TC_SENSOR_VALUE_TOL ||
 	    fabsf(gyro_data.z) < TC_SENSOR_VALUE_TOL) {
-		return -TC_ERROR_DATA_EXCEPTION;
+		_gyro_exce_num++;
+		if(_gyro_exce_num == TC_DATA_EXCEPTION_NUM) {
+			return -TC_ERROR_DATA_EXCEPTION;
+		}
+	} else {
+		_gyro_exce_num--;
+		if(_gyro_exce_num < 1) {
+			_gyro_exce_num = 0;
+		}
 	}
 
 

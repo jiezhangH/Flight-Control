@@ -145,6 +145,8 @@ void TemperatureCalibration::task_main()
 	float gyro_readout_tolerance = -1.f;
 	param_get(param_find("SYS_CAL_GYRO_TOL"), &gyro_readout_tolerance);
 
+	int exce_num = 0;
+
 	//init calibrators
 	TemperatureCalibrationBase *calibrators[3];
 	bool error_reported[3] = {};
@@ -152,7 +154,7 @@ void TemperatureCalibration::task_main()
 
 	if (_accel) {
 		calibrators[num_calibrators] = new TemperatureCalibrationAccel(min_temp_rise, min_start_temp, max_start_temp,
-				accel_readout_tolerance);
+				accel_readout_tolerance, exce_num);
 
 		if (calibrators[num_calibrators]) {
 			++num_calibrators;
@@ -175,7 +177,7 @@ void TemperatureCalibration::task_main()
 
 	if (_gyro) {
 		calibrators[num_calibrators] = new TemperatureCalibrationGyro(min_temp_rise, min_start_temp, max_start_temp,
-				gyro_readout_tolerance, gyro_sub, num_gyro);
+				gyro_readout_tolerance, exce_num, gyro_sub, num_gyro);
 
 		if (calibrators[num_calibrators]) {
 			++num_calibrators;

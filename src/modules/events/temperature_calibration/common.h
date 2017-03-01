@@ -56,6 +56,7 @@
 
 #define TC_SENSOR_VALUE_TOL       0.000001f ///< check if sensor data is always zero
 
+#define TC_DATA_EXCEPTION_NUM             10
 /**
  * Base class for temperature calibration types with abstract methods (for all different sensor types)
  */

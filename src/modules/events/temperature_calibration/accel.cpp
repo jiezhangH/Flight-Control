@@ -46,9 +46,9 @@
 #include <drivers/drv_hrt.h>
 
 TemperatureCalibrationAccel::TemperatureCalibrationAccel(float min_temperature_rise, float min_start_temperature,
-		float max_start_temperature, float readout_tolerance)
+		float max_start_temperature, float readout_tolerance, int accel_exce_num)
 	: TemperatureCalibrationCommon(min_temperature_rise, min_start_temperature, max_start_temperature),
-	  _readout_tolerance(readout_tolerance)
+	  _readout_tolerance(readout_tolerance),_accel_exce_num(accel_exce_num)
 {
 
 	//init subscriptions
@@ -111,7 +111,15 @@ int TemperatureCalibrationAccel::update_sensor_instance(PerSensorData &data, int
 	// check for 0 readout
 	if (fabsf(accel_data.x) < TC_SENSOR_VALUE_TOL || fabsf(accel_data.y) < TC_SENSOR_VALUE_TOL ||
 	    fabsf(accel_data.z) < TC_SENSOR_VALUE_TOL) {
-		return -TC_ERROR_DATA_EXCEPTION;
+		_accel_exce_num++;
+		if(_accel_exce_num == TC_DATA_EXCEPTION_NUM) {
+			return -TC_ERROR_DATA_EXCEPTION;
+		}
+	} else {
+		_accel_exce_num--;
+		if(_accel_exce_num < 1) {
+			_accel_exce_num = 0;
+		}
 	}
 
 	if (finished) {

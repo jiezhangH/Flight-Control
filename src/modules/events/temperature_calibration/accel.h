@@ -40,7 +40,7 @@ class TemperatureCalibrationAccel : public TemperatureCalibrationCommon<3, 3>
 {
 public:
 	TemperatureCalibrationAccel(float min_temperature_rise, float min_start_temperature, float max_start_temperature,
-				    float readout_tolerance);
+				    float readout_tolerance, int accel_exce_num);
 	virtual ~TemperatureCalibrationAccel();
 
 	/**
@@ -60,4 +60,6 @@ private:
 	inline int finish_sensor_instance(PerSensorData &data, int sensor_index);
 
 	float _readout_tolerance; ///< value readout tolerance (if < 0, the check is disabled)
+
+	int _accel_exce_num;  ///n continuous exceptional data points
 };
