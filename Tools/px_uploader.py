@@ -177,7 +177,7 @@ class uploader(object):
     CMD_INFO_BOARD_ID   = 21      # board type
     CMD_INFO_BOARD_REV  = 22      # board revision
     BL_REV_MIN          = 2       # minimum supported bootloader protocol
-    BL_REV_MAX          = 5       # maximum supported bootloader protocol
+    BL_REV_MAX          = 6       # maximum supported bootloader protocol
     CMD_INFO_FLASH_SIZE = 23      # max firmware size in bytes
 
     PROG_MULTI_MAX  = 252   # protocol max is 255, must be multiple of 4
