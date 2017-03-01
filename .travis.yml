@@ -48,7 +48,7 @@ before_install:
 
 script:
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
-      ./Tools/docker_run.sh 'make qgc_firmware';
+      ./Tools/docker_run.sh 'make check_px4fmu-v2_default check_px4fmu-v3_default check_px4fmu-v4_default check_tap-v1_default check_tap-v2_default';
     elif [[ "${BUILD_TARGET}" = "check_format" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
       ./Tools/docker_run.sh 'make check_format';
     elif [[ "${BUILD_TARGET}" = "tests_linux" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
