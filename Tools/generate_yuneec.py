@@ -22,6 +22,7 @@ import argparse
 import px_uploader
 import json
 import base64
+import zlib
 import struct
 import os
 
@@ -109,7 +110,8 @@ def main():
     # print_image(fw.image)
 
     # Replace image with encrypted one
-    fw.desc['image_encrypted'] = base64.b64encode(encrypted).decode("utf-8")
+    fw.desc['image_encrypted'] = \
+        base64.b64encode(zlib.compress(encrypted, 9)).decode("utf-8")
     fw.desc['image'] = ""
     fw.desc['image_encrypted_iv'] = base64.b64encode(iv).decode("utf-8")
 
