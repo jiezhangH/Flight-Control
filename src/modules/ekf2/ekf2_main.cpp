@@ -704,7 +704,7 @@ void Ekf2::task_main()
 				control_state_s ctrl_state = {};
 				float gyro_bias[3] = {};
 				_ekf.get_gyro_bias(gyro_bias);
-				ctrl_state.timestamp = hrt_absolute_time();
+				ctrl_state.timestamp = _replay_mode ? now : hrt_absolute_time();
 				gyro_rad[0] = sensors.gyro_rad[0] - gyro_bias[0];
 				gyro_rad[1] = sensors.gyro_rad[1] - gyro_bias[1];
 				gyro_rad[2] = sensors.gyro_rad[2] - gyro_bias[2];
@@ -789,7 +789,7 @@ void Ekf2::task_main()
 			{
 				// generate vehicle attitude quaternion data
 				struct vehicle_attitude_s att = {};
-				att.timestamp = hrt_absolute_time();
+				att.timestamp = _replay_mode ? now : hrt_absolute_time();
 
 				att.q[0] = q(0);
 				att.q[1] = q(1);
@@ -813,7 +813,7 @@ void Ekf2::task_main()
 			struct vehicle_local_position_s lpos = {};
 			float pos[3] = {};
 
-			lpos.timestamp = hrt_absolute_time();
+			lpos.timestamp = _replay_mode ? now : hrt_absolute_time();
 
 			// Position of body origin in local NED frame
 			_ekf.get_position(pos);
@@ -876,7 +876,7 @@ void Ekf2::task_main()
 				// generate and publish global position data
 				struct vehicle_global_position_s global_pos = {};
 
-				global_pos.timestamp = hrt_absolute_time(); // Time of this estimate, in microseconds since system start
+				global_pos.timestamp = _replay_mode ? now : hrt_absolute_time();
 				global_pos.time_utc_usec = gps.time_utc_usec; // GPS UTC timestamp in microseconds
 
 				double est_lat, est_lon, lat_pre_reset, lon_pre_reset;
@@ -941,7 +941,7 @@ void Ekf2::task_main()
 
 		// publish estimator status
 		struct estimator_status_s status = {};
-		status.timestamp = hrt_absolute_time();
+		status.timestamp = _replay_mode ? now : hrt_absolute_time();
 		_ekf.get_state_delayed(status.states);
 		_ekf.get_covariances(status.covariances);
 		_ekf.get_gps_check_status(&status.gps_check_fail_flags);
@@ -965,7 +965,7 @@ void Ekf2::task_main()
 
 		// Publish wind estimate
 		struct wind_estimate_s wind_estimate = {};
-		wind_estimate.timestamp = hrt_absolute_time();
+		wind_estimate.timestamp = _replay_mode ? now : hrt_absolute_time();
 		wind_estimate.windspeed_north = status.states[22];
 		wind_estimate.windspeed_east = status.states[23];
 		wind_estimate.covariance_north = status.covariances[22];
@@ -981,7 +981,7 @@ void Ekf2::task_main()
 		// publish estimator innovation data
 		{
 			struct ekf2_innovations_s innovations = {};
-			innovations.timestamp = hrt_absolute_time();
+			innovations.timestamp = _replay_mode ? now : hrt_absolute_time();
 			_ekf.get_vel_pos_innov(&innovations.vel_pos_innov[0]);
 			_ekf.get_mag_innov(&innovations.mag_innov[0]);
 			_ekf.get_heading_innov(&innovations.heading_innov);
