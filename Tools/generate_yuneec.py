@@ -109,9 +109,9 @@ def main():
     # print_image(fw.image)
 
     # Replace image with encrypted one
-    fw.desc['image_encrypted'] = base64.b64encode(encrypted).decode("ascii")
+    fw.desc['image_encrypted'] = base64.b64encode(encrypted).decode("utf-8")
     fw.desc['image'] = ""
-    fw.desc['image_encrypted_iv'] = base64.b64encode(iv).decode("ascii")
+    fw.desc['image_encrypted_iv'] = base64.b64encode(iv).decode("utf-8")
 
     # print("len image: {}, crc32: {}".format(len_image, crc32_image))
     # print("len encrypted: {}".format(len(encrypted)))
