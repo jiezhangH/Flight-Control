@@ -89,8 +89,8 @@ int TemperatureCalibrationGyro::update_sensor_instance(PerSensorData &data, int 
 
 	// check value tolerance
 	if (_readout_tolerance > 0.f) {
-		if (gyro_data.x > _readout_tolerance || gyro_data.y > _readout_tolerance || gyro_data.x > _readout_tolerance ||
-		    gyro_data.x < -_readout_tolerance || gyro_data.y < -_readout_tolerance || gyro_data.x < -_readout_tolerance) {
+		if (gyro_data.x > _readout_tolerance || gyro_data.y > _readout_tolerance || gyro_data.z > _readout_tolerance ||
+		    gyro_data.x < -_readout_tolerance || gyro_data.y < -_readout_tolerance || gyro_data.z < -_readout_tolerance) {
 			return -TC_ERROR_DATA_EXCEPTION;
 		}
 	}
