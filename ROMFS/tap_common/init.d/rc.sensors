@@ -33,7 +33,7 @@ fi
 if ver hwcmp TAP_V2
 then
 	# internal SPI bus
-	if mpu6000 -s -R 8 -T 20602 start
+	if mpu6000 -s -R 8 -T 20602 -a 16 start
 	then
 	fi
 fi
