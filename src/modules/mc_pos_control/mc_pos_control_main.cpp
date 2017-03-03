@@ -1465,16 +1465,27 @@ void MulticopterPositionControl::control_auto(float dt)
 	    (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_IDLE)) {
 
 		/* scaled space: 1 == position error resulting max allowed speed */
+		float vel_cruise_z = 0.0f;
+
+		if (_pos_sp(2) >= _pos(2)) {
+			/* we go down */
+			vel_cruise_z = _params.vel_max_down;
+
+		} else {
+			vel_cruise_z = _params.vel_max_up;
+		}
 
 		math::Vector<3> cruising_speed(_params.vel_cruise(0),
 					       _params.vel_cruise(1),
-					       _params.vel_max_up);
+					       vel_cruise_z);
 
-		if (PX4_ISFINITE(_pos_sp_triplet.current.cruising_speed) &&
+
+
+		/*if (PX4_ISFINITE(_pos_sp_triplet.current.cruising_speed) &&
 		    _pos_sp_triplet.current.cruising_speed > 0.1f) {
 			cruising_speed(0) = _pos_sp_triplet.current.cruising_speed;
 			cruising_speed(1) = _pos_sp_triplet.current.cruising_speed;
-		}
+		}*/
 
 		math::Vector<3> scale = _params.pos_p.edivide(cruising_speed);
 
