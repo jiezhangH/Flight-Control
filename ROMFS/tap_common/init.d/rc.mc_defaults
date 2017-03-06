@@ -36,6 +36,19 @@ then
 
 	# GPS handling: disallow arming without GPS
 	param set COM_ARM_WO_GPS 0
+
+	# ekf2
+	param set EKF2_AID_MASK 5
+	param set EKF2_GPS_POS_X -0.06
+	param set EKF2_MIN_OBS_DT 50
+	param set EKF2_MAG_DELAY 0
+	param set EKF2_BARO_DELAY 0
+	param set EKF2_GPS_DELAY 100
+	param set EKF2_OF_DELAY 5
+	param set EKF2_RNG_DELAY 5
+	param set EKF2_ASP_DELAY 0
+	param set EKF2_EV_DELAY 0
+	param set SYS_MC_EST_GROUP 2
 fi
 
 # set environment variables (!= parameters)

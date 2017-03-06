@@ -141,11 +141,11 @@ else
 	set AUTOCNF no
 fi
 
-if param compare SYS_PARAM_VER 17
+if param compare SYS_PARAM_VER 18
 then
 	set NEW_DEFAULTS no
 else
-	param set SYS_PARAM_VER 17
+	param set SYS_PARAM_VER 18
 	set NEW_DEFAULTS yes
 fi
 
@@ -196,19 +196,6 @@ then
 	param set MNT_MAN_ROLL 0
 	param set MNT_MAN_PITCH 2
 	param set MNT_MAN_YAW 1
-
-	# ekf2
-	param set EKF2_AID_MASK 5
-	param set EKF2_GPS_POS_X -0.06
-	param set EKF2_MIN_OBS_DT 50
-	param set EKF2_MAG_DELAY 0
-	param set EKF2_BARO_DELAY 0
-	param set EKF2_GPS_DELAY 100
-	param set EKF2_OF_DELAY 5
-	param set EKF2_RNG_DELAY 5
-	param set EKF2_ASP_DELAY 0
-	param set EKF2_EV_DELAY 0
-	param set SYS_MC_EST_GROUP 2
 
 	param save
 fi
