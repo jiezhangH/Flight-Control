@@ -299,17 +299,17 @@ void Ekf2Replay::publishEstimatorInput()
 	_read_part4 = false;
 
 	if (_vehicle_vision_attitude_pub == nullptr && _read_part5) {
-		_vehicle_vision_attitude_pub = orb_advertise(ORB_ID(vehicle_vision_attitude), &_vehicle_vision_attitude);
+//		_vehicle_vision_attitude_pub = orb_advertise(ORB_ID(vehicle_vision_attitude), &_vehicle_vision_attitude);
 
 	} else if (_vehicle_vision_attitude_pub != nullptr && _read_part5) {
-		orb_publish(ORB_ID(vehicle_vision_attitude), _vehicle_vision_attitude_pub, &_vehicle_vision_attitude);
+//		orb_publish(ORB_ID(vehicle_vision_attitude), _vehicle_vision_attitude_pub, &_vehicle_vision_attitude);
 	}
 
 	if (_vehicle_vision_position_pub == nullptr && _read_part5) {
-		_vehicle_vision_position_pub = orb_advertise(ORB_ID(vehicle_vision_position), &_vehicle_vision_position);
+//		_vehicle_vision_position_pub = orb_advertise(ORB_ID(vehicle_vision_position), &_vehicle_vision_position);
 
 	} else if (_vehicle_vision_position_pub != nullptr && _read_part5) {
-		orb_publish(ORB_ID(vehicle_vision_position), _vehicle_vision_position_pub, &_vehicle_vision_position);
+//		orb_publish(ORB_ID(vehicle_vision_position), _vehicle_vision_position_pub, &_vehicle_vision_position);
 	}
 
 	_read_part5 = false;

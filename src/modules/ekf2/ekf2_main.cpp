@@ -1058,21 +1058,9 @@ void Ekf2::task_main()
 				ekf2_timestamps.airspeed_timestamp_rel = ekf2_timestamps_s::RELATIVE_TIMESTAMP_INVALID;
 			}
 
-			if (vision_position_updated) {
-				ekf2_timestamps.vision_position_timestamp_rel = (int16_t)((int64_t)ev_pos.timestamp / 100 -
-						(int64_t)ekf2_timestamps.timestamp / 100);
-
-			} else {
-				ekf2_timestamps.vision_position_timestamp_rel = ekf2_timestamps_s::RELATIVE_TIMESTAMP_INVALID;
-			}
-
-			if (vision_attitude_updated) {
-				ekf2_timestamps.vision_attitude_timestamp_rel = (int16_t)((int64_t)ev_att.timestamp / 100 -
-						(int64_t)ekf2_timestamps.timestamp / 100);
-
-			} else {
-				ekf2_timestamps.vision_attitude_timestamp_rel = ekf2_timestamps_s::RELATIVE_TIMESTAMP_INVALID;
-			}
+			// FIXME: vision update commits are not yet included...
+			ekf2_timestamps.vision_position_timestamp_rel = ekf2_timestamps_s::RELATIVE_TIMESTAMP_INVALID;
+			ekf2_timestamps.vision_attitude_timestamp_rel = ekf2_timestamps_s::RELATIVE_TIMESTAMP_INVALID;
 
 			if (_ekf2_timestamps_pub == nullptr) {
 				_ekf2_timestamps_pub = orb_advertise(ORB_ID(ekf2_timestamps), &ekf2_timestamps);

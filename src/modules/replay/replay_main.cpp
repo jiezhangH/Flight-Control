@@ -868,11 +868,11 @@ void ReplayEkf2::onSubscriptionAdded(Subscription &sub, uint16_t msg_id)
 	} else if (sub.orb_meta == ORB_ID(airspeed)) {
 		_airspeed_msg_id = msg_id;
 
-	} else if (sub.orb_meta == ORB_ID(vehicle_vision_position)) {
-		_vehicle_vision_position_msg_id = msg_id;
+//	} else if (sub.orb_meta == ORB_ID(vehicle_vision_position)) {
+//		_vehicle_vision_position_msg_id = msg_id;
 
-	} else if (sub.orb_meta == ORB_ID(vehicle_vision_attitude)) {
-		_vehicle_vision_attitude_msg_id = msg_id;
+//	} else if (sub.orb_meta == ORB_ID(vehicle_vision_attitude)) {
+//		_vehicle_vision_attitude_msg_id = msg_id;
 	}
 
 	// the main loop should only handle publication of the following topics, the sensor topics are
