@@ -579,7 +579,7 @@ void Logger::add_default_topics()
 	add_topic("vtol_vehicle_status", 100);
 	add_topic("commander_state", 100);
 	add_topic("satellite_info");
-	add_topic("vehicle_attitude_setpoint", 30);
+	add_topic("vehicle_attitude_setpoint", 50);
 	add_topic("vehicle_rates_setpoint", 30);
 	add_topic("actuator_controls_0", 20);
 	add_topic("actuator_controls_1", 20);
@@ -601,11 +601,11 @@ void Logger::add_default_topics()
 	add_topic("ekf2_innovations", 50);
 	add_topic("tecs_status", 20);
 	add_topic("wind_estimate", 100);
-	add_topic("control_state", 50);
+	add_topic("control_state", 100);
 	add_topic("camera_trigger");
 	add_topic("cpuload");
 	add_topic("gps_dump"); //this will only be published if GPS_DUMP_COMM is set
-	add_topic("sensor_preflight");
+	add_topic("sensor_preflight", 50);
 	add_topic("task_stack_info");
 
 	/* for estimator replay (need to be at full rate) */
