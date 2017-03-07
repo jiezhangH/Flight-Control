@@ -209,8 +209,9 @@ then
 	param set RC_MAP_ARM_SW 12
 	param set COM_ARM_SWISBTN 1
 
-	# Set landing detection stick down threshold
+	# Set landing detection stick up/down thresholds
 	# to account for values in ST16 turtle mode
+	param set LNDMC_POS_UPTHR 0.67
 	param set LNDMC_MAN_DWNTHR 0.25
 
 	# sensor thermal calibration
