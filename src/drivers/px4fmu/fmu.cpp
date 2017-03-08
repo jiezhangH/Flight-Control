@@ -1534,7 +1534,7 @@ PX4FMU::cycle()
 				// The st24 will keep outputting RC channels and RSSI even if RC has been lost.
 				// The only way to detect RC loss is therefore to look at the lost_count.
 
-				if (rc_updated && lost_count == 0) {
+				if (rc_updated && lost_count == 0 && (st24_rssi < (RC_INPUT_RSSI_MAX + 1))) {
 					// we have a new ST24 frame. Publish it.
 					_rc_in.input_source = input_rc_s::RC_INPUT_SOURCE_PX4FMU_ST24;
 					fill_rc_in(raw_rc_count, raw_rc_values, _cycle_timestamp,
