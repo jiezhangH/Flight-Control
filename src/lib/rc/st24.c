@@ -165,7 +165,7 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 		_rxpacket.crc8 = byte;
 		_rxlen++;
 
-		if (st24_common_crc8((uint8_t *) & (_rxpacket.length), _rxlen) == _rxpacket.crc8) {
+		if (st24_common_crc8((uint8_t *) &(_rxpacket.length), _rxlen) == _rxpacket.crc8) {
 
 			ret = 0;
 
@@ -180,6 +180,12 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 					/* Scale from 0..255 to 100%. */
 					*rssi = d->rssi * (100.0f / 255.0f);
 					*lost_count = d->lost_count;
+
+					/* detect out-of-bounds RSSI values */
+					if (*rssi == 255) {
+						ret = 6;
+						_decode_state = ST24_DECODE_STATE_UNSYNCED;
+					}
 
 					/* this can lead to rounding of the strides */
 					if (_rxpacket.type == ST24_PACKET_TYPE_CHANNELDATA12) {
