@@ -181,12 +181,6 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 					*rssi = d->rssi * (100.0f / 255.0f);
 					*lost_count = d->lost_count;
 
-					/* detect out-of-bounds RSSI values */
-					if (*rssi == 255) {
-						ret = 6;
-						_decode_state = ST24_DECODE_STATE_UNSYNCED;
-					}
-
 					/* this can lead to rounding of the strides */
 					if (_rxpacket.type == ST24_PACKET_TYPE_CHANNELDATA12) {
 						*channel_count = (max_chan_count < 12) ? max_chan_count : 12;
