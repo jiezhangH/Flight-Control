@@ -573,7 +573,7 @@ void Logger::add_default_topics()
 	// Note: try to avoid setting the interval where possible, as it increases RAM usage
 
 	add_topic("vehicle_attitude", 30);
-	add_topic("actuator_outputs", 50);
+	add_topic("actuator_outputs", 100);
 	add_topic("telemetry_status");
 	add_topic("vehicle_command");
 	add_topic("vtol_vehicle_status", 100);
@@ -581,8 +581,8 @@ void Logger::add_default_topics()
 	add_topic("satellite_info");
 	add_topic("vehicle_attitude_setpoint", 50);
 	add_topic("vehicle_rates_setpoint", 30);
-	add_topic("actuator_controls_0", 20);
-	add_topic("actuator_controls_1", 20);
+	add_topic("actuator_controls_0", 100);
+	add_topic("actuator_controls_1", 100);
 	add_topic("vehicle_local_position", 100);
 	add_topic("vehicle_local_position_setpoint", 200);
 	add_topic("vehicle_global_position", 200);
@@ -596,8 +596,8 @@ void Logger::add_default_topics()
 	add_topic("rc_channels", 100);
 	add_topic("input_rc", 100);
 	add_topic("differential_pressure", 50);
-	add_topic("esc_status", 20);
-	add_topic("estimator_status", 100); //this one is large
+	add_topic("esc_status", 250);
+	add_topic("estimator_status", 200); //this one is large
 	add_topic("ekf2_innovations", 50);
 	add_topic("tecs_status", 20);
 	add_topic("wind_estimate", 100);
