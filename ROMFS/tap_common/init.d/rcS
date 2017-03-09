@@ -134,8 +134,8 @@ fi
 #
 if param compare SYS_AUTOCONFIG 1
 then
-	# Wipe out params except RC* and TC_* (temperature calibration)
-	param reset_nostart RC* TC_*
+	# Wipe out params except RC*, TC_* (temperature calibration) and flight time
+	param reset_nostart RC* TC_* LND_FLIGHT_T_*
 	set AUTOCNF yes
 else
 	set AUTOCNF no
