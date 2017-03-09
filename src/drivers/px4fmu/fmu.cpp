@@ -165,7 +165,7 @@ private:
 		RC_SCAN_SUMD,
 		RC_SCAN_ST24
 	};
-	enum RC_SCAN _rc_scan_state = RC_SCAN_SBUS;
+	enum RC_SCAN _rc_scan_state = RC_SCAN_ST24;
 
 	char const *RC_SCAN_STRING[5] = {
 		"PPM",
@@ -176,7 +176,7 @@ private:
 	};
 
 	hrt_abstime _rc_scan_begin = 0;
-	bool _rc_scan_locked = false;
+	bool _rc_scan_locked = true;
 	bool _report_lock = true;
 
 	hrt_abstime _cycle_timestamp = 0;
