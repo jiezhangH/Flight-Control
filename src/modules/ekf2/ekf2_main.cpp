@@ -285,6 +285,12 @@ private:
 	// airspeed mode parameter
 	control::BlockParamInt _airspeed_mode;
 
+	// EKF accel bias learning control
+	control::BlockParamExtFloat _acc_bias_lim;
+	control::BlockParamExtFloat _acc_bias_learn_acc_lim;
+	control::BlockParamExtFloat _acc_bias_learn_gyr_lim;
+	control::BlockParamExtFloat _acc_bias_learn_tc;
+
 	int update_subscriptions();
 
 };
@@ -385,7 +391,12 @@ Ekf2::Ekf2():
 	_gyr_bias_init(this, "EKF2_GBIAS_INIT", false, _params->switch_on_gyro_bias),
 	_acc_bias_init(this, "EKF2_ABIAS_INIT", false, _params->switch_on_accel_bias),
 	_ang_err_init(this, "EKF2_ANGERR_INIT", false, _params->initial_tilt_err),
-	_airspeed_mode(this, "FW_ARSP_MODE", false)
+	_airspeed_mode(this, "FW_ARSP_MODE", false),
+	_acc_bias_lim(this, "EKF2_ABL_LIM", false, _params->acc_bias_lim),
+	_acc_bias_learn_acc_lim(this, "EKF2_ABL_ACCLIM", false, _params->acc_bias_learn_acc_lim),
+	_acc_bias_learn_gyr_lim(this, "EKF2_ABL_GYRLIM", false, _params->acc_bias_learn_gyr_lim),
+	_acc_bias_learn_tc(this, "EKF2_ABL_TAU", false, _params->acc_bias_learn_tc)
+
 {
 
 }
