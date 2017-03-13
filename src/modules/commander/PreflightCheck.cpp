@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
+*   Copyright (c) 2012-2017 PX4 Development Team. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -67,6 +67,7 @@
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/estimator_status.h>
 #include <uORB/topics/sensor_preflight.h>
+#include <uORB/topics/home_position.h>
 
 #include "PreflightCheck.h"
 
@@ -167,7 +168,7 @@ static bool imuConsistencyCheck(orb_advert_t *mavlink_log_pub, bool checkAcc, bo
 	int sensors_sub = orb_subscribe(ORB_ID(sensor_preflight));
 	struct sensor_preflight_s sensors = {};
 	orb_copy(ORB_ID(sensor_preflight), sensors_sub, &sensors);
-	px4_close(sensors_sub);
+	orb_unsubscribe(sensors_sub);
 
 	// Use the difference between IMU's to detect a bad calibration. If a single IMU is fitted, the value being checked will be zero so this check will always pass.
 	bool success = true;
@@ -409,7 +410,7 @@ static bool airspeedCheck(orb_advert_t *mavlink_log_pub, bool optional, bool rep
 	}
 
 out:
-	px4_close(fd);
+	orb_unsubscribe(fd);
 	return success;
 }
 
@@ -423,10 +424,10 @@ static bool gnssCheck(orb_advert_t *mavlink_log_pub, bool report_fail)
 	px4_pollfd_struct_t fds[1];
 	fds[0].fd = gpsSub;
 	fds[0].events = POLLIN;
-	if(px4_poll(fds, 1, 2000) <= 0) {
+	if (px4_poll(fds, 1, 2000) <= 0) {
 		success = false;
-	}
-	else {
+
+	} else {
 		struct vehicle_gps_position_s gps;
 		if ( (OK != orb_copy(ORB_ID(vehicle_gps_position), gpsSub, &gps)) ||
 		    (hrt_elapsed_time(&gps.timestamp) > 1000000)) {
@@ -441,8 +442,30 @@ static bool gnssCheck(orb_advert_t *mavlink_log_pub, bool report_fail)
 		}
 	}
 
-	px4_close(gpsSub);
+	orb_unsubscribe(gpsSub);
 	return success;
+}
+
+static bool check_home_valid()
+{
+	// Check if topic is advertised, bail out if not
+	if (orb_exists(ORB_ID(home_position), 0))
+	{
+		return false;
+	}
+
+	// Subscribe to topic and get an update
+	int home_sub = orb_subscribe(ORB_ID(home_position));
+	if (home_sub < 0) {
+		return false;
+	}
+
+	// Check if valid timestamp has been set for home
+	struct home_position_s home = {};
+	orb_copy(ORB_ID(home_position), home_sub, &home);
+	orb_unsubscribe(home_sub);
+
+	return (home.timestamp > 0);
 }
 
 static bool ekf2Check(orb_advert_t *mavlink_log_pub, bool optional, bool report_fail, bool enforce_position_lock)
@@ -454,7 +477,6 @@ static bool ekf2Check(orb_advert_t *mavlink_log_pub, bool optional, bool report_
 	struct estimator_status_s status;
 	orb_copy(ORB_ID(estimator_status), sub, &status);
 	orb_unsubscribe(sub);
-	px4_close(sub);
 
 	bool success = true; // start with a pass and change to a fail if any test fails
 	float test_limit; // pass limit re-used for each test
@@ -493,6 +515,15 @@ static bool ekf2Check(orb_advert_t *mavlink_log_pub, bool optional, bool report_
 	if (enforce_position_lock && (status.gps_check_fail_flags > 0)) {
 		if (report_fail) {
 			mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: NO GPS LOCK");
+		}
+		success = false;
+		goto out;
+	}
+
+	// check wether home is set
+	if (enforce_position_lock && !check_home_valid()) {
+		if (report_fail) {
+			mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: NO HOME POSITION SET");
 		}
 		success = false;
 		goto out;
