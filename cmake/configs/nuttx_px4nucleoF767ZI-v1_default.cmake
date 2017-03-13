@@ -97,7 +97,7 @@ set(config_module_list
 	#
 	# modules/segway # XXX Needs GCC 4.7 fix
 	modules/fw_pos_control_l1
-	modules/fw_att_control
+	#modules/fw_att_control
 	modules/mc_att_control
 	modules/mc_pos_control
 	modules/vtol_att_control

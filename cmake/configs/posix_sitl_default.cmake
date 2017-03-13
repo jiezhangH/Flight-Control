@@ -40,7 +40,7 @@ set(config_module_list
 	modules/ekf2
 	modules/ekf2_replay
 	modules/events
-	modules/fw_att_control
+	#modules/fw_att_control
 	modules/fw_pos_control_l1
 	modules/land_detector
 	modules/logger

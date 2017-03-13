@@ -52,7 +52,7 @@ set(config_module_list
 	#
 	modules/mc_att_control
 	modules/mc_pos_control
-	modules/fw_att_control
+	#modules/fw_att_control
 	modules/fw_pos_control_l1
 	modules/vtol_att_control
 
