@@ -644,7 +644,7 @@ void print_status()
 		break;
 	}
 
-	px4_close(state_sub);
+	orb_unsubscribe(state_sub);
 
 
 	warnx("arming: %s", armed_str);
@@ -3174,19 +3174,19 @@ int commander_thread_main(int argc, char *argv[])
 	/* close fds */
 	led_deinit();
 	buzzer_deinit();
-	px4_close(sp_man_sub);
-	px4_close(offboard_control_mode_sub);
-	px4_close(local_position_sub);
-	px4_close(global_position_sub);
-	px4_close(gps_sub);
-	px4_close(sensor_sub);
-	px4_close(safety_sub);
-	px4_close(cmd_sub);
-	px4_close(subsys_sub);
-	px4_close(diff_pres_sub);
-	px4_close(param_changed_sub);
-	px4_close(battery_sub);
-	px4_close(land_detector_sub);
+	orb_unsubscribe(sp_man_sub);
+	orb_unsubscribe(offboard_control_mode_sub);
+	orb_unsubscribe(local_position_sub);
+	orb_unsubscribe(global_position_sub);
+	orb_unsubscribe(gps_sub);
+	orb_unsubscribe(sensor_sub);
+	orb_unsubscribe(safety_sub);
+	orb_unsubscribe(cmd_sub);
+	orb_unsubscribe(subsys_sub);
+	orb_unsubscribe(diff_pres_sub);
+	orb_unsubscribe(param_changed_sub);
+	orb_unsubscribe(battery_sub);
+	orb_unsubscribe(land_detector_sub);
 
 	thread_running = false;
 
@@ -4302,7 +4302,7 @@ void *commander_low_prio_loop(void *arg)
 		}
 	}
 
-	px4_close(cmd_sub);
+	orb_unsubscribe(cmd_sub);
 
 	return nullptr;
 }
