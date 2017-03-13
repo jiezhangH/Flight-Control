@@ -184,8 +184,6 @@ private:
 		param_t z_ff;
 		param_t slow_land_alt1;
 		param_t slow_land_alt2;
-		param_t slow_land_vel1;
-		param_t slow_land_vel2;
 		param_t xy_p;
 		param_t xy_vel_p;
 		param_t xy_vel_i;
@@ -241,8 +239,6 @@ private:
 		float xy_vel_man_expo;
 		float slow_land_alt1;
 		float slow_land_alt2;
-		float slow_land_vel1;
-		float slow_land_vel2;
 		uint32_t alt_mode;
 
 		int opt_recover;
@@ -325,9 +321,8 @@ private:
 
 	static float	scale_control(float ctl, float end, float dz, float dy);
 	static float    throttle_curve(float ctl, float ctr);
-	float _limit_velocity_dn();
-	float _velocity_limit_depend_altitude(float input_alt, float buffer, float des_min_alt, float des_min_vel,
-					      float des_max_vel);
+	void _slow_land_gradual_velocity_limit();
+
 	/**
 	 * Update reference for local position projection
 	 */
@@ -529,8 +524,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.xy_ff		= param_find("MPC_XY_FF");
 	_params_handles.slow_land_alt1	= param_find("MPC_LAND_ALT1");
 	_params_handles.slow_land_alt2	= param_find("MPC_LAND_ALT2");
-	_params_handles.slow_land_vel1	= param_find("MPC_LAND_SPEED1");
-	_params_handles.slow_land_vel2	= param_find("MPC_LAND_SPEED2");
 	_params_handles.tilt_max_air	= param_find("MPC_TILTMAX_AIR");
 	_params_handles.land_speed	= param_find("MPC_LAND_SPEED");
 	_params_handles.tko_speed	= param_find("MPC_TKO_SPEED");
@@ -550,6 +543,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.alt_mode = param_find("MPC_ALT_MODE");
 	_params_handles.opt_recover = param_find("VT_OPT_RECOV_EN");
 	_params_handles.xy_vel_man_expo = param_find("MPC_XY_MAN_EXPO");
+
 	/* fetch initial parameter values */
 	parameters_update(true);
 }
@@ -666,14 +660,10 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.acc_down_max = v;
 		param_get(_params_handles.xy_vel_man_expo, &v);
 		_params.xy_vel_man_expo = v;
-		param_get(_params_handles.slow_land_alt1, &v);
-		_params.slow_land_alt1 = v;
 		param_get(_params_handles.slow_land_alt2, &v);
 		_params.slow_land_alt2 = v;
-		param_get(_params_handles.slow_land_vel1, &v);
-		_params.slow_land_vel1 = v;
-		param_get(_params_handles.slow_land_vel2, &v);
-		_params.slow_land_vel2 = v;
+		param_get(_params_handles.slow_land_alt1, &v);
+		_params.slow_land_alt1 = math::max(v, _params.slow_land_alt2);
 
 		/*
 		 * increase the maximum horizontal acceleration such that stopping
@@ -965,52 +955,27 @@ MulticopterPositionControl::limit_altitude()
 	}
 }
 
-float
-MulticopterPositionControl::_limit_velocity_dn()
+void
+MulticopterPositionControl::_slow_land_gradual_velocity_limit()
 {
-	float velocity = 0.0f;
-	float temp_height = 1.0;
-	float temp_heigt_1 = 1.5;
+	/*
+	 * Make sure downward velocity (positive Z) is limited close to ground.
+	 * for now we use the home altitude and assume that we want to land on a similar absolute altitude.
+	 */
+	float altitude_above_home = -_pos(2) + _home_pos.z;
+	float vel_limit = FLT_MAX;
 
-	//judge the alt: alt>10m; limit velocity:3m/s
-	if (-_pos(2) > _params.slow_land_alt1 + _home_pos.z) {
-		velocity = _vel_sp(2);
-		//alt:5~10m limit velocity 1.4m/s
+	if (altitude_above_home < _params.slow_land_alt2) {
+		vel_limit = _params.land_speed;
 
-	} else if (-_pos(2) <= _params.slow_land_alt1 + _home_pos.z
-		   && (-_pos(2) >= _params.slow_land_alt2 + _home_pos.z)) {
-		velocity = _velocity_limit_depend_altitude(-_pos(2), temp_heigt_1, _params.slow_land_alt1,
-				_params.slow_land_vel1,
-				_params.vel_max_down);
-
-	} else if (-_pos(2) < _params.slow_land_alt2 + _home_pos.z) {
-		velocity = _velocity_limit_depend_altitude(-_pos(2), temp_height, _params.slow_land_alt2, _params.slow_land_vel2,
-				_params.slow_land_vel1);
+	} else if (altitude_above_home < _params.slow_land_alt1) {
+		/* linear function between the two altitudes */
+		float a = (_params.vel_max_down - _params.land_speed) / (_params.slow_land_alt1 - _params.slow_land_alt2);
+		float b = _params.land_speed - a * _params.slow_land_alt2;
+		vel_limit =  a * altitude_above_home + b;
 	}
 
-	return velocity;
-}
-
-float
-MulticopterPositionControl::_velocity_limit_depend_altitude(float input_alt, float buffer_land, float dow_alt,
-		float dow_min_vel, float dow_max_vel)
-{
-	float temp_min = dow_alt - buffer_land;
-	float temp_max = dow_alt;
-	float velocity = 0.0f;
-
-	if (input_alt < temp_min) {
-		velocity = dow_min_vel;
-
-	} else if (input_alt > temp_max) {
-		velocity = dow_max_vel;
-
-	} else if (input_alt > temp_min && input_alt < temp_max) {
-		velocity = (dow_max_vel - dow_min_vel) / (temp_max - temp_min) * input_alt + (dow_max_vel * temp_min - dow_min_vel *
-				temp_max) / (temp_min - temp_max);
-	}
-
-	return velocity;
+	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
 }
 
 void
@@ -1793,25 +1758,7 @@ MulticopterPositionControl::control_position(float dt)
 		_vel_sp(2) = -1.0f * _params.vel_max_up;
 	}
 
-	/*
-	 * Make sure downward velocity (positive Z) is limited close to ground.
-	 * for now we use the home altitude and assume that our Z coordinate
-	 * is initialized close to home.
-	 */
-	bool close_to_descent = (-_pos(2) + _home_pos.z) <= _params.slow_land_alt1;
-
-	//Judge the velocity is down
-	if (close_to_descent && _vel_sp(2) > FLT_EPSILON) {
-		//calculate the down velocity base on height below the descent height.
-		if (_vel_sp(2) > _params.slow_land_vel1) {
-			float vel_limit = _limit_velocity_dn();
-
-			// judge the set velocity and the calculate
-			if (_vel_sp(2) > vel_limit) {
-				_vel_sp(2) = vel_limit;
-			}
-		}
-	}
+	_slow_land_gradual_velocity_limit();
 
 	if (!_control_mode.flag_control_position_enabled) {
 		_reset_pos_sp = true;
