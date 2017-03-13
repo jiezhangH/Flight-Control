@@ -520,42 +520,55 @@ PARAM_DEFINE_INT32(MPC_ALT_MODE, 0);
 PARAM_DEFINE_FLOAT(MPC_XY_MAN_EXPO, 0.0f);
 
 /**
- * The height is close to ground and get into the descent land
- * @unit m
+ * Altitude for 1. step of slow landing (descend)
  *
+ * Below this altitude descending velocity gets limited to "MPC_LAND_SPEED1"
+ * Should be higher than "MPC_LAND_ALT2"
+ *
+ * @unit m
  * @min 0
  * @max 122
- * @decimal 2
+ * @decimal 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_ALT_DESLD, 10.0f);
+PARAM_DEFINE_FLOAT(MPC_LAND_ALT1, 10.0f);
+
 /**
- * The hight close to ground and at a low speed to down
- * @unit m
+ * Altitude for 2. step of slow landing (landing)
  *
+ * Below this altitude descending velocity gets limited to "MPC_LAND_SPEED2"
+ * Should be lower than "MPC_LAND_ALT1"
+ *
+ * @unit m
  * @min 0
  * @max 122
- * @decimal 2
+ * @decimal 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_ALT_LAND, 5.0f);
+PARAM_DEFINE_FLOAT(MPC_LAND_ALT2, 5.0f);
+
 /**
- * the height is close to the altitude of  the parameter "MPC_ALT_DESLD"
- * and get start a descent down speed
+ * Velocity for 1. step of slow landing (descend)
+ *
+ * Below "MPC_LAND_ALT1" the descending velocity is limited to this
+ *
  * @unit m/s
  * @min 0
  * @max 10
- * @decimal 2
+ * @decimal 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_VELZ_DESLD, 1.4f);
+PARAM_DEFINE_FLOAT(MPC_LAND_SPEED1, 1.4f);
+
 /**
- * The height is close to ground(the parameter "MPC_ALT_LAND") and at a low speed to down
- * @unit m/s
+ * Velocity for 2. step of slow landing (landing)
  *
+ * Below "MPC_LAND_ALT2" the descending velocity is limited to this
+ *
+ * @unit m/s
  * @min 0
  * @max 10
- * @decimal 2
+ * @decimal 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_VELZ_LAND, 0.7f);
+PARAM_DEFINE_FLOAT(MPC_LAND_SPEED2, 0.7f);
