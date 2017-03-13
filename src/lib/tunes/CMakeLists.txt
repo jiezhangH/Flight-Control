@@ -34,7 +34,7 @@ px4_add_module(
 	MODULE lib__tunes
 	SRCS
 		tunes.cpp
-		default_tunes.cpp
+		yuneec_tunes.cpp
 	DEPENDS
 		platforms__common
 		modules__uORB
