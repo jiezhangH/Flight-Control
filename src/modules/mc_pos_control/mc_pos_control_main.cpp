@@ -963,7 +963,7 @@ MulticopterPositionControl::_slow_land_gradual_velocity_limit()
 	 * for now we use the home altitude and assume that we want to land on a similar absolute altitude.
 	 */
 	float altitude_above_home = -_pos(2) + _home_pos.z;
-	float vel_limit = FLT_MAX;
+	float vel_limit = _params.vel_max_down;
 
 	if (altitude_above_home < _params.slow_land_alt2) {
 		vel_limit = _params.land_speed;
