@@ -18,6 +18,7 @@ const char *Tunes::_default_tunes[] = {
 	"MFT255L4gf#fed#d", // baro warning
 	"MFT100a8", // single beep
 	"MFT100L4>G#6A#6B#4", // home set tune
+	"MFT100c8", // test extra custom tune
 };
 
 // set default_tunes array size
