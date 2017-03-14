@@ -3443,7 +3443,9 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 
 			/* enable the use of break */
 			/* fallback strategies, give the user the closest mode to what he wanted */
-			while (res == TRANSITION_DENIED && maxcount > 0) {
+			while ((status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED
+					|| status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR)
+					&& res == TRANSITION_DENIED && maxcount > 0) {
 
 				maxcount--;
 

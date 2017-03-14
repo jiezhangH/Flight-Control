@@ -753,10 +753,10 @@ bool set_nav_state(struct vehicle_status_s *status,
 				   && is_armed) {
 				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
-				if (status_flags->condition_local_altitude_valid) {
+				if (status_flags->condition_local_altitude_valid && is_armed) {
 					status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
 
-				} else {
+				} else if (is_armed) {
 					status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
 				}
 
