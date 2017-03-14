@@ -901,9 +901,14 @@ TAP_ESC::cycle()
 
 	if (updated) {
 		orb_copy(ORB_ID(tune_control), _tune_control_sub, &_tune);
-		_tunes.set_control(_tune);
-		_next_tone = hrt_absolute_time();
-		_play_tone = true;
+
+		if (_tunes.set_control(_tune) == 0) {
+			_next_tone = hrt_absolute_time();
+			_play_tone = true;
+
+		} else {
+			_play_tone = false;
+		}
 	}
 
 	unsigned frequency = 0, duration = 0, silence = 0;
