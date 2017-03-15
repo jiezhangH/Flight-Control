@@ -19,6 +19,7 @@ set(config_module_list
 	drivers/tap_esc
 	drivers/mpu6000
 	drivers/ms5611
+	drivers/mpc2520
 	drivers/hmc5883
 	drivers/ist8310
 	drivers/gps

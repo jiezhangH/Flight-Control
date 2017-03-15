@@ -9,6 +9,10 @@ fi
 
 if ms5611 -T 5607 -I start
 then
+else
+	if mpc2520 -I start
+	then
+	fi
 fi
 
 # External I2C bus
