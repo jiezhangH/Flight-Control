@@ -512,7 +512,11 @@ static bool ekf2Check(orb_advert_t *mavlink_log_pub, bool optional, bool report_
 	}
 
 	// check GPS position flags
-	if (enforce_position_lock && (status.gps_check_fail_flags > 0)) {
+	if (enforce_position_lock
+		&& ((status.gps_check_fail_flags & (estimator_status_s::GPS_CHECK_FAIL_MIN_SAT_COUNT
+											| estimator_status_s::GPS_CHECK_FAIL_MIN_GDOP
+											| estimator_status_s::GPS_CHECK_FAIL_MAX_HORZ_ERR
+											| estimator_status_s::GPS_CHECK_FAIL_MAX_VERT_ERR)) > 0)) {
 		if (report_fail) {
 			mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: NO GPS LOCK");
 		}
