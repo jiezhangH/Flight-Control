@@ -573,6 +573,19 @@ void Logger::add_default_topics()
 	// Note: try to avoid setting the interval where possible, as it increases RAM usage
 
 	add_topic("vehicle_attitude", 30);
+
+	// log minimal set of topic if EKF2_REC_RPL is set
+	param_t replay_handle = param_find("EKF2_REC_RPL");
+
+	if (replay_handle != PARAM_INVALID) {
+		int32_t replay_value = 0;
+		param_get(replay_handle, &replay_value);
+
+		if (replay_value == 1) {
+			goto replay_topics;
+		}
+	}
+
 	add_topic("actuator_outputs", 100);
 	add_topic("telemetry_status");
 	add_topic("vehicle_command");
@@ -608,6 +621,7 @@ void Logger::add_default_topics()
 	add_topic("sensor_preflight", 50);
 	add_topic("task_stack_info");
 
+replay_topics:
 	/* for estimator replay (need to be at full rate) */
 	add_topic("airspeed");
 	add_topic("distance_sensor");
