@@ -1666,8 +1666,7 @@ void MulticopterPositionControl::control_auto(float dt)
 		const bool high_enough_for_landing_gear = (_pos(2) < _manual_land_alt.get() * 2.0f);
 
 		// During a mission or in loiter it's safe to retract the landing gear.
-		if ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION ||
-		     _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&
+		if ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION) &&
 		    !_vehicle_land_detected.landed &&
 		    high_enough_for_landing_gear) {
 			_att_sp.landing_gear = 1.0f;
@@ -1676,6 +1675,7 @@ void MulticopterPositionControl::control_auto(float dt)
 
 		} else if (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF ||
 			   _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND ||
+			   _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER ||
 			   !high_enough_for_landing_gear) {
 			_att_sp.landing_gear = -1.0f;
 
