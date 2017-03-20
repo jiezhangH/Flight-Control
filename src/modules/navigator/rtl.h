@@ -92,6 +92,8 @@ private:
 		RTL_STATE_LOITER,
 		RTL_STATE_LAND,
 		RTL_STATE_LANDED,
+		RTL_STATE_PRE_RETURN,
+		RTL_STATE_AFTER_RETURN,
 	} _rtl_state;
 
 	bool _rtl_start_lock;
