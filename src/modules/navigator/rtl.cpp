@@ -156,7 +156,7 @@ RTL::set_rtl_item()
 
 			// we are close to home, limit climb to min
 			if (home_dist < _param_rtl_min_dist.get()) {
-				climb_alt = _navigator->get_home_position()->alt + _param_min_loiter_alt.get();
+				climb_alt = _navigator->get_home_position()->alt + _param_descend_alt.get();
 			}
 
 			_mission_item.lat = _navigator->get_global_position()->lat;
