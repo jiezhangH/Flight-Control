@@ -1679,6 +1679,10 @@ void MulticopterPositionControl::control_auto(float dt)
 			   !high_enough_for_landing_gear) {
 			_att_sp.landing_gear = -1.0f;
 
+			if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+				_gear_state_initialized = false;
+			}
+
 		} else {
 			// For the rest of the setpoint types, just leave it as is.
 		}
