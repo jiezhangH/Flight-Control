@@ -2303,10 +2303,12 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 		memcpy(&_att_sp.q_d[0], q_sp.data(), sizeof(_att_sp.q_d));
 		_att_sp.q_d_valid = true;
 	}
+
 	// record the state that when disarmed in position mode and the gear switch on.
 	if (!_pre_arm && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
-		_gear_state_initialized =false;
+		_gear_state_initialized = false;
 	}
+
 	// Only switch the landing gear up if we are not landed and if
 	// the user switched from gear down to gear up.
 	// If the user had the switch in the gear up position and took off ignore it
@@ -2320,6 +2322,7 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 		// Switching the gear off does put it into a safe defined state
 		_gear_state_initialized = true;
 	}
+
 	_att_sp.timestamp = hrt_absolute_time();
 }
 
