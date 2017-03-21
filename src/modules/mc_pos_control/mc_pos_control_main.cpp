@@ -520,8 +520,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.xy_vel_max	= param_find("MPC_XY_VEL_MAX");
 	_params_handles.xy_vel_cruise	= param_find("MPC_XY_CRUISE");
 	_params_handles.xy_ff		= param_find("MPC_XY_FF");
-	_params_handles.slow_land_alt1	= param_find("MPC_LAND_ALT1");
-	_params_handles.slow_land_alt2	= param_find("MPC_LAND_ALT2");
+	_params_handles.slow_land_alt1  = param_find("MPC_LAND_ALT1");
+	_params_handles.slow_land_alt2  = param_find("MPC_LAND_ALT2");
 	_params_handles.tilt_max_air	= param_find("MPC_TILTMAX_AIR");
 	_params_handles.land_speed	= param_find("MPC_LAND_SPEED");
 	_params_handles.tko_speed	= param_find("MPC_TKO_SPEED");
@@ -643,6 +643,11 @@ MulticopterPositionControl::parameters_update(bool force)
 
 		/* make sure that vel_cruise_xy is always smaller than vel_max */
 		_params.vel_cruise_xy = math::min(_params.vel_cruise_xy, _params.vel_max_xy);
+
+		param_get(_params_handles.slow_land_alt2, &v);
+		_params.slow_land_alt2 = v;
+		param_get(_params_handles.slow_land_alt1, &v);
+		_params.slow_land_alt1 = math::max(v, _params.slow_land_alt2);
 
 		param_get(_params_handles.alt_mode, &v_i);
 		_params.alt_mode = v_i;
@@ -911,29 +916,6 @@ MulticopterPositionControl::limit_altitude()
 }
 
 void
-MulticopterPositionControl::_slow_land_gradual_velocity_limit()
-{
-	/*
-	 * Make sure downward velocity (positive Z) is limited close to ground.
-	 * for now we use the home altitude and assume that we want to land on a similar absolute altitude.
-	 */
-	float altitude_above_home = -_pos(2) + _home_pos.z;
-	float vel_limit = _params.vel_max_down;
-
-	if (altitude_above_home < _params.slow_land_alt2) {
-		vel_limit = _params.land_speed;
-
-	} else if (altitude_above_home < _params.slow_land_alt1) {
-		/* linear function between the two altitudes */
-		float a = (_params.vel_max_down - _params.land_speed) / (_params.slow_land_alt1 - _params.slow_land_alt2);
-		float b = _params.land_speed - a * _params.slow_land_alt2;
-		vel_limit =  a * altitude_above_home + b;
-	}
-
-	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
-}
-
-void
 MulticopterPositionControl::limit_vel_xy_gradually()
 {
 	/*
@@ -957,6 +939,29 @@ MulticopterPositionControl::get_cruising_speed_xy()
 	 */
 	return ((PX4_ISFINITE(_pos_sp_triplet.current.cruising_speed) && (_pos_sp_triplet.current.cruising_speed > 0.1f)) ?
 		_pos_sp_triplet.current.cruising_speed : _params.vel_cruise_xy);
+}
+
+void
+MulticopterPositionControl::_slow_land_gradual_velocity_limit()
+{
+	/*
+	 * Make sure downward velocity (positive Z) is limited close to ground.
+	 * for now we use the home altitude and assume that we want to land on a similar absolute altitude.
+	 */
+	float altitude_above_home = -_pos(2) + _home_pos.z;
+	float vel_limit = _params.vel_max_down;
+
+	if (altitude_above_home < _params.slow_land_alt2) {
+		vel_limit = _params.land_speed;
+
+	} else if (altitude_above_home < _params.slow_land_alt1) {
+		/* linear function between the two altitudes */
+		float a = (_params.vel_max_down - _params.land_speed) / (_params.slow_land_alt1 - _params.slow_land_alt2);
+		float b = _params.land_speed - a * _params.slow_land_alt2;
+		vel_limit =  a * altitude_above_home + b;
+	}
+
+	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
 }
 
 void
