@@ -2711,7 +2711,7 @@ int commander_thread_main(int argc, char *argv[])
 						&& (internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE)
 						&& (internal_state.main_state != commander_state_s::MAIN_STATE_SMART)
 						) {
-						print_reject_arm("NOT ARMING: Switch to a manual mode first.");
+						print_reject_arm("NOT ARMING: Switch to a pilot flight mode first");
 
 					} else if (!status_flags.condition_home_position_valid &&
 								geofence_action == geofence_result_s::GF_ACTION_RTL) {
