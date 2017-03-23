@@ -1385,6 +1385,10 @@ MulticopterPositionControl::vel_sp_slewrate(float dt)
 	float max_acc_z = acc(2) < 0.0f ? -_params.acc_up_max : _params.acc_down_max;
 
 	if (fabsf(acc(2)) > fabsf(max_acc_z)) {
+		if (_vehicle_land_detected.landed || _vehicle_land_detected.ground_contact) {
+			_vel_sp_prev(2) = 0.0f;
+		}
+
 		_vel_sp(2) = max_acc_z * dt + _vel_sp_prev(2);
 	}
 }
