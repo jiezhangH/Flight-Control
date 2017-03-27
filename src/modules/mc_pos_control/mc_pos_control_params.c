@@ -339,12 +339,12 @@ PARAM_DEFINE_FLOAT(MPC_LAND_SPEED, 0.5f);
  * Takeoff climb rate
  *
  * @unit m/s
- * @min 1
- * @max 5
+ * @min 0.6
+ * @max 3
  * @decimal 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_TKO_SPEED, 1.5f);
+PARAM_DEFINE_FLOAT(MPC_TKO_SPEED, 0.8f);
 
 /**
  * Max manual roll
