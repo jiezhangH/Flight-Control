@@ -93,6 +93,7 @@
 #define MANUAL_THROTTLE_MAX_MULTICOPTER	0.9f
 #define ONE_G	9.8066f
 
+
 /**
  * Multicopter position control app start / stop handling function
  *
@@ -1666,33 +1667,32 @@ void MulticopterPositionControl::control_auto(float dt)
 		}
 
 		// Handle the landing gear based on the manual landing alt
-		const bool high_enough_for_landing_gear = (_pos(2) < _manual_land_alt.get() * 2.0f);
+		//const bool high_enough_for_landing_gear_up = (_pos(2) < _manual_land_alt.get() * 2.0f);
 
-		// During a mission or in loiter it's safe to retract the landing gear.
-		if (((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION
-		      && !_vehicle_land_detected.ground_contact) ||
-		     (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER
-		      && _vehicle_status.nav_state != _vehicle_status.NAVIGATION_STATE_AUTO_RTL)) &&
-		    !_vehicle_land_detected.landed &&
-		    high_enough_for_landing_gear) {
-			_att_sp.landing_gear = 1.0f;
+		/* takeoff, landing and rtl when loiter, lower gears
+		 * ToDo: adjust for PR with new landing state*/
+		const bool gear_down = (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF) ||
+				       (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) ||
+				       ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER)
+					&& (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL));
 
-			// During takeoff and landing, we better put it down again.
+		/* in mission and in loiter when not rtl, put gears up */
+		const bool gear_up = !gear_down &&
+				     ((!_vehicle_land_detected.landed || !_vehicle_land_detected.ground_contact) &&
+				      ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER)
+				       || (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION)));
 
-		} else if (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF ||
-			   _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND ||
-			   (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER
-			    && _vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL) ||
-			   !high_enough_for_landing_gear) {
-			_att_sp.landing_gear = -1.0f;
-
-			if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
-				_gear_state_initialized = false;
-			}
-
-		} else {
-			// For the rest of the setpoint types, just leave it as is.
+		if (gear_up) {
+			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_UP;
+			_gear_state_initialized = _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON;
 		}
+
+		if (gear_down) {
+			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
+			_gear_state_initialized = _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF;
+		}
+
+
 
 	} else {
 		/* no waypoint, do nothing, setpoint was already reset */
@@ -2305,23 +2305,28 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 		_att_sp.q_d_valid = true;
 	}
 
-	// record the state that when disarmed in position mode and the gear switch on.
-	if (!_pre_arm && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
-		_gear_state_initialized = false;
-	}
+	/* only in manual mode we need to consider the gear switch
+	 */
+	if (_control_mode.flag_control_manual_enabled) {
 
-	// Only switch the landing gear up if we are not landed and if
-	// the user switched from gear down to gear up.
-	// If the user had the switch in the gear up position and took off ignore it
-	// until he toggles the switch to avoid retracting the gear immediately on takeoff.
-	if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON && _gear_state_initialized &&
-	    !_vehicle_land_detected.landed) {
-		_att_sp.landing_gear = 1.0f;
+		// record the state that when disarmed in position mode and the gear switch on.
+		if (!_pre_arm && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+			_gear_state_initialized = false;
+		}
 
-	} else if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF) {
-		_att_sp.landing_gear = -1.0f;
-		// Switching the gear off does put it into a safe defined state
-		_gear_state_initialized = true;
+		// Only switch the landing gear up if we are not landed and if
+		// the user switched from gear down to gear up.
+		// If the user had the switch in the gear up position and took off ignore it
+		// until he toggles the switch to avoid retracting the gear immediately on takeoff.
+		if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON && _gear_state_initialized &&
+		    !_vehicle_land_detected.landed) {
+			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_UP;
+
+		} else if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF) {
+			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
+			// Switching the gear off does put it into a safe defined state
+			_gear_state_initialized = true;
+		}
 	}
 
 	_att_sp.timestamp = hrt_absolute_time();
@@ -2364,8 +2369,7 @@ MulticopterPositionControl::task_main()
 	hrt_abstime t_prev = 0;
 
 	// Let's be safe and have the landing gear down by default
-	_att_sp.landing_gear = -1.0f;
-
+	_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
 
 	/* wakeup source */
 	px4_pollfd_struct_t fds[1];
