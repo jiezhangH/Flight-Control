@@ -23,8 +23,8 @@ if [ ! -f "$firmwaredir/Firmware.sublime-project" ]; then
     exit 1
 fi
 
-# This creates a version such as "0.1.0-1-g533aeb".
-version=`cd $firmwaredir && git describe --always --tags`
+# This creates a version such as "v1.6.1-131-ge7bd40aa84".
+version=`cd $firmwaredir && git describe --always --tags --abbrev=10`
 
 tmpdir="/tmp/sitl"
 builddir="$firmwaredir/build_posix_sitl_ekf2"
