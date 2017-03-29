@@ -95,6 +95,12 @@ int VotedSensorsUpdate::init(sensor_combined_s &raw)
 
 	_corrections_changed = true; //make sure to initially publish the corrections topic
 
+	// force the individual selections to be updated and published first time through
+	_mag.last_best_vote = -1;
+	_gyro.last_best_vote = -1;
+	_baro.last_best_vote = -1;
+	_accel.last_best_vote = -1;
+
 	return 0;
 }
 
