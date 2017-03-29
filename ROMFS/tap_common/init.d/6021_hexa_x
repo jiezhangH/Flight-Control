@@ -92,8 +92,8 @@ then
 		# Position control velocity
 		param set MPC_XY_CRUISE 11.0
 		param set MPC_XY_VEL_MAX 14.0
-		param set MPC_ACC_HOR_MAX 3.0
-		param set MPC_DEC_HOR_MAX 10.0
+		param set MPC_ACC_HOR_MAX 10.0
+		param set MPC_ACC_HOR_MAN 3.0
 		param set MPC_DEC_HOR_SLOW 1.0
 		param set MPC_Z_VEL_MAX_UP 5.0
 		param set MPC_Z_VEL_MAX_DN 4.0
