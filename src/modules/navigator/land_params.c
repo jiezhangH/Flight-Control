@@ -1,6 +1,6 @@
-/***************************************************************************
+/****************************************************************************
  *
- *   Copyright (c) 2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2014-2016 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -17,7 +17,7 @@
  *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * AS IS AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
  * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
@@ -30,56 +30,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
 /**
- * @file land.h
+ * @file land_params.c
  *
- * Helper class to land at the current position
+ * Parameters for LAND
  *
- * @author Andreas Antener <andreas@uaventure.com>
  */
 
-#ifndef NAVIGATOR_LAND_H
-#define NAVIGATOR_LAND_H
+/*
+ * LAND parameters, accessible via MAVLink
+ */
 
-#include <controllib/blocks.hpp>
-#include <controllib/block/BlockParam.hpp>
-
-#include "navigator_mode.h"
-#include "mission_block.h"
-
-class Land : public MissionBlock
-{
-public:
-	Land(Navigator *navigator, const char *name);
-
-	~Land();
-
-	virtual void on_inactive();
-
-	virtual void on_activation();
-
-	virtual void on_active();
-private:
-	/**
-	 * Set the autoland item
-	 */
-	void		set_autoland_item();
-
-	/**
-	 * Move to next land item
-	 */
-	void		advance_land();
-
-	enum LANDState {
-		LAND_STATE_NONE = 0,
-		LAND_STATE_DESCEND,
-		LAND_STATE_LOITER,
-		LAND_STATE_LAND,
-		LAND_STATE_LANDED,
-	} _land_state;
-
-	control::BlockParamFloat _param_land_delay;
-	control::BlockParamFloat _param_descend_alt;
-};
-
-#endif
+/**
+ * LAND loiter time when switch to the auto land mode
+ *
+ * If set to 0 the system will not loiter.
+ *
+ * @unit s
+ * @min -1
+ * @max 300
+ * @decimal 1
+ * @increment 0.5
+ * @group Return To Land
+ */
+PARAM_DEFINE_FLOAT(LAND_LOI_DELAY, 3.0f);

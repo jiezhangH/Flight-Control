@@ -43,6 +43,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <fcntl.h>
+#include <float.h>
 
 #include <systemlib/err.h>
 #include <systemlib/mavlink_log.h>
@@ -53,11 +54,19 @@
 #include "land.h"
 #include "navigator.h"
 
+#define DELAY_SIGMA	0.01f
+
 Land::Land(Navigator *navigator, const char *name) :
-	MissionBlock(navigator, name)
+	MissionBlock(navigator, name),
+	_land_state(LAND_STATE_NONE),
+	_param_land_delay(this, "LAND_LOI_DELAY", false),
+	_param_descend_alt(this, "MPC_LAND_ALT1", false)
+
 {
 	/* load initial params */
 	updateParams();
+	/* initial reset */
+	on_inactive();
 }
 
 Land::~Land()
@@ -67,39 +76,146 @@ Land::~Land()
 void
 Land::on_inactive()
 {
+	_land_state = LAND_STATE_NONE;
 }
 
 void
 Land::on_activation()
 {
-	/* set current mission item to Land */
-	set_land_item(&_mission_item, true);
-	_navigator->get_mission_result()->reached = false;
-	_navigator->get_mission_result()->finished = false;
-	_navigator->set_mission_result_updated();
-	reset_mission_item_reached();
-
-	/* convert mission item to current setpoint */
+	set_current_position_item(&_mission_item);
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
-	pos_sp_triplet->previous.valid = false;
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
-	pos_sp_triplet->next.valid = false;
 
-	_navigator->set_can_loiter_at_sp(false);
+	/* for safety reasons don't go into LAND if landed */
+	if (_navigator->get_land_detected()->landed) {
+		_land_state = LAND_STATE_LANDED;
+		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing RTL");
 
-	_navigator->set_position_setpoint_triplet_updated();
+		/* if not landed, loiter first */
+
+	} else {
+		_land_state = LAND_STATE_LOITER;
+	}
+
+	set_autoland_item();
 }
 
 void
 Land::on_active()
 {
-	if (is_mission_item_reached() && !_navigator->get_mission_result()->finished) {
-		_navigator->get_mission_result()->finished = true;
-		_navigator->set_mission_result_updated();
-		set_idle_item(&_mission_item);
+	if (_land_state != LAND_STATE_LANDED && is_mission_item_reached()) {
+		advance_land();
+		set_autoland_item();
+	}
+}
 
-		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
-		mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
-		_navigator->set_position_setpoint_triplet_updated();
+void
+Land::set_autoland_item()
+{
+	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+
+	switch (_land_state) {
+	case LAND_STATE_LOITER: {
+			bool autoland = _param_land_delay.get() > -DELAY_SIGMA;
+
+			_mission_item.lat = _navigator->get_global_position()->lat;
+			_mission_item.lon = _navigator->get_global_position()->lon;
+			// don't change altitude
+			_mission_item.yaw = NAN;
+			_mission_item.loiter_radius = _navigator->get_loiter_radius();
+			_mission_item.nav_cmd = autoland ? NAV_CMD_LOITER_TIME_LIMIT : NAV_CMD_LOITER_UNLIMITED;
+			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
+			_mission_item.time_inside = _param_land_delay.get() < 0.0f ? 0.0f : _param_land_delay.get();
+			_mission_item.autocontinue = autoland;
+			_mission_item.origin = ORIGIN_ONBOARD;
+
+			_navigator->set_can_loiter_at_sp(true);
+
+			if (autoland && (Navigator::get_time_inside(_mission_item) > FLT_EPSILON)) {
+				mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: loitering %.1fs",
+						 (double)Navigator::get_time_inside(_mission_item));
+
+			} else {
+				mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: completed, loiter");
+			}
+
+			break;
+		}
+
+	case LAND_STATE_DESCEND: {
+			_mission_item.lat = _navigator->get_global_position()->lat;
+			_mission_item.lon = _navigator->get_global_position()->lon;
+			_mission_item.altitude_is_relative = false;
+			_mission_item.altitude = _navigator->get_home_position()->alt + _param_descend_alt.get();
+			_mission_item.yaw = NAN;
+			_mission_item.loiter_radius = _navigator->get_loiter_radius();
+			_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
+			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
+			_mission_item.time_inside = 0.0f;
+			_mission_item.autocontinue = false;
+			_mission_item.origin = ORIGIN_ONBOARD;
+
+			/* disable previous setpoint to prevent drift */
+			pos_sp_triplet->previous.valid = false;
+
+			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: descend to %d m (%d m above home)",
+					 (int)(_mission_item.altitude),
+					 (int)(_mission_item.altitude - _navigator->get_home_position()->alt));
+			break;
+		}
+
+	case LAND_STATE_LAND: {
+			set_land_item(&_mission_item, false);
+			_mission_item.yaw = NAN;
+
+			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: land at now");
+			break;
+		}
+
+	case LAND_STATE_LANDED: {
+			set_idle_item(&_mission_item);
+
+			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: completed, landed");
+			break;
+		}
+
+	default:
+		break;
+	}
+
+	reset_mission_item_reached();
+
+	/* convert mission item to current position setpoint and make it valid */
+	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
+	pos_sp_triplet->next.valid = false;
+
+	_navigator->set_position_setpoint_triplet_updated();
+}
+
+void
+Land::advance_land()
+{
+	switch (_land_state) {
+	case LAND_STATE_LOITER:
+		if (_navigator->get_global_position()->alt > _navigator->get_home_position()->alt + _param_descend_alt.get()) {
+			_land_state = LAND_STATE_DESCEND;
+
+		} else {
+			_land_state = LAND_STATE_LAND;
+		}
+
+		break;
+
+	case LAND_STATE_DESCEND:
+		_land_state = LAND_STATE_LAND;
+		break;
+
+	case LAND_STATE_LAND:
+		_land_state = LAND_STATE_LANDED;
+
+		break;
+
+	default:
+		break;
 	}
 }
