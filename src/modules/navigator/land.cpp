@@ -165,7 +165,7 @@ Land::set_autoland_item()
 		}
 
 	case LAND_STATE_LAND: {
-			set_land_item(&_mission_item, false);
+			set_land_item(&_mission_item, true);
 			_mission_item.yaw = NAN;
 
 			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: land at now");
