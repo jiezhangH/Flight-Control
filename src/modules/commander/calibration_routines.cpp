@@ -798,6 +798,104 @@ calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,
 	return result;
 }
 
+calibrate_return calibrate_from_orientation2(orb_advert_t *mavlink_log_pub,
+		int		cancel_sub,
+		bool	side_data_collected[detect_orientation_side_count],
+		calibration_from_orientation_worker_t calibration_worker,
+		void	*worker_data,
+		bool	lenient_still_position)
+{
+	calibrate_return result = calibrate_return_ok;
+
+	enum detect_orientation_return orient = DETECT_ORIENTATION_TAIL_DOWN;
+
+	// Rotate through all requested orientation
+	while (true) {
+		if (calibrate_cancel_check(mavlink_log_pub, cancel_sub)) {
+			result = calibrate_return_cancelled;
+			break;
+		}
+
+		unsigned int side_complete_count = 0;
+
+		// Update the number of completed sides
+		for (unsigned i = 0; i < detect_orientation_side_count; i++) {
+			if (side_data_collected[i]) {
+				side_complete_count++;
+			}
+		}
+
+		if (side_complete_count == detect_orientation_side_count) {
+			// We have completed all sides, move on
+			rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_ON);
+			break;
+		}
+
+		uint8_t mask;
+		switch(side_complete_count) {
+			case 0:
+			case 3:
+				mask = 0x12;
+				break;
+			case 1:
+			case 4:
+				mask = 0x24;
+				break;
+			case 2:
+			case 5:
+				mask = 0x09;
+				break;
+			default: mask = 0x00;
+		}
+		rgbled_set_mag_cali(mask);
+
+		/* inform user which orientations are still needed */
+		char pendingStr[80];
+		pendingStr[0] = 0;
+
+		for (unsigned int cur_orientation = 0; cur_orientation < detect_orientation_side_count; cur_orientation++) {
+			if (!side_data_collected[cur_orientation]) {
+				strncat(pendingStr, " ", sizeof(pendingStr) - 1);
+				strncat(pendingStr, detect_orientation_str((enum detect_orientation_return)cur_orientation), sizeof(pendingStr) - 1);
+			}
+		}
+
+		calibration_log_info(mavlink_log_pub, "[cal] pending:%s", pendingStr);
+		usleep(20000);
+		calibration_log_info(mavlink_log_pub, "[cal] hold vehicle still on a pending side");
+		usleep(20000);
+
+		calibration_log_info(mavlink_log_pub, CAL_QGC_ORIENTATION_DETECTED_MSG, detect_orientation_str(orient));
+		usleep(20000);
+		calibration_log_info(mavlink_log_pub, CAL_QGC_ORIENTATION_DETECTED_MSG, detect_orientation_str(orient));
+		usleep(20000);
+
+		// Call worker routine
+		result = calibration_worker(orient, cancel_sub, worker_data);
+
+		if (result != calibrate_return_ok) {
+			break;
+		}
+
+		calibration_log_info(mavlink_log_pub, CAL_QGC_SIDE_DONE_MSG, detect_orientation_str(orient));
+		usleep(20000);
+		calibration_log_info(mavlink_log_pub, CAL_QGC_SIDE_DONE_MSG, detect_orientation_str(orient));
+		usleep(20000);
+
+		// Note that this side is complete
+		side_data_collected[orient] = true;
+		orient = (detect_orientation_return)(orient + 1);
+
+		// output neutral tune
+		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
+
+		// temporary priority boost for the white blinking led to come trough
+		usleep(200000);
+	}
+
+	return result;
+}
+
 int calibrate_cancel_subscribe()
 {
 	return orb_subscribe(ORB_ID(vehicle_command));

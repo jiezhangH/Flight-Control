@@ -117,6 +117,12 @@ calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,		///<
 		void	*worker_data,						///< Opaque data passed to worker routine
 		bool	lenient_still_detection);				///< true: Use more lenient still position detection
 
+calibrate_return calibrate_from_orientation2(orb_advert_t *mavlink_log_pub,
+		int		cancel_sub,
+		bool	side_data_collected[detect_orientation_side_count],
+		calibration_from_orientation_worker_t calibration_worker,
+		void	*worker_data,
+		bool	lenient_still_position);
 /// Called at the beginning of calibration in order to subscribe to the cancel command
 ///	@return Handle to vehicle_command subscription
 int calibrate_cancel_subscribe(void);
