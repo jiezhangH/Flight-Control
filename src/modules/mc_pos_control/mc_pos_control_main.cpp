@@ -1674,7 +1674,8 @@ void MulticopterPositionControl::control_auto(float dt)
 		const bool gear_down = (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF) ||
 				       (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) ||
 				       ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER)
-					&& (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL));
+					&& (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL))
+				       || (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_LAND);
 
 		/* in mission and in loiter when not rtl, put gears up */
 		const bool gear_up = !gear_down &&
