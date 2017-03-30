@@ -2318,16 +2318,13 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 		// If the user had the switch in the gear up position and took off ignore it
 		// until he toggles the switch to avoid retracting the gear immediately on takeoff.
 		// only after gear state has been initialized, then can switch the gear down
-		if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON && _gear_state_initialized &&
-		    !_vehicle_land_detected.landed) {
-			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_UP;
-
+		if (!_gear_state_initialized && (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF)) {
+			_gear_state_initialized = true;
 		}
 
-		if (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF) {
-			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
-			// Switching the gear off does put it into a safe defined state
-			_gear_state_initialized = true;
+		if (_gear_state_initialized && (!_vehicle_land_detected.landed || !_vehicle_land_detected.ground_contact)) {
+			_att_sp.landing_gear = (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) ?
+					       vehicle_attitude_setpoint_s::LANDING_GEAR_UP : vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
 		}
 	}
 
