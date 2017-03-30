@@ -29,6 +29,7 @@ version=`cd $firmwaredir && git describe --always --tags --abbrev=10`
 tmpdir="/tmp/sitl"
 builddir="$firmwaredir/build_posix_sitl_ekf2"
 
+
 if [ ! -f "$builddir/src/firmware/posix/px4" ]; then
     echo "Please run 'make posix_sitl_ekf2 gazebo_typhoon_h480' manually first"
     exit 1
@@ -42,13 +43,31 @@ elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     os_string="Linux"
 fi
 
-
 mkdir -p $tmpdir/posix-configs/SITL/init/ekf2
 mkdir -p $tmpdir/Tools/sitl_gazebo/worlds
 mkdir -p $tmpdir/Tools/sitl_gazebo/models
 mkdir -p $tmpdir/ROMFS/px4fmu_common/mixers
 mkdir -p $tmpdir/src/firmware/posix
 mkdir -p $tmpdir/build_gazebo
+
+if [ "$(uname)" == "Darwin" ]; then
+    # We need to remove the absolute paths that are generated for libmav_msgs.dylib
+    builddir_abs=`(cd $builddir && pwd)`
+    echo "$builddir_abs/build_gazebo/libmav_msgs.dylib"
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/libgazebo_geotagged_images_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/libgazebo_lidar_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/libgazebo_opticalFlow_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/libLiftDragPlugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/libmav_msgs.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_controller_interface.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_gimbal_controller_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_imu_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_mavlink_interface.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_motor_model.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_multirotor_base_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_wind_plugin.$lib_ending
+fi
+
 
 #cp -r $builddir/* $tmpdir
 cp $builddir/src/firmware/posix/px4 $tmpdir/src/firmware/posix/
@@ -65,6 +84,7 @@ cp $builddir/build_gazebo/librotors_gazebo_mavlink_interface.$lib_ending $tmpdir
 cp $builddir/build_gazebo/librotors_gazebo_motor_model.$lib_ending $tmpdir/build_gazebo/
 cp $builddir/build_gazebo/librotors_gazebo_multirotor_base_plugin.$lib_ending $tmpdir/build_gazebo/
 cp $builddir/build_gazebo/librotors_gazebo_wind_plugin.$lib_ending $tmpdir/build_gazebo/
+
 cp $firmwaredir/Tools/sitl_run.sh $tmpdir/Tools/
 cp $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480 $tmpdir/posix-configs/SITL/init/ekf2/
 cp $firmwaredir/Tools/posix_lldbinit $tmpdir/Tools/
