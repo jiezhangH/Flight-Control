@@ -89,7 +89,7 @@ Land::on_activation()
 	/* for safety reasons don't go into LAND if landed */
 	if (_navigator->get_land_detected()->landed) {
 		_land_state = LAND_STATE_LANDED;
-		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing RTL");
+		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing Landing");
 
 		/* if not landed, loiter first */
 
@@ -158,7 +158,7 @@ Land::set_autoland_item()
 			/* disable previous setpoint to prevent drift */
 			pos_sp_triplet->previous.valid = false;
 
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: descend to %d m (%d m above home)",
+			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: descend to %d m (%d m above home)",
 					 (int)(_mission_item.altitude),
 					 (int)(_mission_item.altitude - _navigator->get_home_position()->alt));
 			break;
@@ -168,7 +168,7 @@ Land::set_autoland_item()
 			set_land_item(&_mission_item, true);
 			_mission_item.yaw = NAN;
 
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: land at now");
+			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: landing  start");
 			break;
 		}
 
