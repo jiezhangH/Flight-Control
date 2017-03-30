@@ -127,6 +127,7 @@ public:
 private:
 	bool		_task_should_exit;		/**< if true, task should exit */
 	bool		_gear_state_initialized;	///< true if the gear state has been initialized
+	bool     _armed_last;        /**< record the pre state armed or disarmed. */
 	int		_control_task;			/**< task handle for task */
 	orb_advert_t	_mavlink_log_pub;		/**< mavlink log advert */
 
@@ -410,6 +411,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	SuperBlock(nullptr, "MPC"),
 	_task_should_exit(false),
 	_gear_state_initialized(false),
+	_armed_last(false),
 	_control_task(-1),
 	_mavlink_log_pub(nullptr),
 
@@ -753,6 +755,8 @@ MulticopterPositionControl::poll_subscriptions()
 	if (updated) {
 		orb_copy(ORB_ID(manual_control_setpoint), _manual_sub, &_manual);
 	}
+
+	_armed_last = _arming.armed;
 
 	orb_check(_arming_sub, &updated);
 
@@ -2305,7 +2309,7 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 
 		// record the state that when disarmed in position mode and the gear switch on.
 		// TODO: avoid next time at the time armed and the gear_switch:SWITCH_POS_ON, the gear up, this is not safe
-		if (!_arming.prearmed && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+		if (!_armed_last && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 			_gear_state_initialized = false;
 		}
 
