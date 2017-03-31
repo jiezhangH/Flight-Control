@@ -72,6 +72,7 @@
 #define ESC_HAVE_CURRENT_SENSOR
 
 #include "drv_tap_esc.h"
+#include "tap_esc_uploader.h"
 
 /*
  * This driver connects to TAP ESCs via serial.
@@ -1352,6 +1353,50 @@ int tap_esc_main(int argc, char *argv[])
 		PX4_WARN("tap_esc is %s", tap_esc_drv::_is_running ? "running" : "not running");
 		return 0;
 
+	}
+
+	else if (!strcmp(argv[1], "uploader")) {
+
+		tap_esc_drv::stop();
+
+		TAP_ESC_UPLOADER *up;
+
+		/* Assume we are using default paths */
+
+		const char *fn[2] = TAP_ESC_FW_SEARCH_PATHS;
+
+		/* Override defaults if a path is passed on command line,use argv[2] path */
+		if (argc > 2) {
+			fn[0] = argv[2];
+			fn[1] = nullptr;
+		}
+
+		up = new TAP_ESC_UPLOADER(6);
+		int ret = up->upload(&fn[0]);
+		delete up;
+
+		switch (ret) {
+		case OK:
+			break;
+
+		case -ENOENT:
+			errx(1, "TAP_ESC firmware file not found");
+
+		case -EEXIST:
+		case -EIO:
+			errx(1, "error updating TAP_ESC - check that bootloader mode is enabled");
+
+		case -EINVAL:
+			errx(1, "verify failed - retry the update");
+
+		case -ETIMEDOUT:
+			errx(1, "timed out waiting for bootloader - power-cycle and try again");
+
+		default:
+			errx(1, "unexpected error %d", ret);
+		}
+
+		return ret;
 	} else {
 		tap_esc_drv::usage();
 		return 1;

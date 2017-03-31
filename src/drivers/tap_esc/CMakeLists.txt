@@ -37,6 +37,7 @@ px4_add_module(
 	COMPILE_FLAGS
 	SRCS
 		tap_esc.cpp
+		tap_esc_uploader.cpp
 	DEPENDS
 		platforms__common
 		lib__led
