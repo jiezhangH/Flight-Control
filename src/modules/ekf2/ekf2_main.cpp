@@ -1081,6 +1081,7 @@ void Ekf2::task_main()
 					if (valid_cal_available[axis_index]) {
 						// retrieve handle to corresponding saved bias parameter
 						param_t param_handle;
+
 						switch (axis_index) {
 						case 0:
 							param_handle = param_find("EKF2_MAGBIAS_X");
