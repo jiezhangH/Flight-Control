@@ -337,7 +337,7 @@ then
 		then
 			set LOGGER_ARGS "-f"
 		fi
-		if logger start -b 8 -q 3 -t -m file ${LOGGER_ARGS}
+		if logger start -b 12 -q 3 -t -m file ${LOGGER_ARGS}
 		then
 		fi
 		unset LOGGER_ARGS
