@@ -258,6 +258,7 @@ TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
 		return -ETIMEDOUT;
 	}
 
+	err = ioctl(_esc_fd, FIONREAD, (unsigned)&bytesAvailable);
 	if ((err != 0) || (bytesAvailable < 11)) {
 		usleep(ESC_WAIT_BEFORE_READ * 1000);
 	}
