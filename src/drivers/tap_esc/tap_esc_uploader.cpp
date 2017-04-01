@@ -138,12 +138,12 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 	/* uploader esc_id(0,1,2,3,4,5) */
 	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
 
-		log("uploader esc_id %d...",esc_id);
-		/* look for the bootloader, blocking 120 ms,uploader begin esc id0*/
-		for (int i = 0; i < 2; i++) {
 /******************************************
  * first:send sync
  ******************************************/
+		log("uploader esc_id %d...",esc_id);
+		/* look for the bootloader, blocking 120 ms,uploader begin esc id0*/
+		for (int i = 0; i < 2; i++) {
 			ret = sync(esc_id);
 
 			if (ret == OK) {
