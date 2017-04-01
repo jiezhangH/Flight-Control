@@ -65,6 +65,7 @@
 //#define UDEBUG
 
 const uint8_t TAP_ESC_UPLOADER::_crc_table[256] = TAP_ESC_CRC;
+const uint8_t TAP_ESC_UPLOADER::_device_mux_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_POS;
 
 TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
 	_esc_fd(-1),
@@ -391,9 +392,10 @@ void
 TAP_ESC_UPLOADER::select_responder(uint8_t sel)
 {
 #if defined(GPIO_S0)
-	px4_arch_gpiowrite(GPIO_S0, sel & 1);
-	px4_arch_gpiowrite(GPIO_S1, sel & 2);
-	px4_arch_gpiowrite(GPIO_S2, sel & 4);
+	/* _device_mux_map[sel]:Asign the id's to the ESCs to match the mux */
+	px4_arch_gpiowrite(GPIO_S0, _device_mux_map[sel] & 1);
+	px4_arch_gpiowrite(GPIO_S1, _device_mux_map[sel] & 2);
+	px4_arch_gpiowrite(GPIO_S2, _device_mux_map[sel] & 4);
 #endif
 }
 
