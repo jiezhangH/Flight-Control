@@ -45,8 +45,9 @@
 #define TAP_ESC_SERIAL_DEVICE	"/dev/ttyS2"
 #define TAP_ESC_FW_SEARCH_PATHS {"/fs/microsd/tap_esc.bin", nullptr }
 #define PROTO_SUPPORT_BL_REV 5	/**< supported bootloader protocol revision */
+#define SYNC_RETRY_TIMES     5	/**< esc sync failed allow retry times*/
 #define UPLOADER_RETRY_TIMES 1  /**< esc uploader failed allow retry times*/
-#define ESCBUS_DATA_CRC_LEN 248
+#define ESCBUS_DATA_CRC_LEN 248 /**< length of data field is 255 and plus one byte for CRC*/
 #define ESC_WAIT_BEFORE_READ 2	/**< ms, wait before reading to save read() calls*/
 
 class TAP_ESC_UPLOADER
