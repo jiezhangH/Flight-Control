@@ -158,10 +158,10 @@ private:
 	float _acc_hor_filt = 0.0f; 	// low-pass filtered horizontal acceleration
 
 	// Used to check, save and use learned magnetometer biases
-	uint64_t _last_invalid_magcal_us = 0;	// last time the conditions for a valid ekf magnetoemter cal were not met (usec)
-	float _last_valid_mag_cal[3] = {0};	// last valid XYZ magnetometer bias estimates (mGauss)
-	bool valid_cal_available[3] = {false};	// true when an unsaved valid calibration for the XYZ magnetometer bias is available
-	float _last_valid_variance[3] = {0};	// variances for the last valid magnetometer XYZ bias estimates (mGauss**2)
+	uint64_t _last_invalid_magcal_us = 0;	// last time the conditions for a valid ekf magnetometer cal were not met (usec)
+	float _last_valid_mag_cal[3] = {};	// last valid XYZ magnetometer bias estimates (mGauss)
+	bool _valid_cal_available[3] = {};	// true when an unsaved valid calibration for the XYZ magnetometer bias is available
+	float _last_valid_variance[3] = {};	// variances for the last valid magnetometer XYZ bias estimates (mGauss**2)
 
 	orb_advert_t _att_pub;
 	orb_advert_t _lpos_pub;
@@ -589,35 +589,17 @@ void Ekf2::task_main()
 
 					if (sensor_selection.mag_device_id != _mag_bias_id.get()) {
 						// the sensor ID used for the last saved mag bias is not confirmed to be the same as the current sensor ID
-						// this means we need to reset the learned bias values to zero and update the params
-						float zero_bias = 0.0f;
-						param_t param_handle = param_find("EKF2_MAGBIAS_X");
+						// this means we need to reset the learned bias values to zero
+						_mag_bias_x.set(0.f);
+						_mag_bias_x.commit();
+						_mag_bias_y.set(0.f);
+						_mag_bias_y.commit();
+						_mag_bias_z.set(0.f);
+						_mag_bias_z.commit();
+						_mag_bias_id.set(sensor_selection.mag_device_id);
+						_mag_bias_id.commit();
 
-						if (param_handle != PARAM_INVALID) {
-							param_set(param_handle, &zero_bias);
-						}
-
-						param_handle = param_find("EKF2_MAGBIAS_Y");
-
-						if (param_handle != PARAM_INVALID) {
-							param_set(param_handle, &zero_bias);
-						}
-
-						param_handle = param_find("EKF2_MAGBIAS_Z");
-
-						if (param_handle != PARAM_INVALID) {
-							param_set(param_handle, &zero_bias);
-						}
-
-						param_handle = param_find("EKF2_MAGBIAS_ID");
-
-						if (param_handle != PARAM_INVALID) {
-							param_set(param_handle, &sensor_selection.mag_device_id);
-						}
-
-						updateParams();
-
-						PX4_ERR("Mag sensor ID changed to %i", _mag_bias_id.get());
+						PX4_DEBUG("Mag sensor ID changed to %i", _mag_bias_id.get());
 					}
 				}
 
@@ -1067,7 +1049,7 @@ void Ekf2::task_main()
 				for (uint8_t axis_index = 0; axis_index <= 2; axis_index++) {
 					if (status.covariances[axis_index + 19] < max_var_allowed) {
 						_last_valid_mag_cal[axis_index] = status.states[axis_index + 19];
-						valid_cal_available[axis_index] = true;
+						_valid_cal_available[axis_index] = true;
 						_last_valid_variance[axis_index] = status.covariances[axis_index + 19];
 					}
 				}
@@ -1077,37 +1059,20 @@ void Ekf2::task_main()
 			if ((vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_STANDBY)
 			    && (status.filter_fault_flags == 0)
 			    && (sensor_selection.mag_device_id == _mag_bias_id.get())) {
+				control::BlockParamFloat *mag_biases[] = { &_mag_bias_x, &_mag_bias_y, &_mag_bias_z };
+
 				for (uint8_t axis_index = 0; axis_index <= 2; axis_index++) {
-					if (valid_cal_available[axis_index]) {
-						// retrieve handle to corresponding saved bias parameter
-						param_t param_handle;
-
-						switch (axis_index) {
-						case 0:
-							param_handle = param_find("EKF2_MAGBIAS_X");
-							break;
-
-						case 1:
-							param_handle = param_find("EKF2_MAGBIAS_Y");
-							break;
-
-						case 2:
-							param_handle = param_find("EKF2_MAGBIAS_Z");
-							break;
-						}
-
+					if (_valid_cal_available[axis_index]) {
 						// calculate weighting using ratio of variances and update stored bias values
-						if (param_handle != PARAM_INVALID) {
-							float weighting = _mag_bias_saved_variance.get() / (_mag_bias_saved_variance.get() +
-									  _last_valid_variance[axis_index]);
-							weighting = math::constrain(weighting, 0.0f, _mag_bias_alpha.get());
-							float mag_bias_saved = 0.0f;
-							param_get(param_handle, &mag_bias_saved);
-							_last_valid_mag_cal[axis_index] = weighting * _last_valid_mag_cal[axis_index] + mag_bias_saved;
-							param_set_no_notification(param_handle, &_last_valid_mag_cal[axis_index]);
-						}
+						float weighting = _mag_bias_saved_variance.get() / (_mag_bias_saved_variance.get() +
+								  _last_valid_variance[axis_index]);
+						weighting = math::constrain(weighting, 0.0f, _mag_bias_alpha.get());
+						float mag_bias_saved = mag_biases[axis_index]->get();
+						_last_valid_mag_cal[axis_index] = weighting * _last_valid_mag_cal[axis_index] + mag_bias_saved;
+						mag_biases[axis_index]->set(_last_valid_mag_cal[axis_index]);
+						mag_biases[axis_index]->commit_no_notification();
 
-						valid_cal_available[axis_index] = false;
+						_valid_cal_available[axis_index] = false;
 					}
 				}
 
@@ -1322,6 +1287,7 @@ void Ekf2::task_main()
 	orb_unsubscribe(ev_pos_sub);
 	orb_unsubscribe(vehicle_land_detected_sub);
 	orb_unsubscribe(status_sub);
+	orb_unsubscribe(sensor_selection_sub);
 
 	delete ekf2::instance;
 	ekf2::instance = nullptr;
