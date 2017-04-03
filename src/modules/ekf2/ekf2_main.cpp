@@ -587,7 +587,7 @@ void Ekf2::task_main()
 
 					orb_copy(ORB_ID(sensor_selection), sensor_selection_sub, &sensor_selection);
 
-					if (sensor_selection.mag_device_id != _mag_bias_id.get()) {
+					if (sensor_selection.mag_device_id != 0 && sensor_selection.mag_device_id != _mag_bias_id.get()) {
 						// the sensor ID used for the last saved mag bias is not confirmed to be the same as the current sensor ID
 						// this means we need to reset the learned bias values to zero
 						_mag_bias_x.set(0.f);
