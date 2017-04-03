@@ -94,20 +94,7 @@ int VotedSensorsUpdate::init(sensor_combined_s &raw)
 	initialize_sensors();
 
 	_corrections_changed = true; //make sure to initially publish the corrections topic
-
-	_selection_changed = false; //make sure to publish the selection topic only when new data is available
-
-	memset(&_selection, 0, sizeof(_selection));
-	memset(&_accel_device_id, 0, sizeof(_accel_device_id));
-	memset(&_baro_device_id, 0, sizeof(_baro_device_id));
-	memset(&_gyro_device_id, 0, sizeof(_gyro_device_id));
-	memset(&_mag_device_id, 0, sizeof(_mag_device_id));
-
-	// force the individual selections to be updated and published first time through
-	_mag.last_best_vote = -1;
-	_gyro.last_best_vote = -1;
-	_baro.last_best_vote = -1;
-	_accel.last_best_vote = -1;
+	_selection_changed = true;
 
 	return 0;
 }
@@ -1063,8 +1050,9 @@ void VotedSensorsUpdate::sensors_poll(sensor_combined_s &raw)
 
 		} else {
 			orb_publish(ORB_ID(sensor_correction), _sensor_correction_pub, &_corrections);
-			_corrections_changed = false;
 		}
+
+		_corrections_changed = false;
 	}
 
 	// publish sensor selection if changed
@@ -1073,12 +1061,12 @@ void VotedSensorsUpdate::sensors_poll(sensor_combined_s &raw)
 
 		if (_sensor_selection_pub == nullptr) {
 			_sensor_selection_pub = orb_advertise(ORB_ID(sensor_selection), &_selection);
-			_selection_changed = false;
 
 		} else {
 			orb_publish(ORB_ID(sensor_selection), _sensor_selection_pub, &_selection);
-			_selection_changed = false;
 		}
+
+		_selection_changed = false;
 	}
 }
 
