@@ -144,7 +144,7 @@ then
 	# Position
 	param set COM_FLTMODE4 2
 	# Smart
-	param set COM_FLTMODE6 13
+	param set COM_FLTMODE6 1
 
 	#
 	# ST16 RC settings
