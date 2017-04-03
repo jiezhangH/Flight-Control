@@ -538,8 +538,6 @@ void VotedSensorsUpdate::accel_poll(struct sensor_combined_s &raw)
 	float *offsets[] = {_corrections.accel_offset_0, _corrections.accel_offset_1, _corrections.accel_offset_2 };
 	float *scales[] = {_corrections.accel_scale_0, _corrections.accel_scale_1, _corrections.accel_scale_2 };
 
-	bool new_accel_data = false;
-
 	for (unsigned uorb_index = 0; uorb_index < _accel.subscription_count; uorb_index++) {
 		bool accel_updated;
 		orb_check(_accel.subscription[uorb_index], &accel_updated);
@@ -612,34 +610,30 @@ void VotedSensorsUpdate::accel_poll(struct sensor_combined_s &raw)
 			_last_accel_timestamp[uorb_index] = accel_report.timestamp;
 			_accel.voter.put(uorb_index, accel_report.timestamp, _last_sensor_data[uorb_index].accelerometer_m_s2,
 					 accel_report.error_count, _accel.priority[uorb_index]);
-
-			new_accel_data = true;
 		}
 	}
 
-	if (new_accel_data) {
-		// find the best sensor
-		int best_index;
-		_accel.voter.get_best(hrt_absolute_time(), &best_index);
+	// find the best sensor
+	int best_index;
+	_accel.voter.get_best(hrt_absolute_time(), &best_index);
 
-		// write the best sensor data to the output variables
-		if (best_index >= 0) {
-			raw.accelerometer_integral_dt = _last_sensor_data[best_index].accelerometer_integral_dt;
+	// write the best sensor data to the output variables
+	if (best_index >= 0) {
+		raw.accelerometer_integral_dt = _last_sensor_data[best_index].accelerometer_integral_dt;
 
-			if (best_index != _accel.last_best_vote) {
-				_accel.last_best_vote = (uint8_t)best_index;
-				_corrections.selected_accel_instance = (uint8_t)best_index;
-				_corrections_changed = true;
-			}
+		if (best_index != _accel.last_best_vote) {
+			_accel.last_best_vote = (uint8_t)best_index;
+			_corrections.selected_accel_instance = (uint8_t)best_index;
+			_corrections_changed = true;
+		}
 
-			if (_selection.accel_device_id != _accel_device_id[best_index]) {
-				_selection_changed = true;
-				_selection.accel_device_id = _accel_device_id[best_index];
-			}
+		if (_selection.accel_device_id != _accel_device_id[best_index]) {
+			_selection_changed = true;
+			_selection.accel_device_id = _accel_device_id[best_index];
+		}
 
-			for (unsigned axis_index = 0; axis_index < 3; axis_index++) {
-				raw.accelerometer_m_s2[axis_index] = _last_sensor_data[best_index].accelerometer_m_s2[axis_index];
-			}
+		for (unsigned axis_index = 0; axis_index < 3; axis_index++) {
+			raw.accelerometer_m_s2[axis_index] = _last_sensor_data[best_index].accelerometer_m_s2[axis_index];
 		}
 	}
 }
@@ -648,8 +642,6 @@ void VotedSensorsUpdate::gyro_poll(struct sensor_combined_s &raw)
 {
 	float *offsets[] = {_corrections.gyro_offset_0, _corrections.gyro_offset_1, _corrections.gyro_offset_2 };
 	float *scales[] = {_corrections.gyro_scale_0, _corrections.gyro_scale_1, _corrections.gyro_scale_2 };
-
-	bool new_gyro_data = false;
 
 	for (unsigned uorb_index = 0; uorb_index < _gyro.subscription_count; uorb_index++) {
 		bool gyro_updated;
@@ -723,43 +715,37 @@ void VotedSensorsUpdate::gyro_poll(struct sensor_combined_s &raw)
 			_last_sensor_data[uorb_index].timestamp = gyro_report.timestamp;
 			_gyro.voter.put(uorb_index, gyro_report.timestamp, _last_sensor_data[uorb_index].gyro_rad,
 					gyro_report.error_count, _gyro.priority[uorb_index]);
-
-			new_gyro_data = true;
 		}
 	}
 
-	if (new_gyro_data) {
-		// find the best sensor
-		int best_index;
-		_gyro.voter.get_best(hrt_absolute_time(), &best_index);
+	// find the best sensor
+	int best_index;
+	_gyro.voter.get_best(hrt_absolute_time(), &best_index);
 
-		// write data for the best sensor to output variables
-		if (best_index >= 0) {
-			raw.gyro_integral_dt = _last_sensor_data[best_index].gyro_integral_dt;
-			raw.timestamp = _last_sensor_data[best_index].timestamp;
+	// write data for the best sensor to output variables
+	if (best_index >= 0) {
+		raw.gyro_integral_dt = _last_sensor_data[best_index].gyro_integral_dt;
+		raw.timestamp = _last_sensor_data[best_index].timestamp;
 
-			if (_gyro.last_best_vote != best_index) {
-				_gyro.last_best_vote = (uint8_t)best_index;
-				_corrections.selected_gyro_instance = (uint8_t)best_index;
-				_corrections_changed = true;
-			}
+		if (_gyro.last_best_vote != best_index) {
+			_gyro.last_best_vote = (uint8_t)best_index;
+			_corrections.selected_gyro_instance = (uint8_t)best_index;
+			_corrections_changed = true;
+		}
 
-			if (_selection.gyro_device_id != _gyro_device_id[best_index]) {
-				_selection_changed = true;
-				_selection.gyro_device_id = _gyro_device_id[best_index];
-			}
+		if (_selection.gyro_device_id != _gyro_device_id[best_index]) {
+			_selection_changed = true;
+			_selection.gyro_device_id = _gyro_device_id[best_index];
+		}
 
-			for (unsigned axis_index = 0; axis_index < 3; axis_index++) {
-				raw.gyro_rad[axis_index] = _last_sensor_data[best_index].gyro_rad[axis_index];
-			}
+		for (unsigned axis_index = 0; axis_index < 3; axis_index++) {
+			raw.gyro_rad[axis_index] = _last_sensor_data[best_index].gyro_rad[axis_index];
 		}
 	}
 }
 
 void VotedSensorsUpdate::mag_poll(struct sensor_combined_s &raw)
 {
-	bool new_mag_data = false;
-
 	for (unsigned i = 0; i < _mag.subscription_count; i++) {
 		bool mag_updated;
 		orb_check(_mag.subscription[i], &mag_updated);
@@ -792,27 +778,22 @@ void VotedSensorsUpdate::mag_poll(struct sensor_combined_s &raw)
 			_last_mag_timestamp[i] = mag_report.timestamp;
 			_mag.voter.put(i, mag_report.timestamp, vect.data,
 				       mag_report.error_count, _mag.priority[i]);
-
-			new_mag_data = true;
 		}
 	}
 
-	if (new_mag_data) {
-		int best_index;
-		_mag.voter.get_best(hrt_absolute_time(), &best_index);
+	int best_index;
+	_mag.voter.get_best(hrt_absolute_time(), &best_index);
 
-		if (best_index >= 0) {
-			raw.magnetometer_ga[0] = _last_sensor_data[best_index].magnetometer_ga[0];
-			raw.magnetometer_ga[1] = _last_sensor_data[best_index].magnetometer_ga[1];
-			raw.magnetometer_ga[2] = _last_sensor_data[best_index].magnetometer_ga[2];
-			_mag.last_best_vote = (uint8_t)best_index;
-		}
+	if (best_index >= 0) {
+		raw.magnetometer_ga[0] = _last_sensor_data[best_index].magnetometer_ga[0];
+		raw.magnetometer_ga[1] = _last_sensor_data[best_index].magnetometer_ga[1];
+		raw.magnetometer_ga[2] = _last_sensor_data[best_index].magnetometer_ga[2];
+		_mag.last_best_vote = (uint8_t)best_index;
+	}
 
-		// To reduce unnecessary publication of the sensor_selection topic, only update the device ID if it has changed
-		if (_selection.mag_device_id != _mag_device_id[best_index]) {
-			_selection_changed = true;
-			_selection.mag_device_id = _mag_device_id[best_index];
-		}
+	if (_selection.mag_device_id != _mag_device_id[best_index]) {
+		_selection_changed = true;
+		_selection.mag_device_id = _mag_device_id[best_index];
 	}
 }
 
