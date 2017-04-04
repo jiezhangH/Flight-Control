@@ -1044,10 +1044,21 @@ void Ekf2::task_main()
 			} else if ((now - _last_invalid_magcal_us) > 180E6) {
 				// we have sufficient continuous valid flight time to form a reliable bias estimate
 				// check that the state variance for each axis is low enough indicating filter convergence
-				float max_var_allowed = 10.0f * _mag_bias_saved_variance.get();
+				float max_var_allowed = 100.0f * _mag_bias_saved_variance.get();
+				float min_var_allowed = 0.01f * _mag_bias_saved_variance.get();
+
+				// Declare all bias estimates invalid if any variances are out of range
+				bool all_estimates_invalid = false;
 
 				for (uint8_t axis_index = 0; axis_index <= 2; axis_index++) {
-					if (status.covariances[axis_index + 19] < max_var_allowed) {
+					if (status.covariances[axis_index + 19] < min_var_allowed
+					    || status.covariances[axis_index + 19] > max_var_allowed) {
+						all_estimates_invalid = true;
+					}
+				}
+
+				if (!all_estimates_invalid) {
+					for (uint8_t axis_index = 0; axis_index <= 2; axis_index++) {
 						_last_valid_mag_cal[axis_index] = status.states[axis_index + 19];
 						_valid_cal_available[axis_index] = true;
 						_last_valid_variance[axis_index] = status.covariances[axis_index + 19];

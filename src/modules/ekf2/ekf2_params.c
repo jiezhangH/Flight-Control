@@ -995,9 +995,9 @@ PARAM_DEFINE_INT32(EKF2_MAGBIAS_ID, 0);
  *
  * @group EKF2
  * @unit mGauss**2
- * @decimal 7
+ * @decimal 8
  */
-PARAM_DEFINE_FLOAT(EKF2_MAGB_VREF, 2.5E-6f);
+PARAM_DEFINE_FLOAT(EKF2_MAGB_VREF, 2.5E-7f);
 
 /**
  * Maximum fraction of learned mag bias saved at each disarm.
@@ -1008,4 +1008,4 @@ PARAM_DEFINE_FLOAT(EKF2_MAGB_VREF, 2.5E-6f);
  * @max 1.0
  * @decimal 2
  */
-PARAM_DEFINE_FLOAT(EKF2_MAGB_K, 0.5f);
+PARAM_DEFINE_FLOAT(EKF2_MAGB_K, 0.2f);
