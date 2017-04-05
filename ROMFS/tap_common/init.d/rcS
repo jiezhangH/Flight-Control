@@ -291,14 +291,14 @@ set BAUDRATE 500000
 param set MAV_PROTO_VER 2
 
 # multiplex mavlink 2 & ymavlink on the gimbal serial
-#protocol_splitter start /dev/ttyS1
+protocol_splitter start /dev/ttyS1
 # seems we need to start vmount before mavlink (probably due to some ioctl's)
-#vmount start -d /dev/ymavlink -b $BAUDRATE
+vmount start -d /dev/ymavlink -b $BAUDRATE
 
 # run mavlink (the same instance) on USB and gimbal port
-#mavlink_dup start -d /dev/mavlink_dup
-#mavlink_dup add -d /dev/mavlink -b $BAUDRATE
-#mavlink_dup add -d /dev/ttyACM0 -p
+mavlink_dup start -d /dev/mavlink_dup
+mavlink_dup add -d /dev/mavlink -b $BAUDRATE
+mavlink_dup add -d /dev/ttyACM0 -p
 # mavlink rate depends on baudrate
 set MAV_RATE 30000
 if [ $BAUDRATE -lt 500000 ]
