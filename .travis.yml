@@ -58,7 +58,7 @@ deploy:
   provider: releases
   api_key:
     secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
-  file: Firmware.zip
+  file: build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4
   skip_cleanup: true
   on:
     tags: true
