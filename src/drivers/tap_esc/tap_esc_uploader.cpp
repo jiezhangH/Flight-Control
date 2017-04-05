@@ -241,31 +241,49 @@ int
 TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
 {
 	uint8_t tmp_serial_buf[UART_BUFFER_SIZE];
-	int err = 0, bytesAvailable = 0;
-	struct pollfd fds[1];
+	//int err = 0, bytesAvailable = 0;
+	//struct pollfd fds[1];
+	int length = 0;
+//	fds[0].fd = _esc_fd;
+//	fds[0].events = POLLIN;
+//
+//	/* wait <timout> ms for a character */
+//	int ret = ::poll(&fds[0], 1, timeout);
+//
+//	if (ret < 1) {
+//#ifdef UDEBUG
+//		log("poll timeout %d", ret);
+//#endif
+//		return -ETIMEDOUT;
+//	}
+//
+//	err = ioctl(_esc_fd, FIONREAD, (unsigned)&bytesAvailable);
+//	if ((err != 0) || (bytesAvailable < 11)) {
+//		usleep(ESC_WAIT_BEFORE_READ * 1000);
+//	}
+		hrt_abstime start_time = hrt_absolute_time();
 
-	fds[0].fd = _esc_fd;
-	fds[0].events = POLLIN;
+		do {
+			length = read(_esc_fd, &tmp_serial_buf[0], 1);
+			if (length > 0) {
+				break;
+			}
+		} while (hrt_absolute_time() - start_time < timeout*1000);
+		log("length------  %d",length);
+		if (length < 0) {
+			return length;
+		}
+usleep(1000);
+		length = read(_esc_fd, &tmp_serial_buf[1], arraySize(tmp_serial_buf)) + 1;
+		log("length++++++  %d",length);
+		if (length < 0) {
+			return length;
+		}
+	//log("length  %d",length);
+	//int len = read(_esc_fd, tmp_serial_buf, arraySize(tmp_serial_buf));
 
-	/* wait <timout> ms for a character */
-	int ret = ::poll(&fds[0], 1, timeout);
-
-	if (ret < 1) {
-#ifdef UDEBUG
-		log("poll timeout %d", ret);
-#endif
-		return -ETIMEDOUT;
-	}
-
-	err = ioctl(_esc_fd, FIONREAD, (unsigned)&bytesAvailable);
-	if ((err != 0) || (bytesAvailable < 11)) {
-		usleep(ESC_WAIT_BEFORE_READ * 1000);
-	}
-
-	int len = read(_esc_fd, tmp_serial_buf, arraySize(tmp_serial_buf));
-
-	if (len > 0 && (_uartbuf.dat_cnt + len < UART_BUFFER_SIZE)) {
-		for (int i = 0; i < len; i++) {
+	if (length > 0 && (_uartbuf.dat_cnt + length < UART_BUFFER_SIZE)) {
+		for (int i = 0; i < length; i++) {
 			_uartbuf.esc_feedback_buf[_uartbuf.tail++] = tmp_serial_buf[i];
 			_uartbuf.dat_cnt++;
 			if (_uartbuf.tail >= UART_BUFFER_SIZE) {
@@ -961,7 +979,7 @@ TAP_ESC_UPLOADER::initialise_uart()
 #error Must define TAP_ESC_SERIAL_DEVICE in board configuration to support firmware upload
 #endif
 	/* open uart */
-	_esc_fd = open(TAP_ESC_SERIAL_DEVICE, O_RDWR);
+	_esc_fd = open(TAP_ESC_SERIAL_DEVICE, O_RDWR | O_NONBLOCK);
 	int termios_state = -1;
 
 	if (_esc_fd < 0) {
