@@ -835,7 +835,7 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 			    (int)errno);
 		}
 
-		/* set the rest to ff */
+		/* set the rest to 0xff */
 		if (count == 0) {
 			break;
 		}
