@@ -218,7 +218,6 @@ private:
 	uint32_t				_bl_rev; /**< bootloader revision */
 	static const uint8_t 	_crc_table[256];
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
-	ESC_UART_BUF 			_uartbuf;
 	uint8_t					_uart_buf[UART_BUFFER_SIZE];
 	EscUploaderMessage  	_uploader_packet;
 

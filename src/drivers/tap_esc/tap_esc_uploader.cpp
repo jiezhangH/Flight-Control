@@ -75,10 +75,7 @@ TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
 	_uart_buf{},
 	_uploader_packet{}
 {
-	_uartbuf.head = 0;
-	_uartbuf.tail = 0;
-	_uartbuf.dat_cnt = 0;
-	memset(_uartbuf.esc_feedback_buf, 0, sizeof(_uartbuf.esc_feedback_buf));
+
 }
 
 TAP_ESC_UPLOADER::~TAP_ESC_UPLOADER()
