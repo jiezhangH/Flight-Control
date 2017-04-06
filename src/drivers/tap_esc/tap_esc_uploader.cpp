@@ -72,6 +72,7 @@ TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
 	_fw_fd(-1),
 	_esc_counter(esc_counter),
 	_bl_rev(0),
+	_uart_buf{},
 	_uploader_packet{}
 {
 	_uartbuf.head = 0;
@@ -238,80 +239,69 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 }
 
 int
-TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
+TAP_ESC_UPLOADER::recv_byte_with_timeout(uint8_t *c, unsigned timeout)
 {
-	uint8_t tmp_serial_buf[UART_BUFFER_SIZE];
-	//int err = 0, bytesAvailable = 0;
-	//struct pollfd fds[1];
-	int length = 0;
-//	fds[0].fd = _esc_fd;
-//	fds[0].events = POLLIN;
-//
-//	/* wait <timout> ms for a character */
-//	int ret = ::poll(&fds[0], 1, timeout);
-//
-//	if (ret < 1) {
-//#ifdef UDEBUG
-//		log("poll timeout %d", ret);
-//#endif
-//		return -ETIMEDOUT;
-//	}
-//
-//	err = ioctl(_esc_fd, FIONREAD, (unsigned)&bytesAvailable);
-//	if ((err != 0) || (bytesAvailable < 11)) {
-//		usleep(ESC_WAIT_BEFORE_READ * 1000);
-//	}
-		hrt_abstime start_time = hrt_absolute_time();
+	struct pollfd fds[1];
 
-		do {
-			length = read(_esc_fd, &tmp_serial_buf[0], 1);
-			if (length > 0) {
-				break;
-			}
-		} while (hrt_absolute_time() - start_time < timeout*1000);
-		log("length------  %d",length);
-		if (length < 0) {
-			return length;
-		}
-usleep(1000);
-		length = read(_esc_fd, &tmp_serial_buf[1], arraySize(tmp_serial_buf)) + 1;
-		log("length++++++  %d",length);
-		if (length < 0) {
-			return length;
-		}
-	//log("length  %d",length);
-	//int len = read(_esc_fd, tmp_serial_buf, arraySize(tmp_serial_buf));
+	fds[0].fd = _esc_fd;
+	fds[0].events = POLLIN;
 
-	if (length > 0 && (_uartbuf.dat_cnt + length < UART_BUFFER_SIZE)) {
-		for (int i = 0; i < length; i++) {
-			_uartbuf.esc_feedback_buf[_uartbuf.tail++] = tmp_serial_buf[i];
-			_uartbuf.dat_cnt++;
-			if (_uartbuf.tail >= UART_BUFFER_SIZE) {
-				_uartbuf.tail = 0;
-			}
-		}
+	/* wait <timout> ms for a character */
+	int ret = ::poll(&fds[0], 1, timeout);
+
+	if (ret < 1) {
+#ifdef UDEBUG
+		log("poll timeout %d", ret);
+#endif
+		return -ETIMEDOUT;
 	}
 
+	read(_esc_fd, c, 1);
+#ifdef UDEBUG
+	log("recv_bytes 0x%02x", c);
+#endif
 	return OK;
 }
 
 int
-TAP_ESC_UPLOADER::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscUploaderMessage *packetdata)
+TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
+{
+	int length = 0;
+	int ret = -1;
+
+	ret = recv_byte_with_timeout(&_uart_buf[0], timeout);
+
+	usleep(3);
+
+	if (ret == OK) {
+		length = read(_esc_fd, &_uart_buf[1], arraySize(_uart_buf));
+		if (length < 0) {
+			return length;
+		}
+
+	} else {
+		return ret;
+
+	}
+	return length + 1;
+}
+
+int
+TAP_ESC_UPLOADER::parse_tap_esc_feedback(int length, uint8_t *serial_buf, EscUploaderMessage *packetdata)
 {
 	static PARSR_ESC_STATE state = HEAD;
 	static uint8_t data_index = 0;
 	static uint8_t crc_data_cal;
 
-	if (serial_buf->dat_cnt > 0) {
-		int count = serial_buf->dat_cnt;
+	if (length > 0) {
 
-		for (int i = 0; i < count; i++) {
+		for (int i = 0; i < length; i++) {
 #ifdef UDEBUG
-			log("decode data[%d] 0x%02x",i,serial_buf->esc_feedback_buf[serial_buf->head]);
+			log("decode data[%d] 0x%02x",i,serial_buf[i]);
 #endif
 			switch (state) {
 			case HEAD:
-				if (serial_buf->esc_feedback_buf[serial_buf->head] == 0xFE) {
+				if (serial_buf[i] == 0xFE) {
 					packetdata->head = 0xFE; //just_keep the format
 					state = LEN;
 				}
@@ -319,8 +309,8 @@ TAP_ESC_UPLOADER::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscUploaderMe
 				break;
 
 			case LEN:
-				if (serial_buf->esc_feedback_buf[serial_buf->head] < sizeof(packetdata->d)) {
-					packetdata->len = serial_buf->esc_feedback_buf[serial_buf->head];
+				if (serial_buf[i] < sizeof(packetdata->d)) {
+					packetdata->len = serial_buf[i];
 					state = ID;
 
 				} else {
@@ -330,8 +320,8 @@ TAP_ESC_UPLOADER::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscUploaderMe
 				break;
 
 			case ID:
-				if (serial_buf->esc_feedback_buf[serial_buf->head] < ESCBUS_MSG_ID_MAX_NUM) {
-					packetdata->msg_id = serial_buf->esc_feedback_buf[serial_buf->head];
+				if (serial_buf[i] < PROTO_MSG_ID_MAX_NUM) {
+					packetdata->msg_id = serial_buf[i];
 					data_index = 0;
 					state = DATA;
 
@@ -342,26 +332,22 @@ TAP_ESC_UPLOADER::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscUploaderMe
 				break;
 
 			case DATA:
-				packetdata->d.data[data_index++] = serial_buf->esc_feedback_buf[serial_buf->head];
+				packetdata->d.data[data_index++] = serial_buf[i];
 
 				if (data_index >= packetdata->len) {
-
 					crc_data_cal = crc8_esc((uint8_t *)(&packetdata->len), packetdata->len + 2);
 					state = CRC;
+
 				}
 
 				break;
 
 			case CRC:
-				if (crc_data_cal == serial_buf->esc_feedback_buf[serial_buf->head]) {
-					packetdata->crc_data = serial_buf->esc_feedback_buf[serial_buf->head];
-
-					if (++serial_buf->head >= UART_BUFFER_SIZE) {
-						serial_buf->head = 0;
-					}
-					serial_buf->dat_cnt--;
+				if (crc_data_cal == serial_buf[i]) {
+					packetdata->crc_data = serial_buf[i];
 					state = HEAD;
 					return OK;
+
 				}
 
 				state = HEAD;
@@ -373,18 +359,13 @@ TAP_ESC_UPLOADER::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscUploaderMe
 
 			}
 
-			if (++serial_buf->head >= UART_BUFFER_SIZE) {
-				serial_buf->head = 0;
-			}
-
-			serial_buf->dat_cnt--;
-
 		}
 
 	}
 
 	return EPROTO;
 }
+
 
 uint8_t
 TAP_ESC_UPLOADER::crc8_esc(uint8_t *p, uint8_t len)
@@ -462,9 +443,12 @@ TAP_ESC_UPLOADER::sync(uint8_t esc_id)
 
 	/* read sync feedback packet, blocking 60ms between esc app jump boot */
 	ret = read_data_from_uart(60);
+	if (ret < 1) {
+		return ret;
+	}
 
 	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(&_uartbuf, &_uploader_packet);
+	ret = parse_tap_esc_feedback(ret,_uart_buf, &_uploader_packet);
 	if (ret != OK) {
 		return ret;
 	}
@@ -506,13 +490,12 @@ TAP_ESC_UPLOADER::get_device_info(uint8_t esc_id, int param, uint32_t &val)
 
 	/* read device information feedback packet, blocking 50ms */
 	ret = read_data_from_uart();
-	if (ret != OK) {
+	if (ret < 1) {
 		return ret;
 	}
 
 	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(&_uartbuf, &_uploader_packet);
-
+	ret = parse_tap_esc_feedback(ret,_uart_buf, &_uploader_packet);
 	if (ret != OK) {
 		return ret;
 	}
@@ -648,11 +631,11 @@ TAP_ESC_UPLOADER::erase(uint8_t esc_id)
 
 	/* read erase feedback packet, blocking 50ms */
 	ret = read_data_from_uart(500);
-	if (ret != OK) {
+	if (ret < 1) {
 		return ret;
 	}
 	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(&_uartbuf, &_uploader_packet);
+	ret = parse_tap_esc_feedback(ret,_uart_buf, &_uploader_packet);
 	if (ret != OK) {
 
 		return ret;
@@ -764,13 +747,12 @@ TAP_ESC_UPLOADER::program(uint8_t esc_id, size_t fw_size)
 
 		/* read program feedback packet, blocking 50ms */
 		ret = read_data_from_uart();
-		if (ret != OK) {
+		if (ret < 1) {
 			break;
 		}
 
 		/* decode feedback packet from esc*/
-		ret = parse_tap_esc_feedback(&_uartbuf, &_uploader_packet);
-
+		ret = parse_tap_esc_feedback(ret,_uart_buf, &_uploader_packet);
 		if (ret != OK) {
 			break;
 		}
@@ -882,14 +864,12 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 
 	/* feedback CRC from tap esc,blocking 50ms */
 	ret = read_data_from_uart();
-
-	if (ret != OK) {
-		return ret;;
+	if (ret < 1) {
+		return ret;
 	}
 
 	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(&_uartbuf, &_uploader_packet);
-
+	ret = parse_tap_esc_feedback(ret,_uart_buf, &_uploader_packet);
 	if (ret != OK) {
 		return ret;
 	}
@@ -937,13 +917,12 @@ TAP_ESC_UPLOADER::reboot(uint8_t esc_id)
 
 	/* read reboot feedback packet, blocking 50ms */
 	ret = read_data_from_uart();
-	if (ret != OK) {
+	if (ret < 1) {
 		return ret;
 	}
 
 	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(&_uartbuf, &_uploader_packet);
-
+	ret = parse_tap_esc_feedback(ret,_uart_buf, &_uploader_packet);
 	if (ret != OK) {
 		return ret;
 	}
@@ -979,7 +958,7 @@ TAP_ESC_UPLOADER::initialise_uart()
 #error Must define TAP_ESC_SERIAL_DEVICE in board configuration to support firmware upload
 #endif
 	/* open uart */
-	_esc_fd = open(TAP_ESC_SERIAL_DEVICE, O_RDWR | O_NONBLOCK);
+	_esc_fd = open(TAP_ESC_SERIAL_DEVICE, O_RDWR);
 	int termios_state = -1;
 
 	if (_esc_fd < 0) {

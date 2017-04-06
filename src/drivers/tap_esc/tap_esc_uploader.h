@@ -88,6 +88,7 @@ private:
 		PROTO_SET_DELAY			= 0x2d,		/**< set minimum boot delay */
 		PROTO_GET_CHIP_DES		= 0x2e,		/**< read chip version In ASCII */
 		PROTO_REBOOT			= 0x30,		/**< boot the application */
+		PROTO_MSG_ID_MAX_NUM    = 0x40,		/**< support protocol maximum message ID command */
 
 		/* argument values for PROTO_GET_DEVICE */
 		PROTO_DEVICE_BL_REV		= 1,		/**< bootloader revision */
@@ -218,11 +219,13 @@ private:
 	static const uint8_t 	_crc_table[256];
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
 	ESC_UART_BUF 			_uartbuf;
+	uint8_t					_uart_buf[UART_BUFFER_SIZE];
 	EscUploaderMessage  	_uploader_packet;
 
 	size_t 		initialise_firmware_file(const char *filenames[]);
+	int 		recv_byte_with_timeout(uint8_t *c, unsigned timeout);
 	int 		read_data_from_uart(unsigned timeout = 50);
-	int 		parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscUploaderMessage *packetdata);
+	int 		parse_tap_esc_feedback(int length, uint8_t *serial_buf, EscUploaderMessage *packetdata);
 	uint8_t 	crc8_esc(uint8_t *p, uint8_t len);
 	uint8_t 	crc_packet(EscUploaderMessage &p);
 	void 		select_responder(uint8_t sel);
