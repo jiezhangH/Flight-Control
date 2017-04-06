@@ -1397,6 +1397,7 @@ int tap_esc_main(int argc, char *argv[])
 		}
 
 		return ret;
+
 	} else {
 		tap_esc_drv::usage();
 		return 1;

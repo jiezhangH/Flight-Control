@@ -125,7 +125,7 @@ private:
 	} EscbusBootProgPacket;
 
 	/**< the real packet definition for PROTO_GET_CRC */
-	typedef struct{
+	typedef struct {
 		uint8_t myID;
 	} EscbusFlashCRCPacket;
 
@@ -154,33 +154,33 @@ private:
 	} EscbusBootloaderRevisionPacket;
 
 	/**< the real packet definition for deviceInfo is PROTO_DEVICE_BOARD_ID	*/
-	typedef struct{
+	typedef struct {
 		uint8_t myID;
 		uint32_t targetSystemId;/**< Use for distinguishing ESC chip, each chip corresponds to a fixed value(e.g. H520 targetSystemId is 0x02) */
-	 } EscbusHardwareIDPacket;
+	} EscbusHardwareIDPacket;
 
-	 /**< the real packet definition for deviceInfo is PROTO_DEVICE_BOARD_REV */
-	 typedef struct{
-		 uint8_t myID;
-		 uint32_t boardRev;
-	 } EscbusHardwareRevisionPacket;
+	/**< the real packet definition for deviceInfo is PROTO_DEVICE_BOARD_REV */
+	typedef struct {
+		uint8_t myID;
+		uint32_t boardRev;
+	} EscbusHardwareRevisionPacket;
 
-	 /**< the real packet definition for deviceInfo is PROTO_DEVICE_FW_SIZE */
-	 typedef struct{
-		 uint8_t myID;
-		 uint32_t FwSize;
-	 } EscbusFirmwareSizePacket;
+	/**< the real packet definition for deviceInfo is PROTO_DEVICE_FW_SIZE */
+	typedef struct {
+		uint8_t myID;
+		uint32_t FwSize;
+	} EscbusFirmwareSizePacket;
 
-	 /**< the real packet definition for deviceInfo is PROTO_DEVICE_FW_REV */
-	 typedef struct{
-		 uint8_t myID;
-		 uint32_t FwRev;
-	 } EscbusFirmwareRevisionPacket;
+	/**< the real packet definition for deviceInfo is PROTO_DEVICE_FW_REV */
+	typedef struct {
+		uint8_t myID;
+		uint32_t FwRev;
+	} EscbusFirmwareRevisionPacket;
 
-	 /**< the real packet definition for PROTO_INVALID,When the package to ESC is parsed fail, ESC sends the command */
-	 typedef struct{
-		 uint8_t myID;
-	 } EscbusProtocolInvalidPacket;
+	/**< the real packet definition for PROTO_INVALID,When the package to ESC is parsed fail, ESC sends the command */
+	typedef struct {
+		uint8_t myID;
+	} EscbusProtocolInvalidPacket;
 
 	/*
 	 * ESCBUS bootloader message type
