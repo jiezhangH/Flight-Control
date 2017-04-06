@@ -144,7 +144,7 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
  * first:send sync
  ******************************************/
 		log("uploader esc_id %d...",esc_id);
-		/* look for the bootloader, blocking 120 ms,uploader begin esc id0*/
+		/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
 		for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
 			ret = sync(esc_id);
 
@@ -152,7 +152,7 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 				break;
 
 			} else {
-				usleep(50000);
+				usleep(100000);
 			}
 		}
 		if (ret != OK) {
