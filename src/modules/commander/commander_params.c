@@ -317,7 +317,7 @@ PARAM_DEFINE_INT32(COM_ARM_SWISBTN, 0);
  * @value 0 Warning
  * @value 1 Return to land
  * @value 2 Land at current position
- * @value 3 Return to land at critically low level, land at current position if reaching dangerously low levels
+ * @value 3 RTL, land immediately if battery too low
  * @decimal 0
  * @increment 1
  */
