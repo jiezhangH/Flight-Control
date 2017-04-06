@@ -235,6 +235,7 @@ MPC2520::MPC2520(device::Device *interface, mpc2520::prom_s &prom_buf, const cha
 	_device_id.devid_s.bus_type = _interface->get_device_bus_type();
 	_device_id.devid_s.bus = _interface->get_device_bus();
 	_device_id.devid_s.address = _interface->get_device_address();
+	_device_id.devid_s.devtype = DRV_BARO_DEVTYPE_MPC2520;
 }
 
 MPC2520::~MPC2520()
