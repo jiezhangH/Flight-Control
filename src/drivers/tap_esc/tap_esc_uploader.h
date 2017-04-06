@@ -48,7 +48,7 @@
 #define SYNC_RETRY_TIMES     5	/**< esc sync failed allow retry times*/
 #define UPLOADER_RETRY_TIMES 1  /**< esc uploader failed allow retry times*/
 #define ESCBUS_DATA_CRC_LEN 248 /**< length of data field is 255 and plus one byte for CRC*/
-#define ESC_WAIT_BEFORE_READ 2	/**< ms, wait before reading to save read() calls*/
+#define ESC_WAIT_BEFORE_READ 5	/**< us, wait before reading to save read() calls*/
 
 class TAP_ESC_UPLOADER
 {

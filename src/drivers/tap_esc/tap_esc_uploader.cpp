@@ -271,7 +271,8 @@ TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
 
 	ret = recv_byte_with_timeout(&_uart_buf[0], timeout);
 
-	usleep(3);
+	/* wait 5us for making read have enough buffer time*/
+	usleep(ESC_WAIT_BEFORE_READ);
 
 	if (ret == OK) {
 		length = read(_esc_fd, &_uart_buf[1], arraySize(_uart_buf));
