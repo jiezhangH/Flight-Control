@@ -629,7 +629,7 @@ TAP_ESC_UPLOADER::erase(uint8_t esc_id)
 	erase_packet.d.erase_packet.myID = esc_id;
 	send_packet(erase_packet, esc_id);
 
-	/* read erase feedback packet, blocking 50ms */
+	/* read erase feedback packet, blocking 500ms */
 	ret = read_data_from_uart(500);
 	if (ret < 1) {
 		return ret;
