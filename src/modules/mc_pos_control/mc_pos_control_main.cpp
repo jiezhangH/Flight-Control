@@ -1964,6 +1964,7 @@ MulticopterPositionControl::control_position(float dt)
 			/* set velocity setpoint to zero and reset position */
 			_vel_sp(0) = 0.0f;
 			_vel_sp(1) = 0.0f;
+			_vel_sp_prev(2) = 0.0f;
 			_pos_sp(0) = _pos(0);
 			_pos_sp(1) = _pos(1);
 		}
@@ -2002,6 +2003,7 @@ MulticopterPositionControl::control_position(float dt)
 		if (_vehicle_land_detected.landed && !got_takeoff_setpoint) {
 			// Keep throttle low while still on ground.
 			thr_max = 0.0f;
+			_vel_sp_prev(2) = 0.0f;
 
 		} else if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid &&
 			   _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
