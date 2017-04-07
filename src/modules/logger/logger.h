@@ -140,6 +140,11 @@ private:
 	 */
 	int create_log_dir(tm *tt);
 
+	/** recursively remove a directory
+	 * @return 0 on success, <0 otherwise
+	 */
+	int remove_directory(const char *dir);
+
 	static bool file_exist(const char *filename);
 
 	/**
@@ -148,7 +153,9 @@ private:
 	int get_log_file_name(char *file_name, size_t file_name_size);
 
 	/**
-	 * Check if there is enough free space left on the SD Card
+	 * Check if there is enough free space left on the SD Card.
+	 * It will remove old log files if there is not enough space,
+	 * and if that fails return 1
 	 * @return 0 on success, 1 if not enough space, <0 on error
 	 */
 	int check_free_space();
@@ -221,7 +228,6 @@ private:
 	void ack_vehicle_command(orb_advert_t &vehicle_command_ack_pub, uint16_t command, uint32_t result);
 
 	static constexpr size_t 	MAX_TOPICS_NUM = 64; /**< Maximum number of logged topics */
-	static constexpr unsigned	MAX_NO_LOGFOLDER = 999;	/**< Maximum number of log dirs */
 	static constexpr unsigned	MAX_NO_LOGFILE = 999;	/**< Maximum number of log files */
 #if defined(__PX4_POSIX_EAGLE) || defined(__PX4_POSIX_EXCELSIOR)
 	static constexpr const char	*LOG_ROOT = PX4_ROOTFSDIR"/log";
@@ -232,6 +238,7 @@ private:
 	uint8_t						*_msg_buffer = nullptr;
 	int						_msg_buffer_len = 0;
 	char 						_log_dir[LOG_DIR_LEN];
+	int						_sess_dir_index = 1; ///< search starting index for 'sess<i>' directory name
 	char 						_log_file_name[32];
 	bool						_task_should_exit = true;
 	bool						_has_log_dir = false;
