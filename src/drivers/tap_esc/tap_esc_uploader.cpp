@@ -280,7 +280,7 @@ TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
 	usleep(ESC_WAIT_BEFORE_READ);
 
 	if (ret == OK) {
-		length = read(_esc_fd, &_uart_buf[1], arraySize(_uart_buf));
+		length = read(_esc_fd, &_uart_buf[1], (arraySize(_uart_buf) - 1));
 
 		if (length < 0) {
 			return length;
