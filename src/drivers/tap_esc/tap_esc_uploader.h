@@ -239,7 +239,6 @@ private:
 	int			reboot(uint8_t esc_id);
 	int 		initialise_uart();
 	void		deinitialize_uart();
-	void		log(const char *fmt, ...);
 };
 
 #endif
