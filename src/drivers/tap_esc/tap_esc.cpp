@@ -1377,6 +1377,13 @@ int tap_esc_main(int argc, char *argv[])
 
 		switch (ret) {
 		case OK:
+#ifdef CONFIG_ARCH_BOARD_TAP_V2
+			/* reboot tap_esc when esc uploader success*/
+			device = "/dev/ttyS2";
+			strncpy(tap_esc_drv::_device, device, strlen(device));
+			tap_esc_drv::_supported_channel_count = 6;
+			tap_esc_drv::start();
+#endif
 			break;
 
 		case -ENOENT:
