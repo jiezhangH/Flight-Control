@@ -104,7 +104,6 @@ protected:
 	void select_responder(uint8_t sel);
 private:
 
-	static const uint8_t crcTable[256];
 	static const uint8_t device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
 	static const uint8_t device_dir_map[TAP_ESC_MAX_MOTOR_NUM];
 
@@ -172,7 +171,6 @@ private:
 	hrt_abstime _send_next_tune;
 };
 
-const uint8_t TAP_ESC::crcTable[256] = TAP_ESC_CRC;
 const uint8_t TAP_ESC::device_mux_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_POS;
 const uint8_t TAP_ESC::device_dir_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_DIR;
 
@@ -432,7 +430,7 @@ uint8_t TAP_ESC::crc8_esc(uint8_t *p, uint8_t len)
 	uint8_t crc = 0;
 
 	for (uint8_t i = 0; i < len; i++) {
-		crc = crcTable[crc^*p++];
+		crc = TAP_ESC_UPLOADER::_crc_table[crc^*p++];
 	}
 
 	return crc;

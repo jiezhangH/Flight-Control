@@ -58,6 +58,8 @@ public:
 
 	int		upload(const char *filenames[]);
 
+	static const uint8_t	_crc_table[256];
+
 private:
 
 #pragma pack(push,1)
@@ -216,7 +218,7 @@ private:
 	int			_fw_fd;
 	uint8_t 	_esc_counter;
 	uint32_t				_bl_rev; /**< bootloader revision */
-	static const uint8_t 	_crc_table[256];
+
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
 	uint8_t					_uart_buf[UART_BUFFER_SIZE];
 	EscUploaderMessage  	_uploader_packet;
