@@ -2268,18 +2268,31 @@ int commander_thread_main(int argc, char *argv[])
 					} else {
 						if (low_bat_action == 1 || low_bat_action == 3) {
 							// let us send the critical message even if already in RTL
-							if (TRANSITION_CHANGED == main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_RTL, main_state_prev, &status_flags, &internal_state)) {
+							transition_result_t s = main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_RTL, main_state_prev, &status_flags, &internal_state);
+
+							if (s == TRANSITION_CHANGED) {
 								warning_action_on = true;
 								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, RETURNING TO LAND");
+
+							} else if (s == TRANSITION_NOT_CHANGED) {
+								warning_action_on = true;
+								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, CONTINUING RTL");
 
 							} else {
 								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, RTL FAILED");
 							}
 
 						} else if (low_bat_action == 2) {
-							if (TRANSITION_CHANGED == main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state)) {
+
+							transition_result_t s = main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state);
+
+							if (s == TRANSITION_CHANGED) {
 								warning_action_on = true;
 								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, LANDING AT CURRENT POSITION");
+
+							} else if (s == TRANSITION_NOT_CHANGED) {
+								warning_action_on = true;
+								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, CONTINUING LANDING");
 
 							} else {
 								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, LANDING FAILED");
@@ -2304,9 +2317,16 @@ int commander_thread_main(int argc, char *argv[])
 
 					} else {
 						if (low_bat_action == 2 || low_bat_action == 3) {
-							if (TRANSITION_CHANGED == main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state)) {
+
+							transition_result_t s = main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state);
+
+							if (s == TRANSITION_CHANGED) {
 								warning_action_on = true;
 								mavlink_log_emergency(&mavlink_log_pub, "DANGEROUS BATTERY LEVEL, LANDING IMMEDIATELY");
+
+							} else if (s == TRANSITION_NOT_CHANGED) {
+								warning_action_on = true;
+								mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, CONTINUING LANDING");
 
 							} else {
 								mavlink_log_emergency(&mavlink_log_pub, "DANGEROUS BATTERY LEVEL, LANDING FAILED");
