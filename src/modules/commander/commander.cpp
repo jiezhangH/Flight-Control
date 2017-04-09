@@ -2561,6 +2561,7 @@ int commander_thread_main(int argc, char *argv[])
 			(internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_TAKEOFF ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_MISSION ||
+			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LOITER)) {
 			// transition to previous state if sticks are touched
 
@@ -2570,9 +2571,26 @@ int commander_thread_main(int argc, char *argv[])
 				 (fabsf(sp_man.z - _last_sp_man.z) > min_stick_change) ||
 				 (fabsf(sp_man.r - _last_sp_man.r) > min_stick_change))) {
 
+				switch (internal_state.main_state) {
+					case commander_state_s::MAIN_STATE_AUTO_TAKEOFF:
+					/* fallthrough */
+					case commander_state_s::MAIN_STATE_AUTO_LOITER:
+						// It is normal to take over with sticks after takeoff and loiter
+						break;
+					case commander_state_s::MAIN_STATE_AUTO_RTL:
+						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, aborted return to land");
+						break;
+					case commander_state_s::MAIN_STATE_AUTO_MISSION:
+						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, paused mission");
+						break;
+					default:
+						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, Autopilot off");
+						break;
+				}
+
 				// revert to position control in any case
 				main_state_transition(&status, commander_state_s::MAIN_STATE_POSCTL, main_state_prev, &status_flags, &internal_state);
-				mavlink_log_critical(&mavlink_log_pub, "Autopilot off, returned control to pilot");
+
 			}
 		}
 
@@ -3047,10 +3065,10 @@ int commander_thread_main(int argc, char *argv[])
 			status_changed = true;
 
 			if (status.failsafe) {
-				mavlink_log_critical(&mavlink_log_pub, "failsafe mode on");
+				mavlink_log_info(&mavlink_log_pub, "failsafe mode on");
 
 			} else {
-				mavlink_log_critical(&mavlink_log_pub, "failsafe mode off");
+				mavlink_log_info(&mavlink_log_pub, "failsafe mode off");
 			}
 
 			failsafe_old = status.failsafe;
