@@ -72,11 +72,11 @@
 using namespace DriverFramework;
 #endif
 
-static const char reason_no_rc[] = "no RC";
-static const char reason_no_offboard[] = "no offboard";
+static const char reason_no_rc[] = "RC lost";
+static const char reason_no_offboard[] = "offboard control timeout";
 static const char reason_no_rc_and_no_offboard[] = "no RC and no offboard";
-static const char reason_no_gps[] = "no gps";
-static const char reason_no_gps_cmd[] = "no gps cmd";
+static const char reason_no_gps[] = "GPS lost";
+static const char reason_no_gps_cmd[] = "no GPS cmd";
 static const char reason_no_home[] = "no home";
 static const char reason_no_datalink[] = "no datalink";
 
@@ -656,7 +656,7 @@ void enable_failsafe(struct vehicle_status_s *status,
 		bool old_failsafe,
 		orb_advert_t *mavlink_log_pub, const char *reason) {
 	if (old_failsafe == false) {
-		mavlink_and_console_log_info(mavlink_log_pub, reason);
+		mavlink_log_critical(mavlink_log_pub, "Failsafe: %s", reason);
 	}
 	status->failsafe = true;
 }
