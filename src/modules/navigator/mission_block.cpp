@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2014-2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
 /**
  * @file mission_block.cpp
  *
@@ -38,6 +39,7 @@
  * @author Julian Oes <julian@oes.ch>
  * @author Sander Smeets <sander@droneslab.com>
  * @author Andreas Antener <andreas@uaventure.com>
+ * @author Lorenz Meier <lorenz@px4.io>
  */
 
 #include <sys/types.h>
@@ -729,6 +731,7 @@ MissionBlock::set_land_item(struct mission_item_s *item, bool at_current_locatio
 	item->time_inside = 0.0f;
 	item->autocontinue = true;
 	item->origin = ORIGIN_ONBOARD;
+	item->deploy_gear = true;
 }
 
 void

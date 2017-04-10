@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2013-2016 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2013-2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
  * Helper class to land at the current position
  *
  * @author Andreas Antener <andreas@uaventure.com>
+ * @author Lorenz Meier <lorenz@px4.io>
  */
 
 #include <string.h>
