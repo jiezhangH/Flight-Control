@@ -76,7 +76,7 @@ bool InputRCSt16::_read_control_data_from_subscription(ControlData &control_data
 
 	// Detect a big stick movement
 	for (int i = 0; i < 4; ++i) {
-		if (fabs(_last_set_aux_values[i] - new_aux_values[i]) > 0.25f) {
+		if (fabsf(_last_set_aux_values[i] - new_aux_values[i]) > 0.25f) {
 			major_movement = true;
 		}
 	}
