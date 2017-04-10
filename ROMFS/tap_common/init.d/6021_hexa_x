@@ -230,7 +230,7 @@ fi
 #
 # Play startup tune
 #
-if tune_control play -m "MNT255L32O2<CDEFGAB>CDEFGAB>C" &
+if tune_control play -m "MNT255L32O2<CDEFGAB>CDEFGAB>CDE" &
 then
 fi
 
