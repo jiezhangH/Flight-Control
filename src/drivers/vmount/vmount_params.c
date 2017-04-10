@@ -46,7 +46,7 @@
 * @value 1 RC
 * @value 2 MAVLINK_ROI
 * @value 3 MAVLINK_DO_MOUNT
-* @value 4 RC ST16
+* @value 4 AUTO with RC ST16
 * @min 0
 * @max 4
 * @group Mount

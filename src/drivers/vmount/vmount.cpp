@@ -297,8 +297,28 @@ static int vmount_thread_main(int argc, char *argv[])
 
 					break;
 
-				case 4: //RC ST16
-					thread_data.input_obj = new InputRCSt16();
+				case 4: // Auto with RC ST16
+					if (!thread_data.input_objs[0]) {
+						thread_data.input_objs[0] = new InputMavlinkCmdMount();
+
+						if (!thread_data.input_objs[0]) { alloc_failed = true; }
+					}
+
+					if (!thread_data.input_objs[1]) {
+						thread_data.input_objs[1] = new InputMavlinkROI();
+
+						if (!thread_data.input_objs[1]) { alloc_failed = true; }
+					}
+
+					// RC is on purpose last here so that if there are any mavlink
+					// messages, they will take precedence over RC.
+					// This logic is done further below while update() is called.
+					if (!thread_data.input_objs[2]) {
+						thread_data.input_objs[0] = new InputRCSt16();
+
+						if (!thread_data.input_objs[2]) { alloc_failed = true; }
+					}
+
 					break;
 
 				default:
