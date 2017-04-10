@@ -1883,15 +1883,18 @@ void MulticopterPositionControl::control_auto(float dt)
 
 		/* for auto loiter, we consider gear switch */
 		/* ToDo: at the mode : takeoff not complete and before loiter, landing and rtl when loiter, lower gears */
-		const bool gear_down = (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_TAKEOFF) ||
-				       ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER)
-					&& (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL))
-				       || (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_LAND) ||
-				       (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND);
+		const bool gear_down = ((_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_TAKEOFF) ||
+					((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER)
+					 && (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL))
+					|| (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_LAND) ||
+					(_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND))
+				       || _pos_sp_triplet.current.deploy_gear;
 
 		/* in mission put gears up, and the gear will not up at the when landed or ground_contact */
 		const bool gear_up = ((!_vehicle_land_detected.landed || !_vehicle_land_detected.ground_contact)
-				      && _vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_MISSION);
+				      && _vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_MISSION
+				      && _pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_TAKEOFF)
+				     && !_pos_sp_triplet.current.deploy_gear;
 
 
 		if (gear_down) {

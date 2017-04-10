@@ -525,6 +525,7 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 	sp->loiter_direction = (item->loiter_radius > 0) ? 1 : -1;
 	sp->acceptance_radius = item->acceptance_radius;
 	sp->disable_mc_yaw_control = item->disable_mc_yaw;
+	sp->deploy_gear = item->deploy_gear;
 
 	sp->cruising_speed = _navigator->get_cruising_speed();
 	sp->cruising_throttle = _navigator->get_cruising_throttle();

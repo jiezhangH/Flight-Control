@@ -118,28 +118,25 @@ Land::set_autoland_item()
 
 	switch (_land_state) {
 	case LAND_STATE_LOITER: {
-			bool autoland = _param_land_delay.get() > -DELAY_SIGMA;
-
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
-			// don't change altitude
+
+			// Enfore a minimum altitude to deploy the gear
+			if (_navigator->get_global_position()->alt < _navigator->get_home_position()->alt + 1.2f) {
+				_mission_item.altitude_is_relative = false;
+				_mission_item.altitude = _navigator->get_global_position()->alt + 1.2f;
+			}
+
 			_mission_item.yaw = NAN;
 			_mission_item.loiter_radius = _navigator->get_loiter_radius();
-			_mission_item.nav_cmd = autoland ? NAV_CMD_LOITER_TIME_LIMIT : NAV_CMD_LOITER_UNLIMITED;
+			_mission_item.nav_cmd = NAV_CMD_LOITER_TIME_LIMIT;
 			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
-			_mission_item.time_inside = _param_land_delay.get() < 0.0f ? 0.0f : _param_land_delay.get();
-			_mission_item.autocontinue = autoland;
+			_mission_item.time_inside = _param_land_delay.get() < 0.0f ? 0.001f : _param_land_delay.get();
+			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
+			_mission_item.deploy_gear = true;
 
 			_navigator->set_can_loiter_at_sp(true);
-
-			if (autoland && (Navigator::get_time_inside(_mission_item) > FLT_EPSILON)) {
-				mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: loitering %.1fs",
-						 (double)Navigator::get_time_inside(_mission_item));
-
-			} else {
-				mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: completed, loiter");
-			}
 
 			break;
 		}
@@ -159,25 +156,17 @@ Land::set_autoland_item()
 
 			/* disable previous setpoint to prevent drift */
 			pos_sp_triplet->previous.valid = false;
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: descend to %d m (%d m above home)",
-					 (int)(_mission_item.altitude),
-					 (int)(_mission_item.altitude - _navigator->get_home_position()->alt));
 			break;
 		}
 
 	case LAND_STATE_LAND: {
 			set_land_item(&_mission_item, true);
 			_mission_item.yaw = NAN;
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: landing  start");
 			break;
 		}
 
 	case LAND_STATE_LANDED: {
 			set_idle_item(&_mission_item);
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "LAND: completed, landed");
 			break;
 		}
 

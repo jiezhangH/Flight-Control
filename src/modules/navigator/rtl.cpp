@@ -46,6 +46,7 @@
 #include <systemlib/mavlink_log.h>
 #include <systemlib/err.h>
 #include <geo/geo.h>
+#include <mathlib/mathlib.h>
 
 #include <uORB/uORB.h>
 #include <navigator/navigation.h>
@@ -99,24 +100,16 @@ RTL::on_activation()
 	pos_sp_triplet->previous.valid = false;
 	pos_sp_triplet->next.valid = false;
 
-	/* for safety reasons don't go into RTL if landed */
+	// for safety reasons don't go into RTL if landed
 	if (_navigator->get_land_detected()->landed) {
 		_rtl_state = RTL_STATE_LANDED;
 		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing RTL");
 
-		/* if lower than return altitude, climb up first */
-
-	} else if (_navigator->get_global_position()->alt < (_navigator->get_home_position()->alt
-			+ get_rtl_altitude())) {
-		_rtl_state = RTL_STATE_CLIMB;
-
-		/* otherwise go straight to return */
+		// otherwise start RTL by climbing
 
 	} else {
-		/* set altitude setpoint to current altitude */
-		_rtl_state = RTL_STATE_PRE_RETURN;
-		_mission_item.altitude_is_relative = false;
-		_mission_item.altitude = _navigator->get_global_position()->alt;
+		_rtl_state = RTL_STATE_CLIMB;
+
 	}
 
 	set_rtl_item();
@@ -138,21 +131,32 @@ RTL::set_rtl_item()
 
 	_navigator->set_can_loiter_at_sp(false);
 
+	// use home yaw if close to home
+	float home_dist = get_distance_to_next_waypoint(_navigator->get_home_position()->lat,
+			  _navigator->get_home_position()->lon,
+			  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
+
+	bool home_close = (home_dist < _param_rtl_min_dist.get());
+	bool home_altitude_close = (fabsf(_navigator->get_home_position()->alt - _navigator->get_global_position()->alt) <
+				    _param_rtl_min_dist.get());
+
 	switch (_rtl_state) {
 	case RTL_STATE_CLIMB: {
 
-			// check if we are pretty close to home already
-			float home_dist = get_distance_to_next_waypoint(_navigator->get_home_position()->lat,
-					  _navigator->get_home_position()->lon,
-					  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
+			// climb to at least a 45 degree cone
+			float climb_alt = _navigator->get_home_position()->alt + get_distance_to_next_waypoint(
+						  _navigator->get_home_position()->lat,
+						  _navigator->get_home_position()->lon,
+						  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
 
-			// if we are close to home we do not climb as high, otherwise we climb to return alt
-			float climb_alt = _navigator->get_home_position()->alt + get_rtl_altitude();
+			// but never climb higher than the return altitude
+			climb_alt = math::min(climb_alt, _navigator->get_home_position()->alt + get_rtl_altitude());
 
-			// we are close to home, limit climb to min
-			if (home_dist < _param_rtl_min_dist.get()) {
-				climb_alt = _navigator->get_home_position()->alt + _param_descend_alt.get();
-			}
+			// do also not reduce altitude if already higher
+			climb_alt = math::max(climb_alt, _navigator->get_global_position()->alt);
+
+			// and also make sure that an absolute minimum altitude is obeyed so the landing gear does not catch.
+			climb_alt = math::max(climb_alt, _navigator->get_home_position()->alt + _param_min_loiter_alt.get());
 
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
@@ -165,10 +169,8 @@ RTL::set_rtl_item()
 			_mission_item.time_inside = 0.0f;
 			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
+			_mission_item.deploy_gear = home_close && home_altitude_close;
 
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: climb to %d m (%d m above home)",
-					 (int)(climb_alt),
-					 (int)(climb_alt - _navigator->get_home_position()->alt));
 			break;
 		}
 
@@ -176,12 +178,7 @@ RTL::set_rtl_item()
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
 
-			// use home yaw if close to home
-			float home_dist = get_distance_to_next_waypoint(_navigator->get_home_position()->lat,
-					  _navigator->get_home_position()->lon,
-					  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
-
-			if (home_dist < _param_rtl_min_dist.get()) {
+			if (home_close) {
 				_mission_item.yaw = _navigator->get_home_position()->yaw;
 
 			} else {
@@ -198,8 +195,7 @@ RTL::set_rtl_item()
 			_mission_item.time_inside = 0.0f;
 			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL:　firstly turn yaw facing the user");
+			_mission_item.deploy_gear = home_close && home_altitude_close;
 
 			break;
 		}
@@ -207,15 +203,10 @@ RTL::set_rtl_item()
 	case RTL_STATE_RETURN: {
 			_mission_item.lat = _navigator->get_home_position()->lat;
 			_mission_item.lon = _navigator->get_home_position()->lon;
+
 			// don't change altitude
 
-			// use home yaw if close to home
-			/* check if we are pretty close to home already */
-			float home_dist = get_distance_to_next_waypoint(_navigator->get_home_position()->lat,
-					  _navigator->get_home_position()->lon,
-					  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
-
-			if (home_dist < _param_rtl_min_dist.get()) {
+			if (home_close) {
 				_mission_item.yaw = _navigator->get_home_position()->yaw;
 
 			} else {
@@ -232,10 +223,7 @@ RTL::set_rtl_item()
 			_mission_item.time_inside = 0.0f;
 			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: return at %d m (%d m above home)",
-					 (int)(_mission_item.altitude),
-					 (int)(_mission_item.altitude - _navigator->get_home_position()->alt));
+			_mission_item.deploy_gear = home_close && home_altitude_close;
 
 			break;
 		}
@@ -252,8 +240,7 @@ RTL::set_rtl_item()
 			_mission_item.time_inside = 0.0f;
 			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL:　turn yaw to home yaw");
+			_mission_item.deploy_gear = home_close && home_altitude_close;
 
 			break;
 		}
@@ -292,13 +279,11 @@ RTL::set_rtl_item()
 			_mission_item.time_inside = 0.0f;
 			_mission_item.autocontinue = false;
 			_mission_item.origin = ORIGIN_ONBOARD;
+			_mission_item.deploy_gear = home_close && home_altitude_close;
 
 			/* disable previous setpoint to prevent drift */
 			pos_sp_triplet->previous.valid = false;
 
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: descend to %d m (%d m above home)",
-					 (int)(_mission_item.altitude),
-					 (int)(_mission_item.altitude - _navigator->get_home_position()->alt));
 			break;
 		}
 
@@ -315,16 +300,9 @@ RTL::set_rtl_item()
 			_mission_item.time_inside = _param_land_delay.get() < 0.0f ? 0.0f : _param_land_delay.get();
 			_mission_item.autocontinue = autoland;
 			_mission_item.origin = ORIGIN_ONBOARD;
+			_mission_item.deploy_gear = true;
 
 			_navigator->set_can_loiter_at_sp(true);
-
-			if (autoland && (Navigator::get_time_inside(_mission_item) > FLT_EPSILON)) {
-				mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: loiter %.1fs",
-						 (double)Navigator::get_time_inside(_mission_item));
-
-			} else {
-				mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: completed, loiter");
-			}
 
 			break;
 		}
@@ -332,15 +310,12 @@ RTL::set_rtl_item()
 	case RTL_STATE_LAND: {
 			set_land_item(&_mission_item, false);
 			_mission_item.yaw = _navigator->get_home_position()->yaw;
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: land at home");
+			_mission_item.deploy_gear = true;
 			break;
 		}
 
 	case RTL_STATE_LANDED: {
 			set_idle_item(&_mission_item);
-
-			mavlink_log_info(_navigator->get_mavlink_log_pub(), "RTL: completed, landed");
 			break;
 		}
 

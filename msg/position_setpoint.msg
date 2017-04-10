@@ -31,6 +31,7 @@ float32 alt			# altitude AMSL, in m
 float32 yaw			# yaw (only for multirotors), in rad [-PI..PI), NaN = hold current yaw
 bool yaw_valid			# true if yaw setpoint valid
 bool disable_mc_yaw_control		# control yaw for mc (used for vtol weather-vane mode)
+bool deploy_gear		# deploy landing gear
 float32 yawspeed		# yawspeed (only for multirotors, in rad/s)
 bool yawspeed_valid		# true if yawspeed setpoint valid
 float32 loiter_radius		# loiter radius (only for fixed wing), in m
