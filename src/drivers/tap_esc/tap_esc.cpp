@@ -1361,7 +1361,7 @@ int tap_esc_main(int argc, char *argv[])
 
 		/* Assume we are using default paths */
 
-		const char *fn[2] = TAP_ESC_FW_SEARCH_PATHS;
+		const char *fn[3] = TAP_ESC_FW_SEARCH_PATHS;
 
 		/* Override defaults if a path is passed on command line,use argv[2] path */
 		if (argc > 2) {
