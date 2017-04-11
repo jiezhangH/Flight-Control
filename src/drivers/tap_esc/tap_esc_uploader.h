@@ -152,7 +152,7 @@ private:
 	/**< the real packet definition for deviceInfo is PROTO_DEVICE_BL_REV */
 	typedef struct {
 		uint8_t myID;
-		uint16_t version;
+		uint32_t version;
 	} EscbusBootloaderRevisionPacket;
 
 	/**< the real packet definition for deviceInfo is PROTO_DEVICE_BOARD_ID	*/
