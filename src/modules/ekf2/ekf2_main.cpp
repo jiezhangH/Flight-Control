@@ -85,6 +85,7 @@
 
 #include <ecl/EKF/ekf.h>
 
+#define MAX_AIRSPEED	18.0f	// maximum possible airspeed (m/s)
 
 extern "C" __EXPORT int ekf2_main(int argc, char *argv[]);
 
@@ -181,6 +182,9 @@ private:
 	math::LowPassFilter2p _lp_roll_rate;
 	math::LowPassFilter2p _lp_pitch_rate;
 	math::LowPassFilter2p _lp_yaw_rate;
+
+	// Used to correct baro data for positional errors
+	Vector3f _vel_body_wind = {};	// XYZ velocity relative to wind in body frame (m/s)
 
 	Ekf _ekf;
 
@@ -316,6 +320,12 @@ private:
 	control::BlockParamExtFloat _bcoef_x;		// ballistic coefficient along the X-axis (kg/m**2)
 	control::BlockParamExtFloat _bcoef_y;		// ballistic coefficient along the Y-axis (kg/m**2)
 
+	// Corrections for static pressure position error where Ps_error = Ps_meas - Ps_truth
+	// Coef = Ps_error / Pdynamic, where Pdynamic = 1/2 * density * TAS**2
+	control::BlockParamFloat _K_pstatic_coef_x;	// static pressure position error coefficient along the X body axis
+	control::BlockParamFloat _K_pstatic_coef_y;	// static pressure position error coefficient along the Y body axis
+	control::BlockParamFloat _K_pstatic_coef_z;	// static pressure position error coefficient along the Z body axis
+
 	int update_subscriptions();
 
 };
@@ -429,7 +439,10 @@ Ekf2::Ekf2():
 	_mag_bias_alpha(this, "EKF2_MAGB_K", false),
 	_drag_noise(this, "EKF2_DRAG_NOISE", false, _params->drag_noise),
 	_bcoef_x(this, "EKF2_BCOEF_X", false, _params->bcoef_x),
-	_bcoef_y(this, "EKF2_BCOEF_Y", false, _params->bcoef_y)
+	_bcoef_y(this, "EKF2_BCOEF_Y", false, _params->bcoef_y),
+	_K_pstatic_coef_x(this, "EKF2_PS_COEF_X", false),
+	_K_pstatic_coef_y(this, "EKF2_PS_COEF_Y", false),
+	_K_pstatic_coef_z(this, "EKF2_PS_COEF_Z", false)
 
 {
 
@@ -660,7 +673,20 @@ void Ekf2::task_main()
 				uint32_t balt_time_ms = _balt_time_sum_ms / _balt_sample_count;
 
 				if (balt_time_ms - _balt_time_ms_last_used > (uint32_t)_params->sensor_interval_min_ms) {
+					// take mean across sample period
 					float balt_data_avg = _balt_data_sum / (float)_balt_sample_count;
+
+					// calculate static pressure error = Pmeas - Ptruth
+					float rho = 1.225f; //TODO calculate air density from pressure and/or height
+					const float max_airspeed_sq = MAX_AIRSPEED * MAX_AIRSPEED;
+					float pstatic_err = 0.5f * rho * (_K_pstatic_coef_x.get() * fminf(_vel_body_wind(0) * _vel_body_wind(0), max_airspeed_sq)
+									  + _K_pstatic_coef_y.get() * fminf(_vel_body_wind(1) * _vel_body_wind(1), max_airspeed_sq)
+									  + _K_pstatic_coef_z.get() * fminf(_vel_body_wind(2) * _vel_body_wind(2), max_airspeed_sq));
+
+					// correct baro measurement using pressure error estimate and assuming sea level gravity
+					balt_data_avg += pstatic_err / (rho * 9.80665f);
+
+					// push to estimator
 					_ekf.setBaroData(1000 * (uint64_t)balt_time_ms, balt_data_avg);
 					_balt_time_ms_last_used = balt_time_ms;
 					_balt_time_sum_ms = 0;
@@ -808,6 +834,12 @@ void Ekf2::task_main()
 				ctrl_state.y_vel = v_b(1);
 				ctrl_state.z_vel = v_b(2);
 
+				// Calculate velocity relative to wind in body frame
+				float velNE_wind[2] = {};
+				_ekf.get_wind_velocity(velNE_wind);
+				v_n(0) -= velNE_wind[0];
+				v_n(1) -= velNE_wind[1];
+				_vel_body_wind = R_to_body * v_n;
 
 				// Local Position NED
 				float position[3];
@@ -848,17 +880,24 @@ void Ekf2::task_main()
 					    && airspeed.timestamp > 0) {
 						ctrl_state.airspeed = airspeed.indicated_airspeed_m_s;
 						ctrl_state.airspeed_valid = true;
+					} else {
+						ctrl_state.airspeed = sqrtf(v_n(0) * v_n(0) + v_n(1) * v_n(1) + v_n(2) * v_n(2));
+						ctrl_state.airspeed_valid = false;
 					}
 
 				} else if (_airspeed_mode.get() == control_state_s::AIRSPD_MODE_EST) {
 					if (_ekf.local_position_is_valid()) {
-						ctrl_state.airspeed = sqrtf(velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2]);
+						ctrl_state.airspeed = sqrtf(v_n(0) * v_n(0) + v_n(1) * v_n(1) + v_n(2) * v_n(2));
 						ctrl_state.airspeed_valid = true;
 					}
 
 				} else if (_airspeed_mode.get() == control_state_s::AIRSPD_MODE_DISABLED) {
 					// do nothing, airspeed has been declared as non-valid above, controllers
 					// will handle this assuming always trim airspeed
+					if (_ekf.local_position_is_valid()) {
+						ctrl_state.airspeed = sqrtf(v_n(0) * v_n(0) + v_n(1) * v_n(1) + v_n(2) * v_n(2));
+						ctrl_state.airspeed_valid = false;
+					}
 				}
 
 				// publish control state data

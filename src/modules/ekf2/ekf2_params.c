@@ -1044,3 +1044,36 @@ PARAM_DEFINE_FLOAT(EKF2_BCOEF_X, 25.0f);
  * @decimal 1
  */
 PARAM_DEFINE_FLOAT(EKF2_BCOEF_Y, 25.0f);
+
+/**
+ * X-axis static pressure position error coefficient.
+ * This is the ratio of static pressure error to dynamic pressure measured along the X-axis.
+ *
+ * @group EKF2
+ * @min -0.5
+ * @max 0.5
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(EKF2_PS_COEF_X, 0.0f);
+
+/**
+ * Y-axis static pressure position error coefficient.
+ * This is the ratio of static pressure error to dynamic pressure measured along the Y-axis.
+ *
+ * @group EKF2
+ * @min -0.5
+ * @max 0.5
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(EKF2_PS_COEF_Y, 0.0f);
+
+/**
+ * Z-axis static pressure position error coefficient.
+ * This is the ratio of static pressure error to dynamic pressure measured along the Z-axis.
+ *
+ * @group EKF2
+ * @min -0.5
+ * @max 0.5
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(EKF2_PS_COEF_Z, 0.0f);
