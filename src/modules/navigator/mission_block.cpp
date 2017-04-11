@@ -638,6 +638,7 @@ void
 MissionBlock::set_follow_target_item(struct mission_item_s *item, float min_clearance, follow_target_s &target,
 				     float yaw)
 {
+
 	if (_navigator->get_land_detected()->landed) {
 		/* landed, don't takeoff, but switch to IDLE mode */
 		item->nav_cmd = NAV_CMD_IDLE;
@@ -737,6 +738,7 @@ MissionBlock::set_land_item(struct mission_item_s *item, bool at_current_locatio
 void
 MissionBlock::set_current_position_item(struct mission_item_s *item)
 {
+	*item = {};
 	item->nav_cmd = NAV_CMD_WAYPOINT;
 	item->lat = _navigator->get_global_position()->lat;
 	item->lon = _navigator->get_global_position()->lon;
