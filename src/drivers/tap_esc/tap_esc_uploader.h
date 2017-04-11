@@ -220,7 +220,6 @@ private:
 	uint32_t				_bl_rev; /**< bootloader revision */
 
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
-	uint8_t					_uart_buf[UART_BUFFER_SIZE];
 	EscUploaderMessage  	_uploader_packet;
 
 	size_t 		initialise_firmware_file(const char *filenames[]);

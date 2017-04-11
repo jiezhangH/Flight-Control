@@ -73,7 +73,6 @@ TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
 	_fw_fd(-1),
 	_esc_counter(esc_counter),
 	_bl_rev(0),
-	_uart_buf{},
 	_uploader_packet{}
 {
 
