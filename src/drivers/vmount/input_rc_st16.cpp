@@ -83,6 +83,8 @@ bool InputRCSt16::_read_control_data_from_subscription(ControlData &control_data
 
 	if (already_active || major_movement || _first_time) {
 
+		_first_time = false;
+
 		//roll
 		control_data.type_data.angle.is_speed[0] = false;
 		control_data.type_data.angle.angles[0] = 0.f; //not assigned
