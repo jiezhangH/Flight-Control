@@ -280,7 +280,7 @@ RTL::set_rtl_item()
 			_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
 			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
 			_mission_item.time_inside = 0.0f;
-			_mission_item.autocontinue = false;
+			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
 			_mission_item.deploy_gear = home_close && home_altitude_close;
 
@@ -314,6 +314,7 @@ RTL::set_rtl_item()
 			set_land_item(&_mission_item, false);
 			_mission_item.yaw = _navigator->get_home_position()->yaw;
 			_mission_item.deploy_gear = true;
+			_navigator->set_can_loiter_at_sp(false);
 			break;
 		}
 
