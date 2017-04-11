@@ -225,8 +225,8 @@ private:
 
 	size_t 		initialise_firmware_file(const char *filenames[]);
 	int 		recv_byte_with_timeout(uint8_t *c, unsigned timeout);
-	int 		read_data_from_uart(unsigned timeout = 50);
-	int 		parse_tap_esc_feedback(int length, uint8_t *serial_buf, EscUploaderMessage *packetdata);
+	int 		read_and_parse_data(unsigned timeout = 50);
+	int 		parse_tap_esc_feedback(uint8_t decode_data, EscUploaderMessage *packetdata);
 	uint8_t 	crc8_esc(uint8_t *p, uint8_t len);
 	uint8_t 	crc_packet(EscUploaderMessage &p);
 	void 		select_responder(uint8_t sel);

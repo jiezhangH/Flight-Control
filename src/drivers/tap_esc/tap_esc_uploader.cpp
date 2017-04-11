@@ -269,113 +269,113 @@ TAP_ESC_UPLOADER::recv_byte_with_timeout(uint8_t *c, unsigned timeout)
 }
 
 int
-TAP_ESC_UPLOADER::read_data_from_uart(unsigned timeout)
+TAP_ESC_UPLOADER::read_and_parse_data(unsigned timeout)
 {
-	int length = 0;
+	uint8_t c = 0;
 	int ret = -1;
 
-	ret = recv_byte_with_timeout(&_uart_buf[0], timeout);
-
-	/* wait 1ms for making read remaining datas have enough buffer time*/
-	usleep(ESC_WAIT_BEFORE_READ * 1000);
+	/* set a timeout Ms for a first byte */
+	ret = recv_byte_with_timeout(&c, timeout);
 
 	if (ret == OK) {
-		length = read(_esc_fd, &_uart_buf[1], (arraySize(_uart_buf) - 1));
+		do {
+			/* try to parse the message from esc */
+			ret = parse_tap_esc_feedback(c, &_uploader_packet);
 
-		if (length < 0) {
-			return length;
-		}
+			/* parse success all data */
+			if (ret == OK) {
+				return OK;
+			}
 
-	} else {
-		return ret;
+			/* read a byte and buffer it with poll and a timeout 1Ms */
+			ret = recv_byte_with_timeout(&c, 1);
+
+			/* timeout in 1 is exceeded */
+			if (ret == -ETIMEDOUT) {
+				return ret;
+			}
+
+		} while (true);
 
 	}
 
-	return length + 1;
+	return ret;
 }
 
 int
-TAP_ESC_UPLOADER::parse_tap_esc_feedback(int length, uint8_t *serial_buf, EscUploaderMessage *packetdata)
+TAP_ESC_UPLOADER::parse_tap_esc_feedback(uint8_t decode_data, EscUploaderMessage *packetdata)
 {
 	static PARSR_ESC_STATE state = HEAD;
 	static uint8_t data_index = 0;
 	static uint8_t crc_data_cal;
 
-	if (length > 0) {
-
-		for (int i = 0; i < length; i++) {
 #ifdef UDEBUG
-			PX4_LOG("decode data[%d] 0x%02x", i, serial_buf[i]);
+	log("decode data 0x%02x", decode_data);
 #endif
 
-			switch (state) {
-			case HEAD:
-				if (serial_buf[i] == 0xFE) {
-					packetdata->head = 0xFE; //just_keep the format
-					state = LEN;
-				}
-
-				break;
-
-			case LEN:
-				if (serial_buf[i] < sizeof(packetdata->d)) {
-					packetdata->len = serial_buf[i];
-					state = ID;
-
-				} else {
-					state = HEAD;
-				}
-
-				break;
-
-			case ID:
-				if (serial_buf[i] < PROTO_MSG_ID_MAX_NUM) {
-					packetdata->msg_id = serial_buf[i];
-					data_index = 0;
-					state = DATA;
-
-				} else {
-					state = HEAD;
-				}
-
-				break;
-
-			case DATA:
-				packetdata->d.data[data_index++] = serial_buf[i];
-
-				if (data_index >= packetdata->len) {
-					crc_data_cal = crc8_esc((uint8_t *)(&packetdata->len), packetdata->len + 2);
-					state = CRC;
-
-				}
-
-				break;
-
-			case CRC:
-				if (crc_data_cal == serial_buf[i]) {
-					packetdata->crc_data = serial_buf[i];
-					state = HEAD;
-					return OK;
-
-				}
-
-				state = HEAD;
-				break;
-
-			default:
-				state = HEAD;
-				break;
-
-			}
+	switch (state) {
+	case HEAD:
+		if (decode_data == 0xFE) {
+			packetdata->head = 0xFE; //just_keep the format
+			state = LEN;
 
 		}
+
+		break;
+
+	case LEN:
+		if (decode_data < sizeof(packetdata->d)) {
+			packetdata->len = decode_data;
+			state = ID;
+
+		} else {
+			state = HEAD;
+		}
+
+		break;
+
+	case ID:
+		if (decode_data < PROTO_MSG_ID_MAX_NUM) {
+			packetdata->msg_id = decode_data;
+			data_index = 0;
+			state = DATA;
+
+		} else {
+			state = HEAD;
+		}
+
+		break;
+
+	case DATA:
+		packetdata->d.data[data_index++] = decode_data;
+
+		if (data_index >= packetdata->len) {
+			crc_data_cal = crc8_esc((uint8_t *)(&packetdata->len), packetdata->len + 2);
+			state = CRC;
+
+		}
+
+		break;
+
+	case CRC:
+		if (crc_data_cal == decode_data) {
+			packetdata->crc_data = decode_data;
+			state = HEAD;
+			return OK;
+
+		}
+
+		state = HEAD;
+		break;
+
+	default:
+		state = HEAD;
+		break;
 
 	}
 
 	return EPROTO;
 }
-
-
 uint8_t
 TAP_ESC_UPLOADER::crc8_esc(uint8_t *p, uint8_t len)
 {
@@ -451,15 +451,8 @@ TAP_ESC_UPLOADER::sync(uint8_t esc_id)
 	sync_packet.d.sync_packet.myID = esc_id;
 	send_packet(sync_packet, esc_id);
 
-	/* read sync feedback packet, blocking 60ms between esc app jump boot */
-	ret = read_data_from_uart(60);
-
-	if (ret < 1) {
-		return ret;
-	}
-
-	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(ret, _uart_buf, &_uploader_packet);
+	/* read and parse sync feedback packet, blocking 60ms between esc app jump boot */
+	ret = read_and_parse_data(60);
 
 	if (ret != OK) {
 		return ret;
@@ -505,15 +498,8 @@ TAP_ESC_UPLOADER::get_device_info(uint8_t esc_id, int param, uint32_t &val)
 	device_info_packet.d.device_info_packet.deviceInfo = param;
 	send_packet(device_info_packet, esc_id);
 
-	/* read device information feedback packet, blocking 50ms */
-	ret = read_data_from_uart();
-
-	if (ret < 1) {
-		return ret;
-	}
-
-	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(ret, _uart_buf, &_uploader_packet);
+	/* read and parse device information feedback packet, blocking 50ms */
+	ret = read_and_parse_data();
 
 	if (ret != OK) {
 		return ret;
@@ -675,18 +661,10 @@ TAP_ESC_UPLOADER::erase(uint8_t esc_id)
 	erase_packet.d.erase_packet.myID = esc_id;
 	send_packet(erase_packet, esc_id);
 
-	/* read erase feedback packet, blocking 500ms */
-	ret = read_data_from_uart(500);
-
-	if (ret < 1) {
-		return ret;
-	}
-
-	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(ret, _uart_buf, &_uploader_packet);
+	/* read and parse erase feedback packet, blocking 500ms */
+	ret = read_and_parse_data(500);
 
 	if (ret != OK) {
-
 		return ret;
 	}
 
@@ -801,15 +779,8 @@ TAP_ESC_UPLOADER::program(uint8_t esc_id, size_t fw_size)
 
 		send_packet(program_packet, esc_id);
 
-		/* read program feedback packet, blocking 50ms */
-		ret = read_data_from_uart();
-
-		if (ret < 1) {
-			break;
-		}
-
-		/* decode feedback packet from esc*/
-		ret = parse_tap_esc_feedback(ret, _uart_buf, &_uploader_packet);
+		/* read and parse program feedback packet, blocking 50ms */
+		ret = read_and_parse_data();
 
 		if (ret != OK) {
 			break;
@@ -926,15 +897,8 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 	flash_crc_packet.d.flash_crc_packet.myID = esc_id;
 	send_packet(flash_crc_packet, esc_id);
 
-	/* feedback CRC from tap esc,blocking 50ms */
-	ret = read_data_from_uart();
-
-	if (ret < 1) {
-		return ret;
-	}
-
-	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(ret, _uart_buf, &_uploader_packet);
+	/* read and parse feedback CRC from tap esc,blocking 50ms */
+	ret = read_and_parse_data();
 
 	if (ret != OK) {
 		return ret;
@@ -988,15 +952,8 @@ TAP_ESC_UPLOADER::reboot(uint8_t esc_id)
 	reboot_packet.d.reboot_packet.myID = esc_id;
 	send_packet(reboot_packet, esc_id);
 
-	/* read reboot feedback packet, blocking 50ms */
-	ret = read_data_from_uart();
-
-	if (ret < 1) {
-		return ret;
-	}
-
-	/* decode feedback packet from esc*/
-	ret = parse_tap_esc_feedback(ret, _uart_buf, &_uploader_packet);
+	/* read and parse reboot feedback packet, blocking 50ms */
+	ret = read_and_parse_data();
 
 	if (ret != OK) {
 		return ret;
