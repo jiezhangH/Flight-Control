@@ -57,6 +57,7 @@ public:
 	virtual ~TAP_ESC_UPLOADER();
 
 	int		upload(const char *filenames[]);
+	void 	checkcrc(const char *filenames[]);
 
 	static const uint8_t	_crc_table[256];
 

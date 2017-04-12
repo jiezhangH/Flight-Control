@@ -1353,6 +1353,16 @@ int tap_esc_main(int argc, char *argv[])
 
 	}
 
+	else if (!strcmp(argv[1], "checkcrc")) {// /etc/extras/tap_esc.bin
+
+		tap_esc_drv::stop();
+		const char *fw[3] = TAP_ESC_FW_SEARCH_PATHS;
+		TAP_ESC_UPLOADER *check_up;
+		check_up = new TAP_ESC_UPLOADER(6);
+		check_up->checkcrc(&fw[0]);//(const char**)argv[2]
+		delete check_up;
+	}
+
 	else if (!strcmp(argv[1], "uploader")) {
 
 		tap_esc_drv::stop();

@@ -242,6 +242,40 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 	return ret;
 }
 
+void
+TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
+{
+	/*
+	  check tap_esc flash CRC against CRC of a file
+	 */
+
+	size_t fw_size;
+	int ret = -1;
+	fw_size = initialise_firmware_file(filenames);
+	initialise_uart();
+
+	/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
+	for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
+		ret = sync(0);
+
+		if (ret == OK) {
+			break;
+
+		} else {
+			usleep(100000);
+		}
+	}
+	/* only check esc_id0: compare esc flash crc with .bin file crc */
+	ret = verify_crc(0, fw_size);
+
+	if (ret == -EINVAL) {
+		PX4_LOG("check CRC is different: %d", ret);
+		upload(filenames);
+	}
+
+	exit(0);
+}
+
 int
 TAP_ESC_UPLOADER::recv_byte_with_timeout(uint8_t *c, unsigned timeout)
 {
