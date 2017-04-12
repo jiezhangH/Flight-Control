@@ -1353,18 +1353,18 @@ int tap_esc_main(int argc, char *argv[])
 
 	}
 
-	else if (!strcmp(argv[1], "checkcrc")) {
+	else if (!strcmp(verb, "checkcrc")) {
 
 		tap_esc_drv::stop();
 		const char *fw[3] = TAP_ESC_FW_SEARCH_PATHS;
 		TAP_ESC_UPLOADER *check_up;
-		check_up = new TAP_ESC_UPLOADER(6);
+		check_up = new TAP_ESC_UPLOADER(tap_esc_drv::_supported_channel_count);
 		check_up->checkcrc(&fw[0]);
 		delete check_up;
 
 	}
 
-	else if (!strcmp(argv[1], "uploader")) {
+	else if (!strcmp(verb, "uploader")) {
 
 		tap_esc_drv::stop();
 
@@ -1375,12 +1375,12 @@ int tap_esc_main(int argc, char *argv[])
 		const char *fn[3] = TAP_ESC_FW_SEARCH_PATHS;
 
 		/* Override defaults if a path is passed on command line,use argv[2] path */
-		if (argc > 2) {
+		if (argc > 4) {
 			fn[0] = argv[2];
 			fn[1] = nullptr;
 		}
 
-		up = new TAP_ESC_UPLOADER(6);
+		up = new TAP_ESC_UPLOADER(tap_esc_drv::_supported_channel_count);
 		int ret = up->upload(&fn[0]);
 		delete up;
 
