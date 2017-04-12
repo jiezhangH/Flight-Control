@@ -79,6 +79,8 @@ static uint32_t version_tag_to_number(const char *tag)
 
 		if (tag[i] == '-') {
 			dashcount++;
+			ver = 0;
+			mag = 0;
 		}
 
 		if (tag[i] >= '0' && tag[i] <= '9') {
@@ -131,8 +133,8 @@ static uint32_t version_tag_to_number(const char *tag)
 		}
 	}
 
-	/* if git describe contains dashes this is not a real tag */
-	if (dashcount > 0) {
+	/* if git describe contains more than one dash this is not a real tag */
+	if (dashcount > 1) {
 		type = FIRMWARE_TYPE_DEV;
 	}
 
@@ -146,10 +148,55 @@ static uint32_t version_tag_to_number(const char *tag)
 	return ver | type;
 }
 
-
 uint32_t px4_firmware_version(void)
 {
 	return version_tag_to_number(PX4_GIT_TAG_STR);
+}
+
+/**
+ * Convert a version tag string to a vendor version number
+ * @param tag version tag in one of the following forms:
+ *            - vendor: v1.4.0-0.2.0
+ *			  - vendor-dev: v1.4.0-7.2.3-7-g8fdf1db
+ *            - dev: v1.4.0rc3-7-g7e282f57
+ *            - rc: v1.4.0rc4
+ *            - release: v1.4.0
+ *            - linux: 7.9.3
+ * @return version in the form 0xAABBCC (AA: Major, BB: Minor, CC: Patch)
+ */
+static uint32_t version_tag_to_vendor_version_number(const char *tag)
+{
+	uint32_t ver = 0;
+	unsigned len = strlen(tag);
+	unsigned mag = 0;
+	unsigned dashcount = 0;
+
+	for (int i = len - 1; i >= 0; i--) {
+		if (tag[i] == '-') {
+			dashcount++;
+			if (dashcount == 2) {
+				mag = 0;
+				ver = 0;
+			}
+		} else if (tag[i] >= '0' && tag[i] <= '9') {
+			if (mag < 24) {
+				unsigned number = tag[i] - '0';
+				ver += (number << mag);
+				mag += 8;
+			}
+		}
+	}
+
+	if (dashcount == 1 || dashcount == 3) {
+		return ver;
+	} else {
+		return 0;
+	}
+}
+
+uint32_t px4_firmware_vendor_version(void)
+{
+	return version_tag_to_vendor_version_number(PX4_GIT_TAG_STR);
 }
 
 uint32_t px4_board_version(void)

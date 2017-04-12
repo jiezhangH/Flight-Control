@@ -1324,7 +1324,10 @@ void Mavlink::send_autopilot_capabilites()
 		msg.os_sw_version = px4_os_version();
 		msg.board_version = px4_board_version();
 		uint64_t fw_git_version_binary = px4_firmware_version_binary() & 0xFFFFFFFFFF000000;
+		uint64_t fw_vendor_version = px4_firmware_vendor_version();
+		size_t fw_vendor_version_length = 3;
 		memcpy(&msg.flight_custom_version, &fw_git_version_binary, sizeof(msg.flight_custom_version));
+		memcpy(&msg.flight_custom_version, &fw_vendor_version, fw_vendor_version_length);
 		memcpy(&msg.middleware_custom_version, &fw_git_version_binary, sizeof(msg.middleware_custom_version));
 		uint64_t os_git_version_binary = px4_os_version_binary();
 		memcpy(&msg.os_custom_version, &os_git_version_binary, sizeof(msg.os_custom_version));
