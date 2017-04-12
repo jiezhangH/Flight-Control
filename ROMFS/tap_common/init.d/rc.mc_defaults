@@ -54,9 +54,10 @@ then
 	param set SYS_MC_EST_GROUP 2
 	param set EKF2_BCOEF_X 25
 	param set EKF2_BCOEF_Y 25
-	param set EKF2_PS_COEF_X -0.25
-	param set EKF2_PS_COEF_Y -0.25
-	param set EKF2_PS_COEF_Z 0
+	param set EKF2_PCOEF_XP -0.20
+	param set EKF2_PCOEF_XN -0.10
+	param set EKF2_PCOEF_Y -0.20
+	param set EKF2_PCOEF_Z 0
 fi
 
 # set environment variables (!= parameters)
