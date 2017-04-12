@@ -83,7 +83,7 @@ if(NOT ${BOARD} STREQUAL "sim")
 
 		if (config_io_board)
 			set(extras "${CMAKE_BINARY_DIR}/src/modules/px4iofirmware/${config_io_board}.bin")
-			set(extras "${CMAKE_BINARY_DIR}/src/drivers/tap_esc/tap_esc.bin")
+			set(extras "${CMAKE_BINARY_DIR}/ROMFS/tap_common/extras/tap_esc.bin")
 		endif()
 
 		message(STATUS "Adding ROMFS on ${BOARD}")
