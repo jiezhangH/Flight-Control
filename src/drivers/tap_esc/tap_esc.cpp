@@ -1285,6 +1285,9 @@ void usage()
 	PX4_INFO("usage: tap_esc start -d /dev/ttyS2 -n <1-8>");
 	PX4_INFO("       tap_esc stop");
 	PX4_INFO("       tap_esc status");
+	PX4_INFO("       tap_esc checkcrc -n <1-8>");
+	PX4_INFO("       tap_esc upload -n <1-8>");
+	PX4_INFO("       tap_esc upload custom_file -n <1-8>");
 }
 
 } // namespace tap_esc
