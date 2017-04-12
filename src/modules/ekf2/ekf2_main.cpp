@@ -323,7 +323,10 @@ private:
 
 	// Corrections for static pressure position error where Ps_error = Ps_meas - Ps_truth
 	// Coef = Ps_error / Pdynamic, where Pdynamic = 1/2 * density * TAS**2
-	control::BlockParamFloat _K_pstatic_coef_x;	// static pressure position error coefficient along the X body axis
+	control::BlockParamFloat
+	_K_pstatic_coef_xp;	// static pressure position error coefficient along the positive X body axis
+	control::BlockParamFloat
+	_K_pstatic_coef_xn;	// static pressure position error coefficient along the negative X body axis
 	control::BlockParamFloat _K_pstatic_coef_y;	// static pressure position error coefficient along the Y body axis
 	control::BlockParamFloat _K_pstatic_coef_z;	// static pressure position error coefficient along the Z body axis
 
@@ -441,9 +444,10 @@ Ekf2::Ekf2():
 	_drag_noise(this, "EKF2_DRAG_NOISE", false, _params->drag_noise),
 	_bcoef_x(this, "EKF2_BCOEF_X", false, _params->bcoef_x),
 	_bcoef_y(this, "EKF2_BCOEF_Y", false, _params->bcoef_y),
-	_K_pstatic_coef_x(this, "EKF2_PS_COEF_X", false),
-	_K_pstatic_coef_y(this, "EKF2_PS_COEF_Y", false),
-	_K_pstatic_coef_z(this, "EKF2_PS_COEF_Z", false)
+	_K_pstatic_coef_xp(this, "EKF2_PCOEF_XP", false),
+	_K_pstatic_coef_xn(this, "EKF2_PCOEF_XN", false),
+	_K_pstatic_coef_y(this, "EKF2_PCOEF_Y", false),
+	_K_pstatic_coef_z(this, "EKF2_PCOEF_Z", false)
 
 {
 
@@ -687,8 +691,19 @@ void Ekf2::task_main()
 					_ekf.set_air_density(rho);
 
 					// calculate static pressure error = Pmeas - Ptruth
+					// model position error sensitivity as a body fixed ellipse with different scale in the positive and negtive X direction
 					const float max_airspeed_sq = MAX_AIRSPEED * MAX_AIRSPEED;
-					float pstatic_err = 0.5f * rho * (_K_pstatic_coef_x.get() * fminf(_vel_body_wind(0) * _vel_body_wind(0), max_airspeed_sq)
+					float K_pstatic_coef_x;
+
+					if (_vel_body_wind(0) >= 0.0f) {
+						K_pstatic_coef_x = _K_pstatic_coef_xp.get();
+
+					} else {
+						K_pstatic_coef_x = _K_pstatic_coef_xn.get();
+
+					}
+
+					float pstatic_err = 0.5f * rho * (K_pstatic_coef_x * fminf(_vel_body_wind(0) * _vel_body_wind(0), max_airspeed_sq)
 									  + _K_pstatic_coef_y.get() * fminf(_vel_body_wind(1) * _vel_body_wind(1), max_airspeed_sq)
 									  + _K_pstatic_coef_z.get() * fminf(_vel_body_wind(2) * _vel_body_wind(2), max_airspeed_sq));
 
@@ -889,6 +904,7 @@ void Ekf2::task_main()
 					    && airspeed.timestamp > 0) {
 						ctrl_state.airspeed = airspeed.indicated_airspeed_m_s;
 						ctrl_state.airspeed_valid = true;
+
 					} else {
 						ctrl_state.airspeed = sqrtf(v_n(0) * v_n(0) + v_n(1) * v_n(1) + v_n(2) * v_n(2));
 						ctrl_state.airspeed_valid = false;
