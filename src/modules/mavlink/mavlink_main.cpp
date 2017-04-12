@@ -54,6 +54,7 @@
 #include <poll.h>
 #include <termios.h>
 #include <time.h>
+#include <iostream>
 
 #ifdef __PX4_POSIX
 #include <net/if.h>
@@ -1322,7 +1323,7 @@ void Mavlink::send_autopilot_capabilites()
 		msg.middleware_sw_version = px4_firmware_version();
 		msg.os_sw_version = px4_os_version();
 		msg.board_version = px4_board_version();
-		uint64_t fw_git_version_binary = px4_firmware_version_binary();
+		uint64_t fw_git_version_binary = px4_firmware_version_binary() & 0xFFFFFFFFFF000000;
 		memcpy(&msg.flight_custom_version, &fw_git_version_binary, sizeof(msg.flight_custom_version));
 		memcpy(&msg.middleware_custom_version, &fw_git_version_binary, sizeof(msg.middleware_custom_version));
 		uint64_t os_git_version_binary = px4_os_version_binary();
