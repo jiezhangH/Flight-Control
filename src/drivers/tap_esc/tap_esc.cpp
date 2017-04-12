@@ -1357,6 +1357,11 @@ int tap_esc_main(int argc, char *argv[])
 	}
 
 	else if (!strcmp(verb, "checkcrc")) {
+		// Check on required arguments
+		if (tap_esc_drv::_supported_channel_count == 0) {
+			tap_esc_drv::usage();
+			return 1;
+		}
 
 		tap_esc_drv::stop();
 		const char *fw[3] = TAP_ESC_FW_SEARCH_PATHS;
@@ -1368,6 +1373,11 @@ int tap_esc_main(int argc, char *argv[])
 	}
 
 	else if (!strcmp(verb, "upload")) {
+		// Check on required arguments
+		if (tap_esc_drv::_supported_channel_count == 0) {
+			tap_esc_drv::usage();
+			return 1;
+		}
 
 		tap_esc_drv::stop();
 
