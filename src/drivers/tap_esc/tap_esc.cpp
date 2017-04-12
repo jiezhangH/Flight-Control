@@ -1364,7 +1364,7 @@ int tap_esc_main(int argc, char *argv[])
 
 	}
 
-	else if (!strcmp(verb, "uploader")) {
+	else if (!strcmp(verb, "upload")) {
 
 		tap_esc_drv::stop();
 
