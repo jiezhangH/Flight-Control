@@ -174,10 +174,12 @@ static uint32_t version_tag_to_vendor_version_number(const char *tag)
 	for (int i = len - 1; i >= 0; i--) {
 		if (tag[i] == '-') {
 			dashcount++;
+
 			if (dashcount == 2) {
 				mag = 0;
 				ver = 0;
 			}
+
 		} else if (tag[i] >= '0' && tag[i] <= '9') {
 			if (mag < 24) {
 				unsigned number = tag[i] - '0';
@@ -189,6 +191,7 @@ static uint32_t version_tag_to_vendor_version_number(const char *tag)
 
 	if (dashcount == 1 || dashcount == 3) {
 		return ver;
+
 	} else {
 		return 0;
 	}
