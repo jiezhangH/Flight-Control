@@ -344,7 +344,7 @@ TAP_ESC_UPLOADER::parse_tap_esc_feedback(uint8_t decode_data, EscUploaderMessage
 	static uint8_t crc_data_cal;
 
 #ifdef UDEBUG
-	log("decode data 0x%02x", decode_data);
+	PX4_LOG("decode data 0x%02x", decode_data);
 #endif
 
 	switch (state) {
