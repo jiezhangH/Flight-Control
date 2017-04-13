@@ -326,6 +326,7 @@ TAP_ESC_UPLOADER::read_and_parse_data(unsigned timeout)
 
 			/* timeout in 1 is exceeded */
 			if (ret == -ETIMEDOUT) {
+				PX4_LOG("parse timeout %d data %d", ret, c);
 				return ret;
 			}
 
@@ -802,8 +803,8 @@ TAP_ESC_UPLOADER::program(uint8_t esc_id, size_t fw_size)
 
 		send_packet(program_packet, esc_id);
 
-		/* read and parse program feedback packet, blocking 50ms */
-		ret = read_and_parse_data();
+		/* read and parse program feedback packet, blocking 100ms */
+		ret = read_and_parse_data(100);
 
 		if (ret != OK) {
 			break;
@@ -975,7 +976,7 @@ TAP_ESC_UPLOADER::reboot(uint8_t esc_id)
 	reboot_packet.d.reboot_packet.myID = esc_id;
 	send_packet(reboot_packet, esc_id);
 
-	/* read and parse reboot feedback packet, blocking 50ms */
+	/* read and parse reboot feedback packet, blocking 100ms */
 	ret = read_and_parse_data();
 
 	if (ret != OK) {
@@ -996,7 +997,7 @@ TAP_ESC_UPLOADER::reboot(uint8_t esc_id)
 		}
 
 	} else if (_uploader_packet.msg_id == PROTO_FAILED) {
-		PX4_LOG("reboot fail, myID: 0x%02x, esc_id: 0x%02x, command: 0x%02x", _uploader_packet.d.feedback_packet.myID,
+		PX4_LOG("reboot fail, myID: 0x%02x, esc_id: 0x%02x, command: 0x%02x", _uploader_packet.d.feedback_packet.myID,esc_id,
 			_uploader_packet.d.feedback_packet.command);
 		return -EIO;
 
