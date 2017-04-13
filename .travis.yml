@@ -57,6 +57,7 @@ script:
       ./Tools/generate_yuneec.py build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 ${AUTOPILOT_AES_KEY};
       mkdir -p s3Upload;
       cp autopilot.yuneec s3Upload;
+      echo ${TRAVIS_TAG} > s3Upload/version;
     elif [[ "${BUILD_TARGET}" = "check_format" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
       ./Tools/docker_run.sh 'make check_format';
     elif [[ "${BUILD_TARGET}" = "tests_linux" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
