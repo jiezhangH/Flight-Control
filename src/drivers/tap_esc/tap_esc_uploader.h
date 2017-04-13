@@ -58,7 +58,6 @@ public:
 
 	int		upload(const char *filenames[]);
 	void 	checkcrc(const char *filenames[]);
-
 	static const uint8_t	_crc_table[256];
 
 private:
@@ -220,6 +219,7 @@ private:
 	uint8_t 	_esc_counter;
 	uint32_t				_bl_rev; /**< bootloader revision */
 
+	/* _device_mux_map[sel]:Asign the id's to the ESC to match the mux */
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
 	EscUploaderMessage  	_uploader_packet;
 
@@ -229,7 +229,6 @@ private:
 	int 		parse_tap_esc_feedback(uint8_t decode_data, EscUploaderMessage *packetdata);
 	uint8_t 	crc8_esc(uint8_t *p, uint8_t len);
 	uint8_t 	crc_packet(EscUploaderMessage &p);
-	void 		select_responder(uint8_t sel);
 	int 		send_packet(EscUploaderMessage &packet, int responder);
 	int			sync(uint8_t esc_id);
 	int			get_device_info(uint8_t esc_id, int param, uint32_t &val);

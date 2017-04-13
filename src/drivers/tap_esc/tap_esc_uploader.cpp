@@ -430,17 +430,6 @@ TAP_ESC_UPLOADER::crc_packet(EscUploaderMessage &p)
 	return p.len + offsetof(EscUploaderMessage, d) + 1;
 }
 
-void
-TAP_ESC_UPLOADER::select_responder(uint8_t sel)
-{
-#if defined(GPIO_S0)
-	/* _device_mux_map[sel]:Asign the id's to the ESCs to match the mux */
-	px4_arch_gpiowrite(GPIO_S0, _device_mux_map[sel] & 1);
-	px4_arch_gpiowrite(GPIO_S1, _device_mux_map[sel] & 2);
-	px4_arch_gpiowrite(GPIO_S2, _device_mux_map[sel] & 4);
-#endif
-}
-
 int
 TAP_ESC_UPLOADER::send_packet(EscUploaderMessage &packet, int responder)
 {
@@ -450,7 +439,7 @@ TAP_ESC_UPLOADER::send_packet(EscUploaderMessage &packet, int responder)
 			return -EINVAL;
 		}
 
-		select_responder(responder);
+		select_responder(_device_mux_map[responder]);
 	}
 
 	int packet_len = crc_packet(packet);

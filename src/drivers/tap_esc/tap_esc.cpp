@@ -100,8 +100,7 @@ public:
 	virtual int	init();
 	virtual int	ioctl(file *filp, int cmd, unsigned long arg);
 	void cycle();
-protected:
-	void select_responder(uint8_t sel);
+
 private:
 
 	static const uint8_t device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
@@ -442,15 +441,6 @@ uint8_t TAP_ESC::crc_packet(EscPacket &p)
 	p.d.bytes[p.len] = crc8_esc(&p.len, p.len + 2);
 	return p.len + offsetof(EscPacket, d) + 1;
 }
-void TAP_ESC::select_responder(uint8_t sel)
-{
-#if defined(GPIO_S0)
-	px4_arch_gpiowrite(GPIO_S0, sel & 1);
-	px4_arch_gpiowrite(GPIO_S1, sel & 2);
-	px4_arch_gpiowrite(GPIO_S2, sel & 4);
-#endif
-}
-
 
 void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 {

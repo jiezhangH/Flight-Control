@@ -47,6 +47,7 @@ px4_add_module(
 		tap_spi.c
 		tap_usb.c
 		tap_led.c
+		tap_74hct151.c
 	DEPENDS
 		platforms__common
 	)
