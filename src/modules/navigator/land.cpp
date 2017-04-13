@@ -122,12 +122,6 @@ Land::set_autoland_item()
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
 
-			// Enfore a minimum altitude to deploy the gear
-			if (_navigator->get_global_position()->alt < _navigator->get_home_position()->alt + 1.2f) {
-				_mission_item.altitude_is_relative = false;
-				_mission_item.altitude = _navigator->get_global_position()->alt + 1.2f;
-			}
-
 			_mission_item.yaw = NAN;
 			_mission_item.loiter_radius = _navigator->get_loiter_radius();
 			_mission_item.nav_cmd = NAV_CMD_LOITER_TIME_LIMIT;
