@@ -83,7 +83,7 @@ deploy:
     bucket: "08f61bbd-8958-433e-8e83-5d79160fa0be"
     skip_cleanup: true
     local_dir: s3Upload
-    upload-dir: ${TRAVIS_TAG}
+    upload-dir: autopilot/${TRAVIS_TAG}
     acl: public_read
     on:
       tags: true
@@ -95,7 +95,7 @@ deploy:
     bucket: "08f61bbd-8958-433e-8e83-5d79160fa0be"
     skip_cleanup: true
     local_dir: s3Upload
-    upload-dir: latest
+    upload-dir: autopilot/latest
     acl: public_read
     on:
       tags: true
