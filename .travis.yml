@@ -6,6 +6,12 @@ language: cpp
 git:
   depth: 50
 
+# white list
+branches:
+  only:
+  - tap
+  - /^v[0-9].*$/
+
 matrix:
   fast_finish: true
   include:
