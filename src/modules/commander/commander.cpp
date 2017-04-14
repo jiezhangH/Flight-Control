@@ -2581,7 +2581,6 @@ int commander_thread_main(int argc, char *argv[])
 			(internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_TAKEOFF ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_MISSION ||
-			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LOITER)) {
 			// transition to previous state if sticks are touched
 
