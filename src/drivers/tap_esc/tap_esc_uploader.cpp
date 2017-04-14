@@ -329,8 +329,8 @@ TAP_ESC_UPLOADER::read_and_parse_data(unsigned timeout)
 				return OK;
 			}
 
-			/* read a byte and buffer it with poll and a timeout 1Ms */
-			ret = recv_byte_with_timeout(&c, 1);
+			/* read a byte and buffer it with poll and a timeout 2Ms */
+			ret = recv_byte_with_timeout(&c, 2);
 
 			/* timeout in 1 is exceeded */
 			if (ret == -ETIMEDOUT) {
