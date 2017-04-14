@@ -270,8 +270,16 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 	ret = verify_crc(0, fw_size);
 
 	if (ret == -EINVAL) {
-		PX4_LOG("check CRC is different: %d", ret);
+		PX4_LOG("check CRC is different,will upload tap esc firmware ");
 		upload(filenames);
+
+	} else {
+		/* reboot tap esc_id0 */
+		reboot(0);
+
+		// sleep for enough time for the TAP ESC chip to boot. This makes
+		// forceupdate more reliably startup TAP ESC again after update
+		up_udelay(20 * 1000);
 	}
 
 	exit(0);
@@ -997,7 +1005,7 @@ TAP_ESC_UPLOADER::reboot(uint8_t esc_id)
 		}
 
 	} else if (_uploader_packet.msg_id == PROTO_FAILED) {
-		PX4_LOG("reboot fail, myID: 0x%02x, esc_id: 0x%02x, command: 0x%02x", _uploader_packet.d.feedback_packet.myID,esc_id,
+		PX4_LOG("reboot fail, myID: 0x%02x, esc_id: 0x%02x, command: 0x%02x", _uploader_packet.d.feedback_packet.myID, esc_id,
 			_uploader_packet.d.feedback_packet.command);
 		return -EIO;
 
