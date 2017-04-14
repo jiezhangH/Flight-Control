@@ -84,11 +84,11 @@ TAP_ESC_UPLOADER::~TAP_ESC_UPLOADER()
 	deinitialize_uart();
 }
 
-size_t
+int32_t
 TAP_ESC_UPLOADER::initialise_firmware_file(const char *filenames[])
 {
 	const char *filename = NULL;
-	size_t firmware_size;
+	int32_t firmware_size;
 
 	/* allow an early abort and look for file first */
 	for (unsigned i = 0; filenames[i] != nullptr; i++) {
@@ -129,10 +129,21 @@ int
 TAP_ESC_UPLOADER::upload(const char *filenames[])
 {
 	int	ret = -1;
-	size_t fw_size;
+	int32_t fw_size;
 
 	fw_size = initialise_firmware_file(filenames);
-	initialise_uart();
+
+	if (fw_size < 0) {
+		PX4_LOG("initialise firmware file failed");
+		return fw_size;
+	}
+
+	ret = initialise_uart();
+
+	if (ret < 0) {
+		PX4_LOG("initialise uart failed %s");
+		return ret;
+	}
 
 	/* uploader esc_id(0,1,2,3,4,5) */
 	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
@@ -242,17 +253,28 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 	return ret;
 }
 
-void
+int
 TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 {
 	/*
 	  check tap_esc flash CRC against CRC of a file
 	 */
 
-	size_t fw_size;
+	int32_t fw_size;
 	int ret = -1;
 	fw_size = initialise_firmware_file(filenames);
-	initialise_uart();
+
+	if (fw_size < 0) {
+		PX4_LOG("initialise firmware file failed");
+		return fw_size;
+	}
+
+	ret = initialise_uart();
+
+	if (ret < 0) {
+		PX4_LOG("initialise uart failed %s");
+		return ret;
+	}
 
 	/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
 	for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
