@@ -2577,7 +2577,7 @@ int commander_thread_main(int argc, char *argv[])
 
 		// abort takeoff, landing or auto or loiter if sticks are moved significantly
 		// but only if not in a low battery handling action
-		if (!critical_battery_voltage_actions_done &&
+		if (!warning_action_on && !critical_battery_voltage_actions_done &&
 			(internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_TAKEOFF ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_MISSION ||
