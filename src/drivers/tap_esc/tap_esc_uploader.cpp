@@ -288,6 +288,12 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 		}
 	}
 
+	if (ret != OK) {
+		/* this is immediately fatal */
+		PX4_LOG("esc_id0 bootloader not responding");
+		return -EIO;
+	}
+
 	/* only check esc_id0: compare esc flash crc with .bin file crc */
 	ret = verify_crc(0, fw_size);
 
