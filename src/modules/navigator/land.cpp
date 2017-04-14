@@ -106,6 +106,15 @@ Land::on_activation()
 void
 Land::on_active()
 {
+	// Reset the position to the current position if the landing
+	// sequence gets overriden by the user at any given point in time
+
+	if (_navigator->get_control_mode()->flag_control_updated) {
+		_mission_item.lat = _navigator->get_global_position()->lat;
+		_mission_item.lon = _navigator->get_global_position()->lon;
+		_mission_item.yaw = _navigator->get_global_position()->yaw;
+	}
+
 	if (_land_state != LAND_STATE_LANDED && is_mission_item_reached()) {
 		advance_land();
 		set_autoland_item();
@@ -194,6 +203,7 @@ Land::advance_land()
 
 	case LAND_STATE_DESCEND:
 		_land_state = LAND_STATE_LAND;
+
 		break;
 
 	case LAND_STATE_LAND:

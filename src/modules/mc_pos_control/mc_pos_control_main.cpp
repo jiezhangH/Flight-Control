@@ -580,7 +580,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.rc_flt_cutoff = param_find("RC_FLT_CUTOFF");
 	_params_handles.rc_flt_smp_rate = param_find("RC_FLT_SMP_RATE");
 
-
 	/* fetch initial parameter values */
 	parameters_update(true);
 
@@ -1282,6 +1281,12 @@ MulticopterPositionControl::control_manual(float dt)
 
 	/* prepare cruise speed (m/s) vector to scale the velocity setpoint */
 	float vel_mag = (_velocity_hor_manual.get() < _vel_max_xy) ? _velocity_hor_manual.get() : _vel_max_xy;
+
+	/* limit cruise speed to half when interrupting an auto mode */
+	if (_control_mode.flag_control_updated) {
+		vel_mag *= 0.5f;
+	}
+
 	matrix::Vector3f vel_cruise_scale(vel_mag, vel_mag,
 					  (man_vel_sp(2) > 0.0f) ? _params.vel_max_down : _params.vel_max_up);
 	man_vel_sp = man_vel_sp.emult(vel_cruise_scale);

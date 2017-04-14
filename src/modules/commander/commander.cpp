@@ -195,6 +195,7 @@ static float max_ekf_dang_bias = 3.5e-4f;
 static float max_imu_acc_diff = 0.7f;
 static float max_imu_gyr_diff = 0.09f;
 static float min_stick_change = 0.25f;
+static float min_interrupt_stick_change = 0.15f;
 
 static struct vehicle_status_s status = {};
 static struct vehicle_roi_s _roi = {};
@@ -1318,6 +1319,8 @@ int commander_thread_main(int argc, char *argv[])
 	param_t _param_offboard_loss_timeout = param_find("COM_OF_LOSS_T");
 	param_t _param_arm_without_gps = param_find("COM_ARM_WO_GPS");
 	param_t _param_arm_switch_is_button = param_find("COM_ARM_SWISBTN");
+	param_t _param_gohome_land_iterrupt = param_find("COM_ALLOW_INT");
+	param_t _param_allow_interrupt_min_alt = param_find("COM_MIN_ALT");
 
 	param_t _param_fmode_1 = param_find("COM_FLTMODE1");
 	param_t _param_fmode_2 = param_find("COM_FLTMODE2");
@@ -1669,11 +1672,16 @@ int commander_thread_main(int argc, char *argv[])
 	int32_t rc_in_off = 0;
 	bool hotplug_timeout = hrt_elapsed_time(&commander_boot_timestamp) > HOTPLUG_SENS_TIMEOUT;
 	int32_t arm_without_gps = 0;
+	static int32_t gohome_land_iterrupt = 0;
+	static float allow_interrupt_min_alt = 0;
 	param_get(_param_autostart_id, &autostart_id);
 	param_get(_param_rc_in_off, &rc_in_off);
 	param_get(_param_arm_without_gps, &arm_without_gps);
 	int32_t arm_switch_is_button = 0;
 	param_get(_param_arm_switch_is_button, &arm_switch_is_button);
+	param_get(_param_gohome_land_iterrupt, &gohome_land_iterrupt);
+	param_get(_param_allow_interrupt_min_alt, &allow_interrupt_min_alt);
+
 	can_arm_without_gps = (arm_without_gps == 1);
 	status.rc_input_mode = rc_in_off;
 	if (is_hil_setup(autostart_id)) {
@@ -2581,7 +2589,6 @@ int commander_thread_main(int argc, char *argv[])
 		// but only if not in a low battery handling action
 		if (!warning_action_on && !critical_battery_voltage_actions_done &&
 			(internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_TAKEOFF ||
-			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_MISSION ||
 			internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LOITER)) {
 			// transition to previous state if sticks are touched
@@ -2615,6 +2622,30 @@ int commander_thread_main(int argc, char *argv[])
 			}
 		}
 
+		if(gohome_land_iterrupt) {
+			if(pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND &&(
+					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
+					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL)) {
+				if((fabsf(sp_man.x - 0.f) > min_interrupt_stick_change ||
+					fabsf(sp_man.y - 0.f) >min_interrupt_stick_change ||
+					(sp_man.z - 0.5f) > min_interrupt_stick_change) &&
+						fabsf(local_position.z) > allow_interrupt_min_alt) {
+
+						control_mode.flag_control_updated = true;
+						main_state_transition(&status, commander_state_s::MAIN_STATE_POSCTL, main_state_prev, &status_flags, &internal_state);
+					}
+				}
+
+				if(control_mode.flag_control_updated &&
+					fabsf(sp_man.x - 0.f) <= min_interrupt_stick_change &&
+					fabsf(sp_man.y - 0.f) <= min_interrupt_stick_change &&
+				    (sp_man.z - 0.5f) <= min_interrupt_stick_change &&
+					fabsf(local_position.vx) < 0.3f && fabsf(local_position.vy) < 0.3f) {
+
+						control_mode.flag_control_updated = false;
+						main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state);
+				}
+		}
 
 		/* Check for mission flight termination */
 		if (armed.armed && _mission_result.flight_termination &&
@@ -3438,6 +3469,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 		return TRANSITION_NOT_CHANGED;
 	}
 
+	control_mode.flag_control_updated = false;
 	_last_sp_man = sp_man;
 
 	/* offboard switch overrides main switch */

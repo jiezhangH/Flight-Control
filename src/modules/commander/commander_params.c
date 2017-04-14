@@ -295,6 +295,19 @@ PARAM_DEFINE_INT32(COM_DISARM_LAND, 0);
 PARAM_DEFINE_INT32(COM_ARM_WO_GPS, 1);
 
 /**
+ * Allow interrupt gohome and landing
+ *
+ * The default do not allow interrupt gohome and landing.
+ *
+ * @group Commander
+ * @min 0
+ * @max 1
+ * @value 0 Don't allow interrupting gohome and landing
+ * @value 1 Allow interrupting gohome and landing
+ */
+PARAM_DEFINE_INT32(COM_ALLOW_INT, 0);
+
+/**
  * Arm switch is only a button
  *
  * The default uses the arm switch as real switch.
@@ -604,3 +617,17 @@ PARAM_DEFINE_FLOAT(COM_ARM_IMU_ACC, 0.7f);
  * @increment 0.01
  */
 PARAM_DEFINE_FLOAT(COM_ARM_IMU_GYR, 0.15f);
+
+/**
+ * allow interrupt minium altitude
+ *
+ *This is the minium altitude the drone allow to be interrupted
+ *
+ * @group Commander
+ * @unit m
+ * @min 0.0
+ * @max 20.0
+ * @decimal 1
+ * @increment 0.5
+ */
+PARAM_DEFINE_FLOAT(COM_MIN_ALT, 2.5f);
