@@ -590,3 +590,15 @@ PARAM_DEFINE_FLOAT(MPC_LAND_ALT1, 10.0f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_LAND_ALT2, 5.0f);
+
+/**
+ * Position smoothing feedforward
+ *
+ * Increasing this value will make direction changes smoother. Decreasing will
+ * lead to more direct approaches towards waypoints.
+ *
+ * @min 15
+ * @max 50
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_POS_SMOOTH, 20.0f);

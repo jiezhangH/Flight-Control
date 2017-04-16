@@ -178,6 +178,7 @@ private:
 	_jerk_hor_max; /**< maximum jerk only applied in manual controlled mode when breaking to zero */
 	control::BlockParamFloat
 	_jerk_hor_min; /**< minimum jerk only applied in manual controlled mode when breaking to zero */
+	control::BlockParamFloat _pos_sp_smoothing;
 
 	control::BlockDerivative _vel_x_deriv;
 	control::BlockDerivative _vel_y_deriv;
@@ -483,6 +484,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_velocity_hor_manual(this, "VEL_MANUAL", true),
 	_jerk_hor_max(this, "JERK_MAX", true),
 	_jerk_hor_min(this, "JERK_MIN", true),
+	_pos_sp_smoothing(this, "POS_SMOOTH", true),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
@@ -1472,8 +1474,8 @@ MulticopterPositionControl::control_non_manual(float dt)
 			// ramp thrust setpoint up
 			if (_vel(2) > -(_params.tko_speed / 2.0f)) {
 
-				// ramp up to hover throttle in one second
-				_takeoff_thrust_sp += _params.thr_hover * dt;
+				// ramp up to hover throttle in two seconds
+				_takeoff_thrust_sp += (_params.thr_hover * dt) / 2.0f;
 				_vel_sp.zero();
 				_vel_prev.zero();
 
@@ -1818,7 +1820,7 @@ void MulticopterPositionControl::control_auto(float dt)
 							/* feed forward position setpoint offset */
 							math::Vector<3> pos_ff = prev_curr_s_norm *
 										 cos_a_curr_next * cos_b * cos_b * (1.0f - curr_pos_s_len) *
-										 (1.0f - expf(-curr_pos_s_len * curr_pos_s_len * 20.0f));
+										 (1.0f - expf(-curr_pos_s_len * curr_pos_s_len * _pos_sp_smoothing.get()));
 							pos_sp_s += pos_ff;
 						}
 					}
@@ -1885,9 +1887,6 @@ void MulticopterPositionControl::control_auto(float dt)
 		/* for auto loiter, we consider gear switch */
 		/* ToDo: at the mode : takeoff not complete and before loiter, landing and rtl when loiter, lower gears */
 		const bool gear_down = ((_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_TAKEOFF) ||
-					((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER)
-					 && (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL))
-					|| (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_LAND) ||
 					(_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND))
 				       || _pos_sp_triplet.current.deploy_gear;
 
