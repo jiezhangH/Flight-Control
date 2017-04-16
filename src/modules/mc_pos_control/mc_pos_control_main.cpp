@@ -1092,8 +1092,10 @@ MulticopterPositionControl::set_manual_acceleration(matrix::Vector2f &stick_xy, 
 
 		/* we start braking with lowest accleration */
 		_acceleration_state_dependent_xy = _deceleration_hor_slow.get();
+		_vel_sp_prev = _vel;
 
 	}
+
 
 	switch (_user_intention) {
 	case brake: {
@@ -1123,11 +1125,20 @@ MulticopterPositionControl::set_manual_acceleration(matrix::Vector2f &stick_xy, 
 
 	case acceleration: {
 			_user_intention = intention;
+
+			if (_user_intention == direction_change) {
+				_vel_sp_prev = _vel;
+			}
+
 			break;
 		}
 
 	case deceleration: {
 			_user_intention = intention;
+
+			if (_user_intention == direction_change) {
+				_vel_sp_prev = _vel;
+			}
 
 			break;
 		}
