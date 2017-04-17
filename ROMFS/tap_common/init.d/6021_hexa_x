@@ -91,7 +91,7 @@ then
 		param set RC_FLT_CUTOFF 5.0
 		param set MPC_HOLD_XY_DZ 0.05
 		param set MPC_XY_MAN_EXPO 0.7
-		param set MPC_Z_MAN_EXPO 0.5
+		param set MPC_Z_MAN_EXPO 0.6
 
 		# Position control velocity
 		param set MPC_XY_CRUISE 11.0
@@ -218,8 +218,9 @@ then
 	param set COM_ARM_SWISBTN 1
 
 	# Set landing detection stick up/down thresholds
-	# to account for values in ST16 turtle mode
-	param set LNDMC_POS_UPTHR 0.67
+	# requires an ST16 in rabbit mode or with new
+	# stick mapping code
+	param set LNDMC_POS_UPTHR 0.6
 	param set LNDMC_MAN_DWNTHR 0.25
 
 	# sensor thermal calibration
