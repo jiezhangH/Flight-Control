@@ -126,6 +126,111 @@ TAP_ESC_UPLOADER::initialise_firmware_file(const char *filenames[])
 }
 
 int
+TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
+{
+	int	ret = -1;
+
+	/******************************************
+	 * first:send sync
+	 ******************************************/
+	PX4_LOG("uploader esc_id %d...", esc_id);
+
+	/* look for the bootloader, blocking 60 ms */
+	for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
+		ret = sync(esc_id);
+
+		if (ret == OK) {
+			break;
+
+		} else {
+			usleep(100000);
+		}
+	}
+
+	if (ret != OK) {
+		/* this is immediately fatal */
+		PX4_LOG("esc_id %d bootloader not responding", esc_id);
+		return -EIO;
+	}
+
+	/* do the usual program thing - allow for failure */
+	for (unsigned retries = 0; retries < UPLOADER_RETRY_TIMES; retries++) {
+		if (retries > 0) {
+			PX4_LOG("esc_id %d retrying update...", esc_id);
+			ret = sync(esc_id);
+
+			if (ret != OK) {
+				/* this is immediately fatal */
+				PX4_LOG("esc_id %d bootloader not responding", esc_id);
+				return -EIO;
+			}
+		}
+
+		/******************************************
+		* second: get device bootloader revision
+		 ******************************************/
+		ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, _bl_rev);
+
+		if (ret == OK) {
+			if (_bl_rev <= PROTO_SUPPORT_BL_REV) {
+				PX4_LOG("esc_id %d found bootloader revision: %d", esc_id, _bl_rev);
+
+			} else {
+				PX4_LOG("esc_id %d found unsupported bootloader revision %d, exiting", esc_id, _bl_rev);
+				return EPERM;
+			}
+		}
+
+		/******************************************
+		* third: erase program
+		 ******************************************/
+		ret = erase(esc_id);
+
+		if (ret != OK) {
+			PX4_LOG("esc_id %d %d erase failed", esc_id, ret);
+			continue;
+		}
+
+		/******************************************
+		* fourth: program
+		 ******************************************/
+		ret = program(esc_id, fw_size);
+
+		if (ret != OK) {
+			PX4_LOG("esc_id %d program failed", esc_id);
+			continue;
+		}
+
+		/******************************************
+		* fifth: verify flash crc
+		 *****************************************/
+		ret = verify_crc(esc_id, fw_size);
+
+		if (ret != OK) {
+			PX4_LOG("verify failed");
+			continue;
+		}
+
+		/******************************************
+		* sixth: reboot tap esc
+		 *****************************************/
+		ret = reboot(esc_id);
+
+		if (ret != OK) {
+			PX4_LOG("reboot failed");
+			return ret;
+		}
+
+		PX4_LOG("esc_id %d uploader complete", esc_id);
+
+		ret = OK;
+		break;
+	}
+
+	return OK;
+}
+
+int
 TAP_ESC_UPLOADER::upload(const char *filenames[])
 {
 	int	ret = -1;
@@ -145,105 +250,10 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 		return ret;
 	}
 
-	/* uploader esc_id(0,1,2,3,4,5) */
+	/* uploader esc_id(0,1,2,3,4,5), uploader begin esc id0 */
 	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
 
-		/******************************************
-		 * first:send sync
-		 ******************************************/
-		PX4_LOG("uploader esc_id %d...", esc_id);
-
-		/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
-		for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
-			ret = sync(esc_id);
-
-			if (ret == OK) {
-				break;
-
-			} else {
-				usleep(100000);
-			}
-		}
-
-		if (ret != OK) {
-			/* this is immediately fatal */
-			PX4_LOG("esc_id %d bootloader not responding", esc_id);
-			return -EIO;
-		}
-
-		/* do the usual program thing - allow for failure */
-		for (unsigned retries = 0; retries < UPLOADER_RETRY_TIMES; retries++) {
-			if (retries > 0) {
-				PX4_LOG("esc_id %d retrying update...", esc_id);
-				ret = sync(esc_id);
-
-				if (ret != OK) {
-					/* this is immediately fatal */
-					PX4_LOG("esc_id %d bootloader not responding", esc_id);
-					return -EIO;
-				}
-			}
-
-			/******************************************
-			* second: get device bootloader revision
-			 ******************************************/
-			ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, _bl_rev);
-
-			if (ret == OK) {
-				if (_bl_rev <= PROTO_SUPPORT_BL_REV) {
-					PX4_LOG("esc_id %d found bootloader revision: %d", esc_id, _bl_rev);
-
-				} else {
-					PX4_LOG("esc_id %d found unsupported bootloader revision %d, exiting", esc_id, _bl_rev);
-					return EPERM;
-				}
-			}
-
-			/******************************************
-			* third: erase program
-			 ******************************************/
-			ret = erase(esc_id);
-
-			if (ret != OK) {
-				PX4_LOG("esc_id %d %d erase failed", esc_id, ret);
-				continue;
-			}
-
-			/******************************************
-			* fourth: program
-			 ******************************************/
-			ret = program(esc_id, fw_size);
-
-			if (ret != OK) {
-				PX4_LOG("esc_id %d program failed", esc_id);
-				continue;
-			}
-
-			/******************************************
-			* fifth: verify flash crc
-			 *****************************************/
-			ret = verify_crc(esc_id, fw_size);
-
-			if (ret != OK) {
-				PX4_LOG("verify failed");
-				continue;
-			}
-
-			/******************************************
-			* sixth: reboot tap esc
-			 *****************************************/
-			ret = reboot(esc_id);
-
-			if (ret != OK) {
-				PX4_LOG("reboot failed");
-				return ret;
-			}
-
-			PX4_LOG("esc_id %d uploader complete", esc_id);
-
-			ret = OK;
-			break;
-		}
+		ret = upload_id(esc_id, fw_size);
 	}
 
 	// sleep for enough time for the TAP ESC chip to boot. This makes

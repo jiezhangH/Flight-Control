@@ -224,6 +224,7 @@ private:
 	EscUploaderMessage  	_uploader_packet;
 
 	int32_t 	initialise_firmware_file(const char *filenames[]);
+	int			upload_id(uint8_t esc_id, int32_t fw_size);
 	int 		recv_byte_with_timeout(uint8_t *c, unsigned timeout);
 	int 		read_and_parse_data(unsigned timeout = 50);
 	int 		parse_tap_esc_feedback(uint8_t decode_data, EscUploaderMessage *packetdata);
