@@ -53,14 +53,14 @@ then
 	else
 		# TAP v2
 		# pitch angle & rate setting
-		param set MC_PITCHRATE_P 0.09
+		param set MC_PITCHRATE_P 0.1
 		param set MC_PITCHRATE_I 0.085
 		param set MC_PITCHRATE_D 0.001
 		param set MC_PITCHRATE_MAX 360.0
 		param set MC_PITCH_P 7.2
 
 		# roll angle & rate setting
-		param set MC_ROLLRATE_P 0.09
+		param set MC_ROLLRATE_P 0.1
 		param set MC_ROLLRATE_I 0.085
 		param set MC_ROLLRATE_D 0.001
 		param set MC_ROLLRATE_MAX 360.0
@@ -69,7 +69,8 @@ then
 		# yaw angle & rate setting
 		param set MC_YAWRATE_P 0.13
 		param set MC_YAWRATE_I 0.05
-		param set MC_YAWRATE_MAX 90.0
+		param set MC_YAWRATE_MAX 100.0
+		param set MC_YAWRAUTO_MAX 80.0
 		param set MC_YAW_P 6
 
 		# hover thrust
@@ -78,7 +79,7 @@ then
 
 		# Position control parameters
 		param set MPC_XY_P 2.5
-		param set MPC_XY_VEL_P 0.15
+		param set MPC_XY_VEL_P 0.17
 		param set MPC_XY_VEL_D 0.007
 		param set MPC_XY_VEL_I 0.02
 		param set MPC_Z_VEL_P 0.6
@@ -94,15 +95,16 @@ then
 		param set MPC_Z_MAN_EXPO 0.6
 
 		# Position control velocity
-		param set MPC_XY_CRUISE 11.0
+		param set MPC_XY_CRUISE 5.0
+		param set MPC_VEL_MANUAL 13.5
 		param set MPC_XY_VEL_MAX 14.0
-		param set MPC_ACC_HOR_MAX 10.0
+		param set MPC_ACC_HOR_MAX 15.0
 		param set MPC_ACC_HOR_MAN 6.0
 		param set MPC_DEC_HOR_SLOW 1.0
 		param set MPC_Z_VEL_MAX_UP 5.0
 		param set MPC_Z_VEL_MAX_DN 3.0
 		param set MPC_LAND_SPEED 0.8
-		param set MPC_JERK_MAX 30
+		param set MPC_JERK_MAX 15
 		param set MPC_JERK_MIN 0.1
 
 		# Throttle pid attenuation
@@ -135,8 +137,11 @@ then
 
 	#
 	# Maximum tilt angle
-	# TODO tilt back to 30.0 as soon as velocity delay is fixed
-	param set MPC_TILTMAX_AIR 35.0
+	param set MPC_TILTMAX_AIR 45.0
+
+	#
+	# Smoothing happening between waypoints
+	param set MPC_POS_SMOOTH 30.0
 
 	#
 	# Battery setting
@@ -220,7 +225,7 @@ then
 	# Set landing detection stick up/down thresholds
 	# requires an ST16 in rabbit mode or with new
 	# stick mapping code
-	param set LNDMC_POS_UPTHR 0.6
+	param set LNDMC_POS_UPTHR 0.55
 	param set LNDMC_MAN_DWNTHR 0.25
 
 	# sensor thermal calibration

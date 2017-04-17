@@ -8,7 +8,7 @@ then
 	param set PWM_MIN 1075
 	param set PWM_MAX 1950
 
-	param set NAV_ACC_RAD 5.0
+	param set NAV_ACC_RAD 4.0
 	param set NAV_MC_ALT_RAD 0.8
 	param set MPC_TKO_SPEED 0.6
 	param set MIS_TAKEOFF_ALT 2.5
