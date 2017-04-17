@@ -286,41 +286,44 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 		return ret;
 	}
 
-	/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
-	for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
-		ret = sync(0);
+	/* checkcrc esc_id(0,1,2,3,4,5), checkcrc begin esc id0 */
+	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
+		/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
+		for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
+			ret = sync(esc_id);
 
-		if (ret == OK) {
-			break;
+			if (ret == OK) {
+				break;
+
+			} else {
+				usleep(100000);
+			}
+		}
+
+		if (ret != OK) {
+			/* this is immediately fatal */
+			PX4_LOG("esc_id %d bootloader not responding", esc_id);
+			return -EIO;
+		}
+
+		/* compare esc flash crc with .bin file crc */
+		ret = verify_crc(esc_id, fw_size);
+
+		if (ret == -EINVAL) {
+			PX4_LOG("esc_id %d check CRC is different,will upload tap esc firmware ", esc_id);
+			ret = upload_id(esc_id, fw_size);
 
 		} else {
-			usleep(100000);
+			/* reboot tap esc_id */
+			reboot(esc_id);
 		}
 	}
 
-	if (ret != OK) {
-		/* this is immediately fatal */
-		PX4_LOG("esc_id0 bootloader not responding");
-		return -EIO;
-	}
+	// sleep for enough time for the TAP ESC chip to boot. This makes
+	// forceupdate more reliably startup TAP ESC again after update
+	up_udelay(20 * 1000);
 
-	/* only check esc_id0: compare esc flash crc with .bin file crc */
-	ret = verify_crc(0, fw_size);
-
-	if (ret == -EINVAL) {
-		PX4_LOG("check CRC is different,will upload tap esc firmware ");
-		upload(filenames);
-
-	} else {
-		/* reboot tap esc_id0 */
-		reboot(0);
-
-		// sleep for enough time for the TAP ESC chip to boot. This makes
-		// forceupdate more reliably startup TAP ESC again after update
-		up_udelay(20 * 1000);
-	}
-
-	exit(0);
+	return ret;
 }
 
 int
