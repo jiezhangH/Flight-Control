@@ -1357,9 +1357,14 @@ int tap_esc_main(int argc, char *argv[])
 		const char *fw[3] = TAP_ESC_FW_SEARCH_PATHS;
 		TAP_ESC_UPLOADER *check_up;
 		check_up = new TAP_ESC_UPLOADER(tap_esc_drv::_supported_channel_count);
-		check_up->checkcrc(&fw[0]);
+		int ret = check_up->checkcrc(&fw[0]);
 		delete check_up;
 
+		if (ret != OK) {
+			errx(1, "TAP_ESC firmware auto check crc and upload fail error %d", ret);
+		}
+
+		return ret;
 	}
 
 	else if (!strcmp(verb, "upload")) {
