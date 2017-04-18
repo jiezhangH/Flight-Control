@@ -34,7 +34,7 @@ echo 'shutdown' >> $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480
 
 # Build SITL
 cd $firmwaredir
-make posix_sitl_default gazebo_typhoon_h480
+HEADLESS=1 make posix_sitl_default gazebo_typhoon_h480
 
 # Revert recent change
 git checkout HEAD -- $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480
