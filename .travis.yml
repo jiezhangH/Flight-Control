@@ -70,7 +70,7 @@ script:
       PX4_DOCKER_REPO=px4io/px4-dev-clang ./Tools/docker_run.sh 'make clang-tidy-parallel';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       make tests;
-      ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./
+      ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
     fi
 
 deploy:
