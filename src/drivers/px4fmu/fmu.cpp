@@ -87,6 +87,7 @@
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/safety.h>
+#include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/adc_report.h>
 #include <uORB/topics/multirotor_motor_limits.h>
 
@@ -195,6 +196,7 @@ private:
 	int		_armed_sub;
 	int		_param_sub;
 	int		_adc_sub;
+	int   _sensor_sub;
 	struct rc_input_values	_rc_in;
 	float		_analog_rc_rssi_volt;
 	bool		_analog_rc_rssi_stable;
@@ -226,6 +228,7 @@ private:
 
 	static pwm_limit_t	_pwm_limit;
 	static actuator_armed_s	_armed;
+	static sensor_combined_s  _sensor_combind;
 	uint16_t	_failsafe_pwm[_max_actuators];
 	uint16_t	_disarmed_pwm[_max_actuators];
 	uint16_t	_min_pwm[_max_actuators];
@@ -315,6 +318,7 @@ const unsigned		PX4FMU::_ngpio = arraySize(PX4FMU::_gpio_tab);
 #endif
 pwm_limit_t		PX4FMU::_pwm_limit;
 actuator_armed_s	PX4FMU::_armed = {};
+sensor_combined_s   PX4FMU::_sensor_combind = {};
 
 namespace
 {
@@ -335,6 +339,7 @@ PX4FMU::PX4FMU() :
 	_armed_sub(-1),
 	_param_sub(-1),
 	_adc_sub(-1),
+	_sensor_sub(-1),
 	_rc_in{},
 	_analog_rc_rssi_volt(-1.0f),
 	_analog_rc_rssi_stable(false),
@@ -994,6 +999,7 @@ PX4FMU::cycle()
 		_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
 		_param_sub = orb_subscribe(ORB_ID(parameter_update));
 		_adc_sub = orb_subscribe(ORB_ID(adc_report));
+		_sensor_sub = orb_subscribe(ORB_ID(sensor_combined));
 
 		/* initialize PWM limit lib */
 		pwm_limit_init(&_pwm_limit);
@@ -1315,6 +1321,12 @@ PX4FMU::cycle()
 #endif
 	/* check arming state */
 	bool updated = false;
+	orb_check(_sensor_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(sensor_combined), _sensor_sub, &_sensor_combind);
+	}
+
 	orb_check(_armed_sub, &updated);
 
 	if (updated) {
