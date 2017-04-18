@@ -93,6 +93,11 @@ if args.board_revision != None:
 	desc['board_revision']	= int(args.board_revision)
 if args.version != None:
 	desc['version']		= str(args.version)
+else:
+	cmd = " ".join(["git", "describe", "--tags"])
+	p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
+	desc['version']	= str(p.read().strip())
+	p.close()
 if args.summary != None:
 	desc['summary']		= str(args.summary)
 if args.description != None:
