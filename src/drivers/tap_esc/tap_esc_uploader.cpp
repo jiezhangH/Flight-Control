@@ -822,12 +822,15 @@ TAP_ESC_UPLOADER::program(uint8_t esc_id, size_t fw_size)
 
 		/* fill the rest with 0xff */
 		if (n < PROG_MULTI_MAX) {
-			for (uint8_t i = count; i < PROG_MULTI_MAX; i++) {
-				file_buf[i] = 0xff;
-			}
+			/* if the file can read data */
+			if (count > 0) {
+				for (uint8_t i = count; i < PROG_MULTI_MAX; i++) {
+					file_buf[i] = 0xff;
+				}
 
-			count = PROG_MULTI_MAX;
-			n 	  = PROG_MULTI_MAX;
+				count = PROG_MULTI_MAX;
+				n 	  = PROG_MULTI_MAX;
+			}
 		}
 
 		if (count != (ssize_t)n) {
@@ -927,12 +930,15 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 
 		/* fill the rest with 0xff */
 		if (n < PROG_MULTI_MAX) {
-			for (uint8_t i = count; i < PROG_MULTI_MAX; i++) {
-				file_buf[i] = fill_blank;
-			}
+			/* if the file can read data */
+			if (count > 0) {
+				for (uint8_t i = count; i < PROG_MULTI_MAX; i++) {
+					file_buf[i] = fill_blank;
+				}
 
-			count = PROG_MULTI_MAX;
-			n 	  = PROG_MULTI_MAX;
+				count = PROG_MULTI_MAX;
+				n 	  = PROG_MULTI_MAX;
+			}
 		}
 
 		if (count != (ssize_t)n) {
