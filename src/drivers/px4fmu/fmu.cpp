@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
-
+#include <mathlib/mathlib.h>
 #include <nuttx/arch.h>
 
 #include <drivers/device/device.h>
@@ -1327,9 +1327,13 @@ PX4FMU::cycle()
 		orb_copy(ORB_ID(sensor_combined), _sensor_sub, &_sensor_combind);
 	}
 
+	matrix::Vector2f acc_xy(_sensor_combind.accelerometer_m_s2[0], _sensor_combind.accelerometer_m_s2[1]);
+
+	bool gear_switch_without_arm = (_sensor_combind.accelerometer_m_s2[2] > 9.0f) && acc_xy.length() < 1.0f;
+
 	orb_check(_armed_sub, &updated);
 
-	if (updated) {
+	if (updated || gear_switch_without_arm) {
 		orb_copy(ORB_ID(actuator_armed), _armed_sub, &_armed);
 
 		/* Update the armed status and check that we're not locked down.
@@ -1339,7 +1343,7 @@ PX4FMU::cycle()
 
 
 		/* update PWM status if armed or if disarmed PWM values are set */
-		bool pwm_on = _armed.armed || _num_disarmed_set > 0 || _armed.in_esc_calibration_mode;
+		bool pwm_on = _armed.armed || _num_disarmed_set > 0 || _armed.in_esc_calibration_mode || gear_switch_without_arm;
 
 		if (_pwm_on != pwm_on) {
 			_pwm_on = pwm_on;
