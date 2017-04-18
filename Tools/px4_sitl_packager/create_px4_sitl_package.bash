@@ -104,10 +104,10 @@ cp $firmwaredir/ROMFS/px4fmu_common/mixers/hexa_x.main.mix $tmpdir/ROMFS/px4fmu_
 cp $firmwaredir/ROMFS/px4fmu_common/mixers/mount_legs.aux.mix $tmpdir/ROMFS/px4fmu_common/mixers/
 
 # Add bash script to start it
-cp $firmwaredir/px4_sitl_packager/typhoon_sitl.bash $tmpdir/typhoon_sitl.bash
+cp $firmwaredir/Tools/px4_sitl_packager/typhoon_sitl.bash $tmpdir/typhoon_sitl.bash
 chmod +x $tmpdir/typhoon_sitl.bash
 # And add a readme
-cp $firmwaredir/px4_sitl_packager/README_package.md $tmpdir/README.md
+cp $firmwaredir/Tools/px4_sitl_packager/README_package.md $tmpdir/README.md
 
 # copy everything into zip
 curdir=`pwd`
