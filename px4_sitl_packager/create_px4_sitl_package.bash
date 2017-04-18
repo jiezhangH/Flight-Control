@@ -27,11 +27,20 @@ fi
 version=`cd $firmwaredir && git describe --always --tags --abbrev=10`
 
 tmpdir="/tmp/sitl"
-builddir="$firmwaredir/build_posix_sitl_ekf2"
+builddir="$firmwaredir/build_posix_sitl_default"
 
+# Force gazebo to shutdown after building SITL
+echo 'shutdown' >> $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480
+
+# Build SITL
+cd $firmwaredir
+make posix_sitl_default gazebo_typhoon_h480
+
+# Revert recent change
+git checkout HEAD -- $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480
 
 if [ ! -f "$builddir/src/firmware/posix/px4" ]; then
-    echo "Please run 'make posix_sitl_ekf2 gazebo_typhoon_h480' manually first"
+    echo "Build 'make posix_sitl_default gazebo_typhoon_h480' failed. Exit."
     exit 1
 fi
 
@@ -43,7 +52,7 @@ elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     os_string="Linux"
 fi
 
-mkdir -p $tmpdir/posix-configs/SITL/init/ekf2
+mkdir -p $tmpdir/posix-configs/SITL/init/default
 mkdir -p $tmpdir/Tools/sitl_gazebo/worlds
 mkdir -p $tmpdir/Tools/sitl_gazebo/models
 mkdir -p $tmpdir/ROMFS/px4fmu_common/mixers
@@ -84,9 +93,8 @@ cp $builddir/build_gazebo/librotors_gazebo_mavlink_interface.$lib_ending $tmpdir
 cp $builddir/build_gazebo/librotors_gazebo_motor_model.$lib_ending $tmpdir/build_gazebo/
 cp $builddir/build_gazebo/librotors_gazebo_multirotor_base_plugin.$lib_ending $tmpdir/build_gazebo/
 cp $builddir/build_gazebo/librotors_gazebo_wind_plugin.$lib_ending $tmpdir/build_gazebo/
-
 cp $firmwaredir/Tools/sitl_run.sh $tmpdir/Tools/
-cp $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480 $tmpdir/posix-configs/SITL/init/ekf2/
+cp $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480 $tmpdir/posix-configs/SITL/init/default/
 cp $firmwaredir/Tools/posix_lldbinit $tmpdir/Tools/
 cp $firmwaredir/Tools/posix.gdbinit $tmpdir/Tools/
 cp $firmwaredir/Tools/setup_gazebo.bash $tmpdir/Tools/
@@ -96,10 +104,10 @@ cp $firmwaredir/ROMFS/px4fmu_common/mixers/hexa_x.main.mix $tmpdir/ROMFS/px4fmu_
 cp $firmwaredir/ROMFS/px4fmu_common/mixers/mount_legs.aux.mix $tmpdir/ROMFS/px4fmu_common/mixers/
 
 # Add bash script to start it
-cp typhoon_sitl.bash $tmpdir/typhoon_sitl.bash
+cp $firmwaredir/px4_sitl_packager/typhoon_sitl.bash $tmpdir/typhoon_sitl.bash
 chmod +x $tmpdir/typhoon_sitl.bash
 # And add a readme
-cp README_package.md $tmpdir/README.md
+cp $firmwaredir/px4_sitl_packager/README_package.md $tmpdir/README.md
 
 # copy everything into zip
 curdir=`pwd`
