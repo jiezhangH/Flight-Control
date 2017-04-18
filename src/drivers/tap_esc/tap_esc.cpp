@@ -1277,7 +1277,7 @@ void usage()
 	PX4_INFO("       tap_esc status");
 	PX4_INFO("       tap_esc checkcrc -n <1-8>");
 	PX4_INFO("       tap_esc upload -n <1-8>");
-	PX4_INFO("       tap_esc upload custom_file -n <1-8>");
+	PX4_INFO("       tap_esc upload -n <1-8> custom_file (e.g:tap_esc upload -n 6 /fs/microsd/tap_esc.bin)");
 }
 
 } // namespace tap_esc
@@ -1382,9 +1382,9 @@ int tap_esc_main(int argc, char *argv[])
 
 		const char *fn[3] = TAP_ESC_FW_SEARCH_PATHS;
 
-		/* Override defaults if a path is passed on command line,use argv[2] path */
+		/* Override defaults if a path is passed on command line,use argv[4] path */
 		if (argc > 4) {
-			fn[0] = argv[2];
+			fn[0] = argv[4];
 			fn[1] = nullptr;
 		}
 
