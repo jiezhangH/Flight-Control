@@ -839,7 +839,7 @@ TAP_ESC_UPLOADER::program(uint8_t esc_id, size_t fw_size)
 				(unsigned)sent,
 				(int)count,
 				(int)errno);
-			ret = -errno;
+			ret = count;
 			break;
 		}
 
@@ -947,8 +947,7 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 				(unsigned)bytes_read,
 				(int)count,
 				(int)errno);
-			ret = -errno;
-			return -errno;
+			ret = count;
 		}
 
 		/* set the rest to 0xff */
@@ -958,7 +957,7 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 
 		/* stop if the file cannot be read */
 		if (count < 0) {
-			return -errno;
+			return count;
 		}
 
 		/* calculate crc32 sum */
