@@ -53,8 +53,10 @@ before_install:
 
 script:
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
-      ./Tools/docker_run.sh 'make check_px4fmu-v2_default check_px4fmu-v3_default check_px4fmu-v4_default check_tap-v1_default check_tap-v2_default';
+
+      ./Tools/docker_run.sh 'make check_px4fmu-v2_default check_px4fmu-v4_default check_tap-v2_default';
       ./Tools/generate_yuneec.py build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec ${AUTOPILOT_AES_KEY};
+
       mkdir -p s3Upload;
       cp build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec s3Upload;
       echo ${TRAVIS_TAG} > s3Upload/version;
