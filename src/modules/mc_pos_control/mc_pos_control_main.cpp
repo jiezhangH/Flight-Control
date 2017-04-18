@@ -2060,6 +2060,11 @@ MulticopterPositionControl::control_position(float dt)
 
 	_slow_land_gradual_velocity_limit();
 
+	/* Do not allow the drone to fly up when interrupting an auto mode */
+	if (_control_mode.flag_control_updated) {
+		_vel_sp(2) = math::max(_vel_sp(2), 0.f);
+	}
+
 	if (!_control_mode.flag_control_position_enabled) {
 		_reset_pos_sp = true;
 	}
