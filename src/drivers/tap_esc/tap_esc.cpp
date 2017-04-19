@@ -299,6 +299,9 @@ TAP_ESC::init()
 		return ret;
 	}
 
+	/* set wait time for tap esc configurate and write flash (0.2696s measure by Saleae logic Analyzer) */
+	usleep(30 * 1000);
+
 #if !defined(TAP_ESC_NO_VERIFY_CONFIG)
 
 	/* Verify All ESC got the config */
