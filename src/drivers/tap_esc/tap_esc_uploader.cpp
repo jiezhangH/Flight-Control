@@ -257,8 +257,9 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 	}
 
 	// sleep for enough time for the TAP ESC chip to boot. This makes
-	// forceupdate more reliably startup TAP ESC again after update
-	up_udelay(100 * 1000);
+	// update more reliably startup TAP ESC again after upload
+	// set wait time for tap esc form rebbot jump app(0.1269s measure by Saleae logic Analyzer)
+	usleep(130 * 1000);
 
 	return ret;
 }
@@ -320,8 +321,9 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 	}
 
 	// sleep for enough time for the TAP ESC chip to boot. This makes
-	// forceupdate more reliably startup TAP ESC again after update
-	up_udelay(20 * 1000);
+	// update more reliably startup TAP ESC again after upload
+	// set wait time for tap esc form rebbot jump app(0.1269s measure by Saleae logic Analyzer)
+	usleep(130 * 1000);
 
 	return ret;
 }
