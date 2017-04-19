@@ -30,7 +30,7 @@ tmpdir="/tmp/sitl"
 builddir="$firmwaredir/build_posix_sitl_default"
 
 # Force gazebo to shutdown after building SITL
-echo 'shutdown' >> $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480
+sed -i -e 's/simulator start -s/shutdown/g' ./posix-configs/SITL/init/ekf2/typhoon_h480
 
 # Build SITL
 cd $firmwaredir
