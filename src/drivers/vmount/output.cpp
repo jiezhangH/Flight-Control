@@ -92,10 +92,13 @@ void OutputBase::publish()
 		mount_orientation.attitude_euler_angle[i] = _angle_outputs[i];
 	}
 
-	//PX4_INFO("roll: %.2f, pitch: %.2f, yaw: %.2f",
+	//PX4_INFO("roll: %.2f deg, %.2f, pitch: %.2f, %.2f, yaw: %.2f, %.2f",
 	//		(double)_angle_outputs[0],
+	//		(double)_angle_speeds[0],
 	//		(double)_angle_outputs[1],
-	//		(double)_angle_outputs[2]);
+	//		(double)_angle_speeds[1],
+	//		(double)_angle_outputs[2],
+	//		(double)_angle_speeds[2]);
 
 	orb_publish_auto(ORB_ID(mount_orientation), &_mount_orientation_pub, &mount_orientation, &instance, ORB_PRIO_DEFAULT);
 }

@@ -66,9 +66,10 @@ bool InputRCSt16::_read_control_data_from_subscription(ControlData &control_data
 
 	float new_aux_values[4];
 
-	for (int i = 0; i < 4; ++i) {
-		new_aux_values[i] = _get_aux_value(manual_control_setpoint, i);
-	}
+	new_aux_values[0] = manual_control_setpoint.aux1;
+	new_aux_values[1] = manual_control_setpoint.aux2;
+	new_aux_values[2] = manual_control_setpoint.aux3;
+	new_aux_values[3] = manual_control_setpoint.aux4;
 
 	// If we were already active previously, we just update normally. Otherwise, there needs to be
 	// a major stick movement to re-activate manual (or it's running for the very first time).
