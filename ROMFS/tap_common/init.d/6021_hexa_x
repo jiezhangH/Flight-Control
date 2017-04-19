@@ -216,6 +216,23 @@ then
 	param set RC_MAP_FLTMODE 5
 	param set RC_MAP_GEAR_SW 11
 
+	# pan control
+	param set RC_MAP_AUX1 8
+	# tilt control
+	param set RC_MAP_AUX2 7
+	# tilt mode
+	param set RC_MAP_AUX3 9
+	# pan mode
+	param set RC_MAP_AUX4 10
+
+	# gimbal driver configuration
+	param set MNT_MODE_IN 4
+	param set MNT_MODE_OUT 2
+	param set MNT_MAN_CONTROL 1
+	param set MNT_MAN_ROLL 0
+	param set MNT_MAN_PITCH 2
+	param set MNT_MAN_YAW 1
+
 	#
 	# Arm button settings
 	#
