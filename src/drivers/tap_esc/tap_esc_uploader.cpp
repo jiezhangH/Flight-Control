@@ -143,7 +143,10 @@ TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
 			break;
 
 		} else {
-			usleep(100000);
+			if (i == 1) {
+				/* set wait time for tap esc form app jump reboot(0.311748s measure by Saleae logic Analyzer) */
+				usleep(260 * 1000);
+			}
 		}
 	}
 
@@ -297,7 +300,10 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 				break;
 
 			} else {
-				usleep(100000);
+				if (i == 1) {
+					/* set wait time for tap esc form app jump reboot(0.311748s measure by Saleae logic Analyzer) */
+					usleep(260 * 1000);
+				}
 			}
 		}
 
