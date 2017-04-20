@@ -73,11 +73,14 @@ if sys.version_info[0] < 3:
 else:
     runningPython3 = True
 
+
 class firmware(object):
     '''Loads a firmware file'''
 
     desc = {}
     image = bytes()
+    is_encrypted = False
+
     crctab = array.array('I', [
         0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
         0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988, 0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91,
@@ -120,11 +123,20 @@ class firmware(object):
         self.desc = json.load(f)
         f.close()
 
-        self.image = bytearray(zlib.decompress(base64.b64decode(self.desc['image'])))
+        if len(self.desc['image']) == 0 and len(self.desc['image_encrypted']) > 0:
+            self.is_encrypted = True
+            print("Found encrypted firmware binary")
+        else:
+            self.is_encrypted = False
 
-        # pad image to 4-byte length
-        while ((len(self.image) % 4) != 0):
-            self.image.append('\xff')
+        if not self.is_encrypted:
+            self.image = bytearray(zlib.decompress(base64.b64decode(self.desc['image'])))
+            # pad image to 4-byte length
+            while ((len(self.image) % 4) != 0):
+                self.image.append('\xff')
+        else:
+            self.image_encrypted = bytearray(zlib.decompress(base64.b64decode(self.desc['image_encrypted'])))
+            self.image_encrypted_iv = bytearray(base64.b64decode(self.desc['image_encrypted_iv']))
 
     def property(self, propname):
         return self.desc[propname]
@@ -154,6 +166,7 @@ class uploader(object):
     CMD_FAILED          = 3
     CMD_INVALID         = 4       # rev3+
     CMD_BAD_SILICON_REV = 5       # rev5+
+    CMD_BAD_KEY         = 27      # rev6+
 
     # command bytes
     CMD_NOP             = 6       # guaranteed to be discarded by the bootloader
@@ -169,9 +182,12 @@ class uploader(object):
     CMD_GET_CHIP        = 16      # rev5+  , get chip version
     CMD_SET_BOOT_DELAY  = 17      # rev5+  , set boot delay
     CMD_GET_CHIP_DES    = 18      # rev5+  , get chip description in ASCII
-    MAX_DES_LENGTH      = 20
-
     CMD_REBOOT          = 19
+    CMD_SET_IV          = 24      # rev6+  , Send AES-128 initialization vector (16 bytes)
+    CMD_PROG_MULTI_ENCRYPTED = 25 # rev6+  , like PROG_MULTI but encrypted with AES-128
+    CMD_CHECK_CRC       = 26      # rev6+  , check CRC on device which is included in the encrypted binary
+
+    MAX_DES_LENGTH      = 20
 
     CMD_INFO_BL_REV     = 20      # bootloader protocol revision
     CMD_INFO_BOARD_ID   = 21      # board type
@@ -183,12 +199,14 @@ class uploader(object):
     PROG_MULTI_MAX  = 252   # protocol max is 255, must be multiple of 4
     READ_MULTI_MAX  = 252   # protocol max is 255
 
+    PROG_MULTI_MAX_ENCRYPTED = 240  # max 255, multiple of 16
+
     PROTOCOL_UKN  = -1
     PROTOCOL_0    = 0
     PROTOCOL_1    = 1
-#                           0        1        2        3        4        5        6        7        8        9       10        11       12       13       14       15       16       17      18        19       20      21        22       23
-    protocol_cmds = [(b'\x12', b'\x20', b'\x10', b'\x11', b'\x13', b'\x14', b'\x00', b'\x21', b'\x22', b'\x23', b'\x24', b'\x27', b'\x28', b'\x29', b'\x2a', b'\x2b', b'\x2c', b'\x2d', b'\x2e', b'\x30', b'\x01', b'\x02', b'\x03', b'\x04'),
-                     (b'\xab', b'\xba', b'\xf0', b'\xf1', b'\xf3', b'\x14', b'\x00', b'\xe1', b'\xe2', b'\xe3', b'\x24', b'\xe4', b'\x28', b'\xe5', b'\xe6', b'\xe7', b'\x2c', b'\x2d', b'\x2e', b'\xe8', b'\x01', b'\x02', b'\x03', b'\x04')]
+#                           0        1        2        3        4        5        6        7        8        9       10       11       12       13       14       15       16       17      18        19       20      21        22       23      24       25       26       27
+    protocol_cmds = [(b'\x12', b'\x20', b'\x10', b'\x11', b'\x13', b'\x14', b'\x00', b'\x21', b'\x22', b'\x23', b'\x24', b'\x27', b'\x28', b'\x29', b'\x2a', b'\x2b', b'\x2c', b'\x2d', b'\x2e', b'\x30', b'\x01', b'\x02', b'\x03', b'\x04', b'\x36', b'\x37', b'\x38', b'\x15'),
+                     (b'\xab', b'\xba', b'\xf0', b'\xf1', b'\xf3', b'\x14', b'\x00', b'\xe1', b'\xe2', b'\xe3', b'\x24', b'\xe4', b'\x28', b'\xe5', b'\xe6', b'\xe7', b'\x2c', b'\x2d', b'\x2e', b'\xe8', b'\x01', b'\x02', b'\x03', b'\x04', b'\x36', b'\x37', b'\x38', b'\x15')]
 
     NSH_INIT        = bytearray(b'\x0d\x0d\x0d')
     NSH_REBOOT_BL   = b"reboot -b\n"
@@ -263,6 +281,8 @@ class uploader(object):
             raise RuntimeError("bootloader reports INVALID OPERATION")
         if c == self.__command(self.CMD_FAILED):
             raise RuntimeError("bootloader reports OPERATION FAILED")
+        if c == self.__command(self.CMD_BAD_KEY):
+            raise RuntimeError("bootloader key overwritten, encrypted flashing not possible")
         if c != self.__command(self.CMD_OK):
             raise RuntimeError("unexpected response 0x%x instead of OK" % ord(c))
 
@@ -278,7 +298,7 @@ class uploader(object):
                         self.__command(self.CMD_EOC))
             try:
                 self.__getSync()
-            except Exception as e:
+            except Exception:
                 self.protocol = self.PROTOCOL_1
                 self.__send(self.__command(self.CMD_GET_SYNC) +
                             self.__command(self.CMD_EOC))
@@ -430,6 +450,27 @@ class uploader(object):
         if self.bl_rev >= 3:
             self.__getSync()
 
+    # send AES-128 initialization vector
+    def __send_iv(self, data):
+        self.__send(self.__command(self.CMD_SET_IV))
+        self.__send(data)
+        self.__send(self.__command(self.CMD_EOC))
+        self.__getSync()
+
+    # send a PROG_MULTI_ENCRYPTED command to send encrypted binary
+    def __program_multi_encrypted(self, data):
+
+        if runningPython3:
+            length = len(data).to_bytes(1, byteorder='big')
+        else:
+            length = chr(len(data))
+
+        self.__send(self.__command(self.CMD_PROG_MULTI_ENCRYPTED))
+        self.__send(length)
+        self.__send(data)
+        self.__send(self.__command(self.CMD_EOC))
+        self.__getSync()
+
     # split a sequence into a list of size-constrained pieces
     def __split_len(self, seq, length):
         return [seq[i:i+length] for i in range(0, len(seq), length)]
@@ -443,6 +484,25 @@ class uploader(object):
         uploadProgress = 0
         for bytes in groups:
             self.__program_multi(bytes)
+
+            # Print upload progress (throttled, so it does not delay upload progress)
+            uploadProgress += 1
+            if uploadProgress % 256 == 0:
+                self.__drawProgressBar(label, uploadProgress, len(groups))
+        self.__drawProgressBar(label, 100, 100)
+
+    # upload encrypted image containing header and binary
+    def __program_encrypted(self, label, fw):
+        print("\n", end='')
+
+        self.__send_iv(fw.image_encrypted_iv)
+
+        code = fw.image_encrypted
+        groups = self.__split_len(code, self.PROG_MULTI_MAX_ENCRYPTED)
+
+        uploadProgress = 0
+        for bytes in groups:
+            self.__program_multi_encrypted(bytes)
 
             # Print upload progress (throttled, so it does not delay upload progress)
             uploadProgress += 1
@@ -479,6 +539,15 @@ class uploader(object):
             print("Expected 0x%x" % expect_crc)
             print("Got      0x%x" % report_crc)
             raise RuntimeError("Program CRC failed")
+        self.__drawProgressBar(label, 100, 100)
+
+    # initiate CRC check on the bootloader
+    def __check_crc(self, label, fw):
+        print("\n", end='')
+        self.__drawProgressBar(label, 1, 100)
+        self.__send(self.__command(self.CMD_CHECK_CRC) +
+                    self.__command(self.CMD_EOC))
+        self.__getSync()
         self.__drawProgressBar(label, 100, 100)
 
     def __set_boot_delay(self, boot_delay):
@@ -553,13 +622,19 @@ class uploader(object):
                 # ignore bad character encodings
                 pass
 
-        self.__erase("Erase  ")
-        self.__program("Program", fw)
+        if self.bl_rev < 6 and fw.is_encrypted:
+            raise Exception("Bootloader rev %d doesn't support encrypted upload" % self.bl_rev)
 
-        if self.bl_rev == 2:
-            self.__verify_v2("Verify ", fw)
+        self.__erase("Erase  ")
+        if not fw.is_encrypted:
+            self.__program("Program", fw)
+            if self.bl_rev == 2:
+                self.__verify_v2("Verify ", fw)
+            else:
+                self.__verify_v3("Verify ", fw)
         else:
-            self.__verify_v3("Verify ", fw)
+            self.__program_encrypted("Program", fw)
+            self.__check_crc("Check  ", fw)
 
         if boot_delay is not None:
             self.__set_boot_delay(boot_delay)
