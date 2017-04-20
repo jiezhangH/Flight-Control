@@ -123,7 +123,7 @@ then
 		param set BAT_V_LOAD_DROP 0.18
 
 		# Altitude (manual) mode parameters
-		param set MPC_MAN_TILT_MAX 14
+		param set MPC_MAN_TILT_MAX 24
 	fi
 
 	#
