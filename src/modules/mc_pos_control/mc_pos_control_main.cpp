@@ -1502,7 +1502,7 @@ MulticopterPositionControl::control_non_manual(float dt)
 				// remembering to remove _params.thr_hover which is added later as a feed-forward in control_position.
 				_thrust_int(2) = _takeoff_thrust_sp - _params.vel_p(2) * fabsf(_params.tko_speed) - _params.thr_hover;
 				_thrust_int(2) = -math::constrain(_thrust_int(2), _params.thr_min, _params.thr_max);
-				_vel_sp_prev(2) = -_params.tko_speed;
+				_vel_sp_prev(2) = 0.0f;
 				_takeoff_jumped = true;
 				_reset_int_z = false;
 			}
@@ -2052,6 +2052,12 @@ MulticopterPositionControl::control_position(float dt)
 	    && (_vel_sp(2) < -_params.tko_speed)) {
 
 		_vel_sp(2) = -_params.tko_speed;
+
+	} else if ((_vel(2) > -_params.tko_speed)
+		   && (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF)) {
+		if (!_takeoff_jumped) {
+			_vel_sp(2) = 0.0f;
+		}
 
 	} else if (_vel_sp(2) < -1.0f * _params.vel_max_up) {
 		_vel_sp(2) = -1.0f * _params.vel_max_up;
