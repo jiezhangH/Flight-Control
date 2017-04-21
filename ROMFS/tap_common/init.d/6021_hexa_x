@@ -155,6 +155,11 @@ then
 	param set BAT_N_CELLS 4
 
 	#
+	# Calibrate by rotating around arms
+	#
+	param set CAL_MAG_METHOD 1
+
+	#
 	# Flight modes
 	#
 	# RTL
