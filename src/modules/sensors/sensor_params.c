@@ -707,6 +707,15 @@ PARAM_DEFINE_INT32(CAL_MAG_PRIME, 0);
 PARAM_DEFINE_INT32(CAL_MAG_SIDES, 63);
 
 /**
+ * Mag calibration method
+ *
+ * @value 0 Rotate around vehicle axes
+ * @value 1 Rotate around vehicle arms
+ * @group Sensor Calibration
+ */
+PARAM_DEFINE_INT32(CAL_MAG_METHOD, 0);
+
+/**
  * Primary baro ID
  *
  * @group Sensor Calibration
