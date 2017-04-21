@@ -54,6 +54,7 @@
 
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/sensor_combined.h>
+#include <uORB/topics/sensor_gyro.h>
 
 #include <drivers/drv_tone_alarm.h>
 
@@ -798,7 +799,7 @@ calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,
 	return result;
 }
 
-calibrate_return calibrate_from_orientation2(orb_advert_t *mavlink_log_pub,
+calibrate_return calibrate_from_hex_orientation(orb_advert_t *mavlink_log_pub,
 		int		cancel_sub,
 		bool	side_data_collected[detect_orientation_side_count],
 		calibration_from_orientation_worker_t calibration_worker,
@@ -892,6 +893,77 @@ calibrate_return calibrate_from_orientation2(orb_advert_t *mavlink_log_pub,
 		// temporary priority boost for the white blinking led to come trough
 		usleep(200000);
 	}
+
+	return result;
+}
+
+calibrate_return calibrate_detect_rotation(orb_advert_t *mavlink_log_pub, int cancel_sub, hrt_abstime detection_deadline)
+{
+		/*
+	 * Detect if the system is rotating.
+	 *
+	 * We're detecting this as a general rotation on any axis, not necessary on the one we
+	 * asked the user for. This is because we really just need two roughly orthogonal axes
+	 * for a good result, so we're not constraining the user more than we have to.
+	 */
+
+	hrt_abstime last_gyro = 0;
+	float gyro_x_integral = 0.0f;
+	float gyro_y_integral = 0.0f;
+	float gyro_z_integral = 0.0f;
+
+	calibrate_return result = calibrate_return_ok;
+
+	const float gyro_int_thresh_rad = 0.5f;
+
+	int sub_gyro = orb_subscribe(ORB_ID(sensor_gyro));
+
+	while (fabsf(gyro_x_integral) < gyro_int_thresh_rad &&
+	       fabsf(gyro_y_integral) < gyro_int_thresh_rad &&
+	       fabsf(gyro_z_integral) < gyro_int_thresh_rad) {
+
+		/* abort on request */
+		if (calibrate_cancel_check(mavlink_log_pub, cancel_sub)) {
+			result = calibrate_return_cancelled;
+			px4_close(sub_gyro);
+			return result;
+		}
+
+		/* abort with timeout */
+		if (hrt_absolute_time() > detection_deadline) {
+			result = calibrate_return_error;
+			warnx("int: %8.4f, %8.4f, %8.4f", (double)gyro_x_integral, (double)gyro_y_integral, (double)gyro_z_integral);
+			calibration_log_critical(mavlink_log_pub, "Failed: This calibration requires rotation.");
+			break;
+		}
+
+		/* Wait clocking for new data on all gyro */
+		px4_pollfd_struct_t fds[1];
+		fds[0].fd = sub_gyro;
+		fds[0].events = POLLIN;
+		size_t fd_count = 1;
+
+		int poll_ret = px4_poll(fds, fd_count, 1000);
+
+		if (poll_ret > 0) {
+			struct sensor_gyro_s gyro;
+			orb_copy(ORB_ID(sensor_gyro), sub_gyro, &gyro);
+
+			/* ensure we have a valid first timestamp */
+			if (last_gyro > 0) {
+
+				/* integrate */
+				float delta_t = (gyro.timestamp - last_gyro) / 1e6f;
+				gyro_x_integral += gyro.x * delta_t;
+				gyro_y_integral += gyro.y * delta_t;
+				gyro_z_integral += gyro.z * delta_t;
+			}
+
+			last_gyro = gyro.timestamp;
+		}
+	}
+
+	orb_unsubscribe(sub_gyro);
 
 	return result;
 }

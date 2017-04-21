@@ -34,6 +34,8 @@
 /// @file calibration_routines.h
 ///	@authot Don Gagne <don@thegagnes.com>
 
+#include <drivers/drv_hrt.h>
+
 /**
  * Least-squares fit of a sphere to a set of points.
  *
@@ -117,12 +119,18 @@ calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,		///<
 		void	*worker_data,						///< Opaque data passed to worker routine
 		bool	lenient_still_detection);				///< true: Use more lenient still position detection
 
-calibrate_return calibrate_from_orientation2(orb_advert_t *mavlink_log_pub,
+/// Perform calibration sequence which require a rest orientation detection prior to calibration.
+///	@return OK: Calibration succeeded, ERROR: Calibration failed
+calibrate_return calibrate_from_hex_orientation(orb_advert_t *mavlink_log_pub,
 		int		cancel_sub,
 		bool	side_data_collected[detect_orientation_side_count],
 		calibration_from_orientation_worker_t calibration_worker,
 		void	*worker_data,
 		bool	lenient_still_position);
+
+/// Detect if any rotation is happening
+calibrate_return calibrate_detect_rotation(orb_advert_t *mavlink_log_pub, int cancel_sub, hrt_abstime detection_deadline);
+
 /// Called at the beginning of calibration in order to subscribe to the cancel command
 ///	@return Handle to vehicle_command subscription
 int calibrate_cancel_subscribe(void);

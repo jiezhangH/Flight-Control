@@ -274,7 +274,7 @@ int do_mag_calibration(orb_advert_t *mavlink_log_pub)
 static bool reject_sample(float sx, float sy, float sz, float x[], float y[], float z[], unsigned count,
 			  unsigned max_count)
 {
-	float min_sample_dist = fabsf(5.4f * mag_sphere_radius / sqrtf(max_count) - 0.024f) / 3.0f;
+	float min_sample_dist = fabsf(5.4f * mag_sphere_radius / sqrtf(max_count)) / 3.0f;
 
 	for (size_t i = 0; i < count; i++) {
 		float dx = sx - x[i];
@@ -356,11 +356,25 @@ static calibrate_return mag_calibration_worker(detect_orientation_return orienta
 	calibration_log_info(worker_data->mavlink_log_pub, "[cal] Continue rotation for %s %u s",
 			     detect_orientation_str(orientation), worker_data->calibration_interval_perside_seconds);
 
+	uint32_t cal_method = 0;
+	(void)param_get(param_find("CAL_MAG_METHOD"), &cal_method);
+
+	uint64_t calibration_deadline = hrt_absolute_time() + worker_data->calibration_interval_perside_useconds;
+
+	if (cal_method == 0) {
+		// Standard method times out quickly after each side
+		result = calibrate_detect_rotation(worker_data->mavlink_log_pub, cancel_sub, hrt_absolute_time() + worker_data->calibration_interval_perside_useconds * 5);
+	} else {
+		// Other methods time out only after 60 seconds
+		calibration_deadline = hrt_absolute_time() + 60 * 1000 * 1000;
+	}
+
 	unsigned poll_errcount = 0;
 
 	calibration_counter_side = 0;
 
-	while (calibration_counter_side < worker_data->calibration_points_perside) {
+	while (hrt_absolute_time() < calibration_deadline &&
+	       calibration_counter_side < worker_data->calibration_points_perside) {
 
 		if (calibrate_cancel_check(worker_data->mavlink_log_pub, cancel_sub)) {
 			result = calibrate_return_cancelled;
@@ -580,12 +594,27 @@ calibrate_return mag_calibrate_all(orb_advert_t *mavlink_log_pub)
 	if (result == calibrate_return_ok) {
 		int cancel_sub  = calibrate_cancel_subscribe();
 
-		result = calibrate_from_orientation2(mavlink_log_pub,                    // uORB handle to write output
-						    cancel_sub,                         // Subscription to vehicle_command for cancel support
-						    worker_data.side_data_collected,    // Sides to calibrate
-						    mag_calibration_worker,             // Calibration worker
-						    &worker_data,			// Opaque data for calibration worked
-						    true);				// true: lenient still detection
+		uint32_t cal_method = 0;
+		(void)param_get(param_find("CAL_MAG_METHOD"), &cal_method);
+
+		if (cal_method == 0) {
+			result = calibrate_from_orientation(mavlink_log_pub,                    // uORB handle to write output
+							    cancel_sub,                         // Subscription to vehicle_command for cancel support
+							    worker_data.side_data_collected,    // Sides to calibrate
+							    mag_calibration_worker,             // Calibration worker
+							    &worker_data,			// Opaque data for calibration worked
+							    true);				// true: lenient still detection
+		} else {
+
+			result = calibrate_from_hex_orientation(mavlink_log_pub,                    // uORB handle to write output
+					    cancel_sub,                         // Subscription to vehicle_command for cancel support
+					    worker_data.side_data_collected,    // Sides to calibrate
+					    mag_calibration_worker,             // Calibration worker
+					    &worker_data,			// Opaque data for calibration worked
+					    true);				// true: lenient still detection
+		}
+
+
 		calibrate_cancel_unsubscribe(cancel_sub);
 	}
 
