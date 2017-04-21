@@ -73,7 +73,6 @@ TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
 	_esc_fd(-1),
 	_fw_fd(-1),
 	_esc_counter(esc_counter),
-	_bl_rev(0),
 	_uploader_packet{},
 	_mavlink_log_pub(nullptr)
 {
@@ -174,16 +173,20 @@ TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
 		/******************************************
 		* second: get device bootloader revision
 		 ******************************************/
-		ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, _bl_rev);
+		uint32_t bl_rev;
+		ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, bl_rev);
 
 		if (ret == OK) {
-			if (_bl_rev <= PROTO_SUPPORT_BL_REV) {
-				PX4_LOG("esc_id %d found bootloader revision: %d", esc_id, _bl_rev);
+			if (bl_rev <= PROTO_SUPPORT_BL_REV) {
+				PX4_LOG("esc_id %d found bootloader revision: %d", esc_id, bl_rev);
 
 			} else {
-				PX4_LOG("esc_id %d found unsupported bootloader revision %d, exiting", esc_id, _bl_rev);
+				PX4_LOG("esc_id %d found unsupported bootloader revision %d, exiting", esc_id, bl_rev);
 				return EPERM;
 			}
+
+		} else {
+			PX4_LOG("esc_id %d found bootloader revision failed", esc_id);
 		}
 
 		/******************************************

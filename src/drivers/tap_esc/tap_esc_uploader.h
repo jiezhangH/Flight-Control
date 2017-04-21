@@ -217,7 +217,6 @@ private:
 	int			_esc_fd;
 	int			_fw_fd;
 	uint8_t 	_esc_counter;
-	uint32_t				_bl_rev; /**< bootloader revision */
 
 	/* _device_mux_map[sel]:Asign the id's to the ESC to match the mux */
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
