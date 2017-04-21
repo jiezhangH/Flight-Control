@@ -56,6 +56,7 @@
 #include <nuttx/arch.h>
 #include <crc32.h>
 #include <systemlib/px4_macros.h>
+#include <systemlib/mavlink_log.h>
 #include <drivers/drv_hrt.h>
 #include <sys/ioctl.h>
 
@@ -73,7 +74,8 @@ TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
 	_fw_fd(-1),
 	_esc_counter(esc_counter),
 	_bl_rev(0),
-	_uploader_packet{}
+	_uploader_packet{},
+	_mavlink_log_pub(nullptr)
 {
 
 }
@@ -313,11 +315,44 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 			continue;
 		}
 
+		uint32_t temp_revision;
+
+		/* get device bootloader revision */
+		ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, temp_revision);
+
+		if (ret == OK) {
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found bootloader revision: %d", esc_id, temp_revision);
+
+		} else {
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found bootloader revision failed", esc_id);
+		}
+
+		/* get device firmware revision */
+		ret = get_device_info(esc_id, PROTO_DEVICE_FW_REV, temp_revision);
+
+		if (ret == OK) {
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found firmware revision: %d", esc_id, temp_revision);
+
+		} else {
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found firmware revision failed");
+		}
+
+		/* get device hardware revision */
+		ret = get_device_info(esc_id, PROTO_DEVICE_BOARD_REV, temp_revision);
+
+		if (ret == OK) {
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found board revision: %02x", esc_id, temp_revision);
+
+		}  else {
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found board revision failed");
+		}
+
 		/* compare esc flash crc with .bin file crc */
 		ret = verify_crc(esc_id, fw_size);
 
 		if (ret == -EINVAL) {
-			PX4_LOG("esc_id %d check CRC is different,will upload tap esc firmware ", esc_id);
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d check CRC is different,will upload tap esc firmware ",
+						     esc_id);
 			ret = upload_id(esc_id, fw_size);
 
 		} else {

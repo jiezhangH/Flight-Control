@@ -222,7 +222,7 @@ private:
 	/* _device_mux_map[sel]:Asign the id's to the ESC to match the mux */
 	static const uint8_t 	_device_mux_map[TAP_ESC_MAX_MOTOR_NUM];
 	EscUploaderMessage  	_uploader_packet;
-
+	orb_advert_t    		_mavlink_log_pub;
 	int32_t 	initialise_firmware_file(const char *filenames[]);
 	int			upload_id(uint8_t esc_id, int32_t fw_size);
 	int 		recv_byte_with_timeout(uint8_t *c, unsigned timeout);
