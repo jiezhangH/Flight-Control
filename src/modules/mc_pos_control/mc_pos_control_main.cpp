@@ -1004,9 +1004,11 @@ MulticopterPositionControl::get_cruising_speed_xy()
 void
 MulticopterPositionControl::apply_gear_switch()
 {
+	//reset the _gear_state_initialized after disarmed
 	// record the state that when disarmed in position mode and the gear switch on.
 	// TODO: avoid next time at the time armed and the gear_switch:SWITCH_POS_ON, the gear up, this is not safe
-	if (!_armed_last && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+	if ((!_armed_last && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON)
+	    || !_arming.armed) {
 		_gear_state_initialized = false;
 	}
 
