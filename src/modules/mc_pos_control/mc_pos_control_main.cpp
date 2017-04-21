@@ -1069,7 +1069,7 @@ MulticopterPositionControl::set_manual_acceleration(matrix::Vector2f &stick_xy, 
 		/* we do manual deceleration */
 		intention = deceleration;
 
-	} else if (!is_aligned && stick_xy.length() > 0.5f) {
+	} else if (!is_aligned && stick_xy.length() > 0.8f) {
 		/* we have a direction change */
 		intention = direction_change;
 
