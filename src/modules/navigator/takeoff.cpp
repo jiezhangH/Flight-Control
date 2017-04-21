@@ -55,6 +55,7 @@
 
 Takeoff::Takeoff(Navigator *navigator, const char *name) :
 	MissionBlock(navigator, name),
+	_param_alt_rad(this, "NAV_MC_ALT_RAD", false),
 	_param_min_alt(this, "MIS_TAKEOFF_ALT", false)
 {
 	// load initial params
@@ -105,7 +106,8 @@ Takeoff::set_takeoff_position()
 
 	float abs_altitude = 0.0f;
 
-	const float min_abs_altitude = _navigator->get_home_position()->alt + _param_min_alt.get();
+	const float min_abs_altitude = _navigator->get_home_position()->alt + _param_min_alt.get() + 0.5f *
+				       _param_alt_rad.get();
 
 	// Use altitude if it has been set.
 	if (rep->current.valid && PX4_ISFINITE(rep->current.alt)) {
