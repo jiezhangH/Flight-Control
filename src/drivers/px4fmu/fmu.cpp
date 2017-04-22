@@ -1329,7 +1329,7 @@ PX4FMU::cycle()
 
 	matrix::Vector2f acc_xy(_sensor_combind.accelerometer_m_s2[0], _sensor_combind.accelerometer_m_s2[1]);
 
-	bool gear_switch_without_arm = (_sensor_combind.accelerometer_m_s2[2] > 9.0f) && (acc_xy.length() < 1.0f)
+	bool gear_switch_without_arm = (_sensor_combind.accelerometer_m_s2[2] > 9.0f) && (acc_xy.length() < 0.5f)
 				       && (!_armed.armed);
 
 	orb_check(_armed_sub, &updated);
