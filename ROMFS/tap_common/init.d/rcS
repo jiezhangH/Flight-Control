@@ -81,17 +81,20 @@ fi
 
 if ver hwcmp TAP_V2
 then
-	# load the temperature calibration data from EEPROM.
-	if param load /fs/mtd_caldata
-	then
-	fi
 
 	# now load from SD card, which can override the temp calib params
 	param select $PARAM_FILE
 	# we need to use param import (instead of load), because load will cause a reset
-	if param import
+	if param load
 	then
 	fi
+	
+	# load the temperature calibration data from EEPROM.
+	if param import /fs/mtd_caldata
+	then
+	fi
+	
+	
 else
 # tap v1
 	if param load
