@@ -136,6 +136,8 @@ typedef enum VEHICLE_MODE_FLAG
 
 static constexpr uint8_t COMMANDER_MAX_GPS_NOISE = 60;		/**< Maximum percentage signal to noise ratio allowed for GPS reception */
 
+bool prevent_poweroff_flag = false; ///< If the system is armed it is not allowed to power off and this flag is set to true
+
 /* Decouple update interval and hysteresis counters, all depends on intervals */
 #define COMMANDER_MONITORING_INTERVAL 10000
 #define COMMANDER_MONITORING_LOOPSPERMSEC (1/(COMMANDER_MONITORING_INTERVAL/1000.0f))
@@ -1754,6 +1756,11 @@ int commander_thread_main(int argc, char *argv[])
 
 		arming_ret = TRANSITION_NOT_CHANGED;
 
+		if (armed.armed) {
+			prevent_poweroff_flag = true;
+		} else {
+			prevent_poweroff_flag = false;
+		}
 
 		/* update parameters */
 		orb_check(param_changed_sub, &updated);

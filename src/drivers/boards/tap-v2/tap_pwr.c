@@ -59,6 +59,10 @@
 extern void led_on(int led);
 extern void led_off(int led);
 
+// Set externally in commander
+// TODO replace with proper architecture and API
+extern bool prevent_poweroff_flag;
+
 /************************************************************************************
  * Private Data
  ************************************************************************************/
@@ -80,6 +84,11 @@ static int board_button_irq(int irq, FAR void *context)
 	} else {
 
 		led_off(BOARD_LED_RED);
+
+		/* do not power off if the system is still armed */
+		if (prevent_poweroff_flag) {
+			return OK;
+		}
 
 		struct timespec now;
 
