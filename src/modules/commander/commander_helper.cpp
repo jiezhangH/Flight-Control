@@ -210,7 +210,7 @@ void tune_mission_fail(bool use_buzzer)
 void tune_positive(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST);
+	rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 3, 2);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_POSITIVE_TUNE);
@@ -350,10 +350,9 @@ void rgbled_set_mag_cali(uint8_t mask)
 	led_control.priority = 2;
 	led_control.timestamp = hrt_absolute_time();
 
-	led_control.led_mask = 0xff;
+	led_control.led_mask = ~mask; // turn off LEDs which should not blink
 	led_control.mode = led_control_s::COLOR_OFF;
 	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
-	usleep(10000);
 
 	led_control.led_mask = mask;
 	led_control.mode = led_control_s::MODE_BLINK_NORMAL;
