@@ -82,7 +82,9 @@
 // 0 is CW, 1 is CCW
 #define ESC_DIR {0, 1, 0, 1, 0, 1, 0, 1}
 
-#define RPMMAX 1900
+// The real maximum is 1900 but down-rating this slighly
+// avoids vibration issues at max RPM
+#define RPMMAX 1795
 #define RPMMIN 1200
 #define RPMSTOPPED (RPMMIN - 10)
 
