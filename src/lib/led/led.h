@@ -145,4 +145,3 @@ private:
 	hrt_abstime _last_update_call;
 	bool _force_update = true; ///< force an orb_copy in the beginning
 };
-
