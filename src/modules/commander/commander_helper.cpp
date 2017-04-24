@@ -223,7 +223,7 @@ void tune_positive(bool use_buzzer)
 void tune_neutral(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_BLINK_FAST);
+	rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_BLINK_FAST, 3, 2);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
@@ -246,7 +246,7 @@ void tune_negative(bool use_buzzer)
 void tune_failsafe(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color_and_mode(led_control_s::COLOR_PURPLE, led_control_s::MODE_BLINK_FAST);
+	rgbled_set_color_and_mode(led_control_s::COLOR_PURPLE, led_control_s::MODE_BLINK_FAST, 3, 2);
 
 	if (use_buzzer) {
 		set_tune(TONE_BATTERY_WARNING_FAST_TUNE);
