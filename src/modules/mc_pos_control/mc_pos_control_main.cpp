@@ -180,6 +180,7 @@ private:
 	control::BlockParamFloat
 	_jerk_hor_min; /**< minimum jerk only applied in manual controlled mode when breaking to zero */
 	control::BlockParamFloat _pos_sp_smoothing;
+	control::BlockParamFloat _takeoff_ramp_time; /**< time contant for smooth takeoff ramp */
 
 	control::BlockDerivative _vel_x_deriv;
 	control::BlockDerivative _vel_y_deriv;
@@ -313,10 +314,12 @@ private:
 	bool _state_updn_revert;
 	float _vel_z_lp;
 	float _acc_z_lp;
-	float _takeoff_vel_limit;
 	float _vel_max_xy;  /**< equal to vel_max except in auto mode when close to target */
 	float _acceleration_state_dependent_xy;
 	float _manual_jerk_limit; /**< jerk limit in manual mode dependent on stick input */
+
+	bool _in_takeoff; /**< flag for smooth velocity setpoint takeoff ramp */
+	float _takeoff_vel_limit; /**< velocity limit value which gets ramped up */
 
 	// counters for reset events on position and velocity states
 	// they are used to identify a reset event
@@ -483,6 +486,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_jerk_hor_max(this, "JERK_MAX", true),
 	_jerk_hor_min(this, "JERK_MIN", true),
 	_pos_sp_smoothing(this, "POS_SMOOTH", true),
+	_takeoff_ramp_time(this, "TKO_RAMP_T", true),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
@@ -506,10 +510,11 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_state_updn_revert(false),
 	_vel_z_lp(0),
 	_acc_z_lp(0),
-	_takeoff_vel_limit(0.0f),
 	_vel_max_xy(0.0f),
 	_acceleration_state_dependent_xy(0.0f),
 	_manual_jerk_limit(1.0f),
+	_in_takeoff(false),
+	_takeoff_vel_limit(0.0f),
 	_z_reset_counter(0),
 	_xy_reset_counter(0),
 	_vz_reset_counter(0),
@@ -2082,20 +2087,15 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		_vel_sp(2) = 0.0f;
 	}
 
-	/* special velocity setpoint limitation for smooth takeoff from ground */
+	/* limit vertical takeoff speed if we are in auto takeoff */
 	if (_pos_sp_triplet.current.valid
-	    && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF
-	    && _control_mode.flag_armed) {
-
-		/* ramp vertical velocity limit up to takeoff speed */
-		_takeoff_vel_limit += _params.tko_speed * dt / 10.0f;
-		_takeoff_vel_limit = math::min(_takeoff_vel_limit, _params.tko_speed);
-		/* limit vertical velocity to the current ramp value */
-		_vel_sp(2) = math::max(_vel_sp(2), -_takeoff_vel_limit);
-
-	} else {
-		_takeoff_vel_limit = 0.0f;
+	    && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF) {
+		_vel_sp(2) = math::max(_vel_sp(2), -_params.tko_speed);
 	}
+
+	/* apply slewrate (aka acceleration limit) for smooth flying */
+	vel_sp_slewrate(dt);
+	_vel_sp_prev = _vel_sp;
 
 	/* make sure velocity setpoint is constrained in all directions*/
 	if (vel_norm_xy > _vel_max_xy) {
@@ -2105,9 +2105,18 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 
 	_vel_sp(2) = math::max(_vel_sp(2), -_params.vel_max_up);
 
-	/* apply slewrate (aka acceleration limit) for smooth flying */
-	vel_sp_slewrate(dt);
-	_vel_sp_prev = _vel_sp;
+	/* special velocity setpoint limitation for smooth takeoff */
+	if (_in_takeoff) {
+		_in_takeoff = _takeoff_vel_limit < -_vel_sp(2);
+		/* ramp vertical velocity limit up to takeoff speed */
+		_takeoff_vel_limit += -_vel_sp(2) * dt / _takeoff_ramp_time.get();
+		/* limit vertical velocity to the current ramp value */
+		_vel_sp(2) = math::max(_vel_sp(2), -_takeoff_vel_limit);
+		//printf("ramping: %f %f\n", (double)_takeoff_vel_limit, (double)_vel_sp(2));
+
+	} else {
+		_takeoff_vel_limit = -0.5f;
+	}
 
 	/* publish velocity setpoint */
 	_global_vel_sp.timestamp = hrt_absolute_time();
@@ -2599,6 +2608,7 @@ MulticopterPositionControl::task_main()
 	orb_copy(ORB_ID(vehicle_land_detected), _vehicle_land_detected_sub, &_vehicle_land_detected);
 
 	bool was_armed = false;
+	bool was_landed = true;
 
 	hrt_abstime t_prev = 0;
 
@@ -2634,7 +2644,7 @@ MulticopterPositionControl::task_main()
 		float dt = t_prev != 0 ? (t - t_prev) / 1e6f : 0.004f;
 		t_prev = t;
 
-		// set dt for control blocks
+		/* set dt for control blocks */
 		setDt(dt);
 
 		/* set default max velocity in xy to vel_max */
@@ -2652,6 +2662,8 @@ MulticopterPositionControl::task_main()
 			_yaw_takeoff = _yaw;
 		}
 
+		was_armed = _control_mode.flag_armed;
+
 		/* reset setpoints and integrators VTOL in FW mode */
 		if (_vehicle_status.is_vtol && !_vehicle_status.is_rotary_wing) {
 			_reset_alt_sp = true;
@@ -2662,8 +2674,12 @@ MulticopterPositionControl::task_main()
 			_vel_sp_prev = _vel;
 		}
 
-		//Update previous arming state
-		was_armed = _control_mode.flag_armed;
+		/* switch to smooth takeoff if we got out of landed state */
+		if (!_vehicle_land_detected.landed && was_landed) {
+			_in_takeoff = true;
+		}
+
+		was_landed = _vehicle_land_detected.landed;
 
 		update_ref();
 
