@@ -260,7 +260,7 @@ then
 	# Set landing detection stick up/down thresholds
 	# requires an ST16 in rabbit mode or with new
 	# stick mapping code
-	param set LNDMC_POS_UPTHR 0.6
+	param set LNDMC_POS_UPTHR 0.66
 	param set LNDMC_MAN_DWNTHR 0.25
 
 	# sensor thermal calibration
