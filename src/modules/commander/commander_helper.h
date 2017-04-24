@@ -87,4 +87,6 @@ void rgbled_set_color_and_mode(uint8_t color, uint8_t mode, uint8_t blinks, uint
 
 void rgbled_set_mag_cali(uint8_t mask);
 
+void rgbled_reset_high_prio_event();
+
 #endif /* COMMANDER_HELPER_H_ */

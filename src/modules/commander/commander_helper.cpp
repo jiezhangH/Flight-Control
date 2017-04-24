@@ -236,7 +236,7 @@ void tune_neutral(bool use_buzzer)
 void tune_negative(bool use_buzzer)
 {
 	blink_msg_end = hrt_absolute_time() + BLINK_MSG_TIME;
-	rgbled_set_color_and_mode(led_control_s::COLOR_RED, led_control_s::MODE_BLINK_FAST);
+	rgbled_set_color_and_mode(led_control_s::COLOR_RED, led_control_s::MODE_BLINK_FAST, 3, 2);
 
 	if (use_buzzer) {
 		set_tune(TONE_NOTIFY_NEGATIVE_TUNE);
@@ -347,7 +347,7 @@ void rgbled_set_mag_cali(uint8_t mask)
 {
 	led_control.color = led_control_s::COLOR_GREEN;
 	led_control.num_blinks = 0;
-	led_control.priority = 0;
+	led_control.priority = 2;
 	led_control.timestamp = hrt_absolute_time();
 
 	led_control.led_mask = 0xff;
@@ -357,5 +357,12 @@ void rgbled_set_mag_cali(uint8_t mask)
 
 	led_control.led_mask = mask;
 	led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
+}
+
+void rgbled_reset_high_prio_event(){
+	led_control.mode = led_control_s::MODE_DISABLED;
+	led_control.led_mask = 0xff;
+	led_control.timestamp = hrt_absolute_time();
 	orb_publish(ORB_ID(led_control), led_control_pub, &led_control);
 }
