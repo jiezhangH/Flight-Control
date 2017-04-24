@@ -2054,7 +2054,8 @@ MulticopterPositionControl::control_position(float dt)
 		_vel_sp(2) = -_params.tko_speed;
 
 	} else if ((_vel(2) > -_params.tko_speed)
-		   && (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF)) {
+		   && (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF)
+		   && !_control_mode.flag_control_manual_enabled) {
 		if (!_takeoff_jumped) {
 			_vel_sp(2) = 0.0f;
 		}
