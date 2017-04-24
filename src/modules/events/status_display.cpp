@@ -57,7 +57,7 @@ StatusDisplay::StatusDisplay(const events::SubscriberHandler &subscriber_handler
 	publish();
 
 	_led_control.priority = 1;
-	_led_control.num_blinks = 3;
+	_led_control.num_blinks = 0;	// infinite blinking
 }
 
 bool StatusDisplay::check_for_updates()
@@ -109,11 +109,10 @@ void StatusDisplay::set_leds()
 				    vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK) ==
 				   vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK;
 	int nav_state = _vehicle_status.nav_state;
-	static int counter = 0;
 
-	// try to publish the static LED each 1s
-	// this avoid the problem if the tap_esc did not subscribe to the topic yet
-	if (counter < 1) {
+	// try to publish the static LED for the first 10s
+	// this avoid the problem if a LED driver did not subscribe to the topic yet
+	if (hrt_absolute_time() < 10 * 1000000) {
 		// set the base color for motor 1
 		_led_control.led_mask = (1 << 1);
 		_led_control.color = led_control_s::COLOR_GREEN;
@@ -131,10 +130,7 @@ void StatusDisplay::set_leds()
 		_led_control.color = led_control_s::COLOR_RED;
 		_led_control.mode = led_control_s::MODE_ON;
 		publish();
-		counter = 3;
 	}
-
-	--counter;
 
 	// set the led mask for the status led which are number 0 and 5
 	_led_control.led_mask = (1 << 0) | (1 << 5);
@@ -161,7 +157,15 @@ void StatusDisplay::set_leds()
 		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
 	}
 
-	publish();
+	if (nav_state != _old_nav_state || gps_lock_valid != _old_gps_lock_valid
+	    || home_position_valid != home_position_valid) {
+		publish();
+	}
+
+	// copy actual state
+	_old_nav_state = nav_state;
+	_old_gps_lock_valid = gps_lock_valid;
+	_old_home_position_valid = home_position_valid;
 }
 
 void StatusDisplay::publish()

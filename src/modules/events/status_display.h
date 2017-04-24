@@ -94,6 +94,9 @@ protected:
 	struct led_control_s _led_control = {};
 
 private:
+	bool _old_gps_lock_valid = false;
+	bool _old_home_position_valid = false;
+	int _old_nav_state = 0;
 	orb_advert_t _led_control_pub = nullptr;
 	const events::SubscriberHandler &_subscriber_handler;
 };
