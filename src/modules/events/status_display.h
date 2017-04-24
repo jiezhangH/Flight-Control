@@ -95,10 +95,7 @@ protected:
 
 private:
 	orb_advert_t _led_control_pub = nullptr;
-
 	const events::SubscriberHandler &_subscriber_handler;
-
-	bool _arming_state = false;
 };
 
 } /* status */
