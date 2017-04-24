@@ -103,75 +103,65 @@ void StatusDisplay::process()
 
 void StatusDisplay::set_leds()
 {
-	bool is_armed = _vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED;
-	bool reset_leds = false;
+	bool gps_lock_valid = (_vehicle_status_flags.conditions & vehicle_status_flags_s::CONDITION_GLOBAL_POSITION_VALID_MASK)
+			      == vehicle_status_flags_s::CONDITION_GLOBAL_POSITION_VALID_MASK;
+	bool home_position_valid = (_vehicle_status_flags.conditions &
+				    vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK) ==
+				   vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK;
+	int nav_state = _vehicle_status.nav_state;
+	static int counter = 0;
 
-	if (is_armed != _arming_state) {
-		if (!is_armed) {
-			reset_leds = true;
-		}
-
-		_arming_state = is_armed;
-	}
-
-	if (is_armed) {
-		// check attitude
-		matrix::Eulerf euler = matrix::Quatf(_vehicle_attitude.q);
-
-		uint8_t led_mask_blinking = 0;
-		uint8_t led_mask_normal = 0;
-		bool is_tilted = false;
-
-		// fly left
-		if (fabsf(euler.theta() * 57.3f) < 6.0f && (euler.phi() * 57.3f) < -5.0f) {
-			led_mask_normal = (1 << 0) | (1 << 1) | (1 << 2);
-			led_mask_blinking = (1 << 3) | (1 << 4) | (1 << 5);
-			is_tilted = true;
-		}
-
-		// fly right
-		if (fabsf(euler.theta() * 57.3f) < 6.0f && (euler.phi() * 57.3f) > 5.0f) {
-			led_mask_normal = (1 << 3) | (1 << 4) | (1 << 5);
-			led_mask_blinking = (1 << 0) | (1 << 1) | (1 << 2);
-			is_tilted = true;
-		}
-
-		// fly forward
-		if (fabsf(euler.phi() * 57.3f) < 6.0f && (euler.theta() * 57.3f) < -5.0f) {
-			led_mask_normal = (1 << 0) | (1 << 1) | (1 << 4) | (1 << 5);
-			led_mask_blinking = (1 << 2) | (1 << 3);
-			is_tilted = true;
-		}
-
-		// fly back
-		if (fabsf(euler.phi() * 57.3f) < 6.0f && (euler.theta() * 57.3f) > 5.0f) {
-			led_mask_normal = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4);
-			led_mask_blinking = (1 << 0) | (1 << 5);
-			is_tilted = true;
-		}
-
-		if (is_tilted) {
-			_led_control.led_mask = led_mask_normal;
-			_led_control.mode = led_control_s::MODE_ON;
-			_led_control.color = led_control_s::COLOR_GREEN;
-			publish();
-			_led_control.led_mask = led_mask_blinking;
-			_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
-			_led_control.color = led_control_s::COLOR_PURPLE;
-			_led_control.num_blinks = 0;
-			publish();
-
-		} else {
-			reset_leds = true;
-		}
-	}
-
-	if (reset_leds) {
-		_led_control.led_mask = 0xff;
-		_led_control.mode = led_control_s::MODE_DISABLED;
+	// try to publish the static LED each 1s
+	// this avoid the problem if the tap_esc did not subscribe to the topic yet
+	if (counter < 1) {
+		// set the base color for motor 1
+		_led_control.led_mask = (1 << 1);
+		_led_control.color = led_control_s::COLOR_GREEN;
+		_led_control.mode = led_control_s::MODE_ON;
 		publish();
+
+		// set the base color for motor 2 and 3
+		_led_control.led_mask = (1 << 2) | (1 << 3);
+		_led_control.color = led_control_s::COLOR_WHITE;
+		_led_control.mode = led_control_s::MODE_ON;
+		publish();
+
+		// set the base color for motor 4
+		_led_control.led_mask = (1 << 4);
+		_led_control.color = led_control_s::COLOR_RED;
+		_led_control.mode = led_control_s::MODE_ON;
+		publish();
+		counter = 3;
 	}
 
+	--counter;
+
+	// set the led mask for the status led which are number 0 and 5
+	_led_control.led_mask = (1 << 0) | (1 << 5);
+
+	// choose color depending on the nav state
+	if (nav_state == vehicle_status_s::NAVIGATION_STATE_SMART) {
+		_led_control.color = led_control_s::COLOR_GREEN;
+
+	} else if (nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_RTL) {
+		_led_control.color = led_control_s::COLOR_PURPLE;
+
+	} else if (nav_state == vehicle_status_s::NAVIGATION_STATE_ALTCTL) {
+		_led_control.color = led_control_s::COLOR_CYAN;
+
+	} else {
+		_led_control.color = led_control_s::COLOR_PURPLE;
+	}
+
+	// blink if no GPS and home are set
+	if (gps_lock_valid && home_position_valid) {
+		_led_control.mode = led_control_s::MODE_ON;
+
+	} else {
+		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+	}
+
+	publish();
 }
 
 void StatusDisplay::publish()
