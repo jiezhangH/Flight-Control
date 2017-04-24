@@ -787,9 +787,9 @@ calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,
 		side_data_collected[orient] = true;
 		// output neutral tune
 		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
-		// temporary priority boost for the white blinking led to come trough
-		rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_BLINK_FAST, 3, 1);
-		usleep(200000);
+		rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_BLINK_FAST, 3, 2);
+		usleep(600000); // incease sleep to let the white color get trough
+		rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 0, 2);
 	}
 
 	if (sub_accel >= 0) {
@@ -828,7 +828,7 @@ calibrate_return calibrate_from_hex_orientation(orb_advert_t *mavlink_log_pub,
 
 		if (side_complete_count == detect_orientation_side_count) {
 			// We have completed all sides, move on
-			rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_ON);
+			rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_ON, 0, 2);
 			break;
 		}
 
@@ -889,8 +889,6 @@ calibrate_return calibrate_from_hex_orientation(orb_advert_t *mavlink_log_pub,
 
 		// output neutral tune
 		set_tune(TONE_NOTIFY_NEUTRAL_TUNE);
-
-		// temporary priority boost for the white blinking led to come trough
 		usleep(200000);
 	}
 
