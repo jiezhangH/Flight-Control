@@ -88,13 +88,13 @@ then
 	if param load
 	then
 	fi
-	
+
 	# load the temperature calibration data from EEPROM.
 	if param import /fs/mtd_caldata
 	then
 	fi
-	
-	
+
+
 else
 # tap v1
 	if param load
@@ -144,11 +144,11 @@ else
 	set AUTOCNF no
 fi
 
-if param compare SYS_PARAM_VER 45
+if param compare SYS_PARAM_VER 46
 then
 	set NEW_DEFAULTS no
 else
-	param set SYS_PARAM_VER 45
+	param set SYS_PARAM_VER 46
 
 	set NEW_DEFAULTS yes
 fi
