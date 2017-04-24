@@ -3324,6 +3324,8 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 	if (changed || last_overload != overload) {
 		uint8_t led_mode = led_control_s::MODE_OFF;
 		uint8_t led_color;
+		uint8_t prio = 0;
+		static bool activated_high_prio_event = false;
 		bool set_normal_color = false;
 		bool hotplug_timeout = hrt_elapsed_time(&commander_boot_timestamp) > HOTPLUG_SENS_TIMEOUT;
 
@@ -3342,6 +3344,8 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 				(!status_flags.condition_system_sensors_initialized && hotplug_timeout)) {
 			led_mode = led_control_s::MODE_BLINK_FAST;
 			led_color = led_control_s::COLOR_RED;
+			activated_high_prio_event = true;
+			prio = 2;
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_STANDBY) {
 			led_mode = led_control_s::MODE_BREATHE;
@@ -3356,17 +3360,25 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 		} else {	// STANDBY_ERROR and other states
 			led_mode = led_control_s::MODE_BLINK_NORMAL;
 			led_color = led_control_s::COLOR_RED;
+			activated_high_prio_event = true;
+			prio = 2;
 		}
 
 		if (set_normal_color) {
+			if (activated_high_prio_event) {
+				rgbled_reset_high_prio_event();
+				activated_high_prio_event = false;
+			}
 			/* set color */
 			if (status.failsafe) {
 				led_color = led_control_s::COLOR_PURPLE;
 
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_LOW) {
 				led_color = led_control_s::COLOR_AMBER;
+				prio = 2;
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
 				led_color = led_control_s::COLOR_RED;
+				prio = 2;
 			} else {
 				if (status_flags.condition_home_position_valid && status_flags.condition_global_position_valid) {
 					led_color = led_control_s::COLOR_GREEN;
@@ -3377,7 +3389,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 			}
 		}
 		if (led_mode != led_control_s::MODE_OFF) {
-			rgbled_set_color_and_mode(led_color, led_mode);
+			rgbled_set_color_and_mode(led_color, led_mode, 0, prio);
 		}
 	}
 
@@ -4213,6 +4225,8 @@ void *commander_low_prio_loop(void *arg)
 
 					if ((int)(cmd.param1) == 1) {
 						/* gyro calibration */
+						// set calibration color and mode
+						rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 0, 2);
 						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						calib_ret = do_gyro_calibration(&mavlink_log_pub);
 
@@ -4222,6 +4236,8 @@ void *commander_low_prio_loop(void *arg)
 
 					} else if ((int)(cmd.param2) == 1) {
 						/* magnetometer calibration */
+						// set calibration color and mode
+						rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_NORMAL, 0, 2);
 						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						calib_ret = do_mag_calibration(&mavlink_log_pub);
 
@@ -4244,6 +4260,8 @@ void *commander_low_prio_loop(void *arg)
 
 					} else if ((int)(cmd.param5) == 1) {
 						/* accelerometer calibration */
+						// set calibration color and mode
+						rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 0, 2);
 						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						calib_ret = do_accel_calibration(&mavlink_log_pub);
 					} else if ((int)(cmd.param5) == 2) {
