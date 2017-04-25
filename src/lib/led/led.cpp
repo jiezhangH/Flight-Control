@@ -61,7 +61,7 @@ int LedController::update(LedControlData &control_data)
 			for (int i = 0; i < BOARD_MAX_LEDS; ++i) {
 				if (led_control.led_mask & (1 << i)) {
 					// if next state was reset or the new state has a higher priority
-					// than one recieved before, set it as next state.
+					// than one received before, set it as next state.
 					if (!_states[i].next_state.is_valid() || led_control.priority >= _states[i].next_state.priority) {
 						_states[i].next_state.set(led_control);
 					}
