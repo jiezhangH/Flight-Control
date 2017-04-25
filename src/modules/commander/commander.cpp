@@ -3365,7 +3365,8 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 		}
 
 		if (set_normal_color) {
-			if (activated_high_prio_event) {
+			// make sure that only an error state can reset the high priority event and not a calibration event
+			if (activated_high_prio_event && !status_flags.condition_calibration_enabled) {
 				rgbled_reset_high_prio_event();
 				activated_high_prio_event = false;
 			}
@@ -4225,9 +4226,9 @@ void *commander_low_prio_loop(void *arg)
 
 					if ((int)(cmd.param1) == 1) {
 						/* gyro calibration */
+						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						// set calibration color and mode
 						rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 0, 2);
-						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						calib_ret = do_gyro_calibration(&mavlink_log_pub);
 
 					} else if ((int)(cmd.param1) == 2 || (int)(cmd.param5) == 2 || (int)(cmd.param7) == 2) {
@@ -4236,9 +4237,9 @@ void *commander_low_prio_loop(void *arg)
 
 					} else if ((int)(cmd.param2) == 1) {
 						/* magnetometer calibration */
+						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						// set calibration color and mode
 						rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_NORMAL, 0, 2);
-						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						calib_ret = do_mag_calibration(&mavlink_log_pub);
 
 					} else if ((int)(cmd.param3) == 1) {
@@ -4260,9 +4261,9 @@ void *commander_low_prio_loop(void *arg)
 
 					} else if ((int)(cmd.param5) == 1) {
 						/* accelerometer calibration */
+						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						// set calibration color and mode
 						rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 0, 2);
-						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
 						calib_ret = do_accel_calibration(&mavlink_log_pub);
 					} else if ((int)(cmd.param5) == 2) {
 						// board offset calibration
