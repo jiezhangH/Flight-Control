@@ -1837,7 +1837,7 @@ void MulticopterPositionControl::control_auto(float dt)
 						float angle = unit_current_to_next * (unit_prev_to_current * -1.0f) + 1.0f;
 
 						/* velocity close to target adjusted to angle
-						 * vel_close = a *b ^x + c; where at angle = 0 -> vel_close = vel_cruise; angle = 1 -> vel_cruise/4.0 (this means that at 90degrees
+						 * vel_close = a *b ^x + c; where at angle = 0 -> vel_close = vel_cruise; angle = 1 -> vel_cruise/5.0 (this means that at 90degrees
 						 * the velocity at target should be 1/5 * cruising speed;
 						 * angle = 2 -> vel_close = min_cruising_speed */
 						float M = get_cruising_speed_xy() / 5.0f;

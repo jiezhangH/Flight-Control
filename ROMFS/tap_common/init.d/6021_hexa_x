@@ -157,6 +157,11 @@ then
 	param set BAT_N_CELLS 4
 
 	#
+	# Acceptance radius
+	#
+	param set NAV_ACC_RAD 1.0
+
+	#
 	# Calibrate by rotating around arms
 	#
 	param set CAL_MAG_METHOD 1
