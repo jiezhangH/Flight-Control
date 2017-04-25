@@ -472,8 +472,13 @@ Navigator::task_main()
 					rep->current.lon = (cmd.param6 < 1000) ? cmd.param6 : cmd.param6 / (double)1e7;
 
 				} else {
-					rep->current.lat = get_global_position()->lat;
-					rep->current.lon = get_global_position()->lon;
+					/* predict setpoint forward*/
+					double lat_predict;
+					double lon_predict;
+					add_vector_to_global_position(get_global_position()->lat, get_global_position()->lon, get_global_position()->vel_n,
+								      get_global_position()->vel_e, &lat_predict, &lon_predict);
+					rep->current.lat = lat_predict;
+					rep->current.lon = lon_predict;
 				}
 
 				if (PX4_ISFINITE(cmd.param7)) {
