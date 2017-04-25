@@ -158,7 +158,7 @@ void StatusDisplay::set_leds()
 	}
 
 	if (nav_state != _old_nav_state || gps_lock_valid != _old_gps_lock_valid
-	    || home_position_valid != home_position_valid) {
+	    || home_position_valid != _old_home_position_valid) {
 		publish();
 	}
 
