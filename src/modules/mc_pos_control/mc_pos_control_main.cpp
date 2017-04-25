@@ -1733,9 +1733,11 @@ void MulticopterPositionControl::control_auto(float dt)
 		matrix::Vector2f diff((_curr_pos_sp(0) - curr_pos_sp(0)), (_curr_pos_sp(1) - curr_pos_sp(1)));
 
 		if (diff.length() > FLT_EPSILON) {
-			_curr_pos_sp = curr_pos_sp;
 			triplet_updated = true;
 		}
+
+		/* we need to update _curr_pos_sp always since navigator applies slew rate on z */
+		_curr_pos_sp = curr_pos_sp;
 
 	}
 
