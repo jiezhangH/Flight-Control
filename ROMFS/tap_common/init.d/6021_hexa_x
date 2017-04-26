@@ -271,9 +271,9 @@ then
 
 fi
 
-if tap_esc checkcrc -n 6
-then
-fi
+#if tap_esc checkcrc -n 6
+#then
+#fi
 
 if tap_esc start -d ${ESC_TTY} -n 6
 then
