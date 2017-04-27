@@ -52,6 +52,12 @@
 #include <arch/board/board.h>
 #include <nuttx/arch.h>
 
+#include <uORB/uORB.h>
+#include <uORB/topics/led_control.h>
+#include <uORB/topics/tune_control.h>
+
+#include <px4_workqueue.h>
+
 #include "up_arch.h"
 #include "board_config.h"
 #include <stm32_pwr.h>
@@ -62,6 +68,29 @@ extern void led_off(int led);
 // Set externally in commander
 // TODO replace with proper architecture and API
 extern bool prevent_poweroff_flag;
+
+// work queue element
+static struct work_s work = {};
+
+static void pwr_down_call_back(void *args)
+{
+	led_on(BOARD_LED_BLUE);
+	// turn off LEDs
+	struct led_control_s leds = {};
+	leds.priority = 2;
+	leds.led_mask = 0xff;
+	leds.mode = 0; // LED OFF
+	orb_advertise(ORB_ID(led_control), &leds);
+	// play shutdown tune
+	struct tune_control_s tune;
+	tune.tune_id = 16; //  shutdown
+	tune.strength = 40;
+	orb_advertise(ORB_ID(tune_control), &tune);
+	// power down board
+	up_mdelay(200);
+	px4_board_pwr(false);
+}
+
 
 /************************************************************************************
  * Private Data
@@ -81,32 +110,14 @@ static int board_button_irq(int irq, FAR void *context)
 
 		clock_gettime(CLOCK_REALTIME, &time_down);
 
+		if (!prevent_poweroff_flag) {
+			work_queue(LPWORK, &work, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
+		}
+
 	} else {
-
 		led_off(BOARD_LED_RED);
-
-		/* do not power off if the system is still armed */
-		if (prevent_poweroff_flag) {
-			return OK;
-		}
-
-		struct timespec now;
-
-		clock_gettime(CLOCK_REALTIME, &now);
-
-		uint64_t tdown_ms = time_down.tv_sec * 1000 + time_down.tv_nsec / 1000000;
-
-		uint64_t tnow_ms  = now.tv_sec * 1000 + now.tv_nsec / 1000000;
-
-		if (tdown_ms != 0 && (tnow_ms - tdown_ms) >= MS_PWR_BUTTON_DOWN) {
-
-			led_on(BOARD_LED_BLUE);
-
-			up_mdelay(200);
-			px4_board_pwr(false);
-
-			while (1);
-		}
+		// if the button is release before the MS_PWR_BUTTON_DOWN time is passed the work queue is canceled
+		work_cancel(LPWORK, &work);
 	}
 
 	return OK;
