@@ -111,13 +111,13 @@ static int board_button_irq(int irq, FAR void *context)
 		clock_gettime(CLOCK_REALTIME, &time_down);
 
 		if (!prevent_poweroff_flag) {
-			work_queue(LPWORK, &work, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
+			work_queue(HPWORK, &work, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
 		}
 
 	} else {
 		led_off(BOARD_LED_RED);
 		// if the button is release before the MS_PWR_BUTTON_DOWN time is passed the work queue is canceled
-		work_cancel(LPWORK, &work);
+		work_cancel(HPWORK, &work);
 	}
 
 	return OK;
