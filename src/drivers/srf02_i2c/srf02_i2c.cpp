@@ -76,7 +76,11 @@
 #include <board_config.h>
 
 /* Configuration Constants */
-#define SRF02_I2C_BUS 		PX4_I2C_BUS_EXPANSION
+#if defined(PX4_I2C_BUS_SONAR)
+#  define SRF02_I2C_BUS 		PX4_I2C_BUS_SONAR
+#else
+#  define SRF02_I2C_BUS 		PX4_I2C_BUS_EXPANSION
+#endif
 #define SRF02_I2C_BASEADDR 	0x70 /* 7-bit address. 8-bit address is 0xE0 */
 #define SRF02_DEVICE_PATH	"/dev/srf02"
 
