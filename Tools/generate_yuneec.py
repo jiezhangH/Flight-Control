@@ -67,7 +67,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate .yuneec file using .px4 JSON.")
     parser.add_argument("px4", action="store",
-                        help="the .px4 file")
+                        help="the existing .px4 file ")
+    parser.add_argument("yuneec", action="store",
+                        help="the .yuneec file to create")
     parser.add_argument("key", action="store",
                         help="the 16 byte AES key as 32 hex chars")
     args = parser.parse_args()
@@ -119,7 +121,7 @@ def main():
     # print("len encrypted: {}".format(len(encrypted)))
     # print("len base64 encrypted: {}".format(len(fw.desc['image_encrypted'])))
 
-    with open("autopilot.yuneec", "w") as f:
+    with open(args.yuneec, "w") as f:
         json.dump(fw.desc, f, indent=4)
 
 
