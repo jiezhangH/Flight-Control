@@ -2224,7 +2224,8 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		_vel_sp(1) = _vel_sp(1) * _vel_max_xy / vel_norm_xy;
 	}
 
-	_vel_sp(2) = math::max(_vel_sp(2), -_params.vel_max_up);
+	/* limit z-axis velocity setpoint */
+	_vel_sp(2) = math::constrain(_vel_sp(2), -_params.vel_max_up, _params.vel_max_down);
 
 	/* special velocity setpoint limitation for smooth takeoff */
 	if (_in_takeoff) {
