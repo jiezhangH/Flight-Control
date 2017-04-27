@@ -620,7 +620,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	/* for z direction we use fixed jerk for now
 	 * TODO: check if other jerk value is required */
 	_acceleration_state_dependent_z = _acceleration_z_max_up.get();
-	_manual_jerk_limit_z = _jerk_hor_max.get() / 5.0f;
+	_manual_jerk_limit_z = _jerk_hor_max.get() / 3.0f;
 
 
 }

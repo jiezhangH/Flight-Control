@@ -475,7 +475,7 @@ Navigator::task_main()
 					/* predict setpoint forward such that it has 3 seconds time to stop*/
 					double lat_predict;
 					double lon_predict;
-					float time_to_travel = 3.0f;
+					float time_to_travel = 1.6f;
 					add_vector_to_global_position(get_global_position()->lat, get_global_position()->lon,
 								      get_global_position()->vel_n *  time_to_travel,
 								      get_global_position()->vel_e * time_to_travel, &lat_predict, &lon_predict);

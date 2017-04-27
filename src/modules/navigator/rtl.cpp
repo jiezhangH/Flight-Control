@@ -154,7 +154,7 @@ RTL::set_rtl_item()
 
 			double lat_predict;
 			double lon_predict;
-			float time_to_travel = 3.0f;
+			float time_to_travel = 1.6f;
 			add_vector_to_global_position(_navigator->get_global_position()->lat, _navigator->get_global_position()->lon,
 						      _navigator->get_global_position()->vel_n *  time_to_travel,
 						      _navigator->get_global_position()->vel_e * time_to_travel,
@@ -379,6 +379,7 @@ void
 RTL::advance_rtl()
 {
 	switch (_rtl_state) {
+
 	case RTL_STATE_BRAKE:
 		_rtl_state = RTL_STATE_CLIMB;
 
