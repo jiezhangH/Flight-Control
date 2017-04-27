@@ -87,8 +87,13 @@ static void pwr_down_call_back(void *args)
 	tune.strength = 40;
 	orb_advertise(ORB_ID(tune_control), &tune);
 	// power down board
-	up_mdelay(200);
+	usleep(2000000);
+	// disable the interrups
+	px4_enter_critical_section();
 	px4_board_pwr(false);
+
+	// keep system busy, to prevent to run other code
+	while (1);
 }
 
 
