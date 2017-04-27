@@ -108,10 +108,10 @@ RTL::on_activation()
 		_rtl_state = RTL_STATE_LANDED;
 		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing RTL");
 
-		// otherwise start RTL by climbing
+		// otherwise start RTL by braking first
 
 	} else {
-		_rtl_state = RTL_STATE_CLIMB;
+		_rtl_state = RTL_STATE_BRAKE;
 
 	}
 
@@ -144,6 +144,38 @@ RTL::set_rtl_item()
 				    _param_rtl_min_dist.get());
 
 	switch (_rtl_state) {
+	case RTL_STATE_BRAKE: {
+
+			/* we try to predict a waypoint such that the vehicle has enough time to slow down
+			* TODO:
+			 * - navigator needs to be smarter: mission item should incorporate velocity demand (triplets already do)
+			 * such that we can demand zero velocity instead of predicting forward
+			 * - rtl and land share same logic -> combine */
+
+			double lat_predict;
+			double lon_predict;
+			float time_to_travel = 3.0f;
+			add_vector_to_global_position(_navigator->get_global_position()->lat, _navigator->get_global_position()->lon,
+						      _navigator->get_global_position()->vel_n *  time_to_travel,
+						      _navigator->get_global_position()->vel_e * time_to_travel,
+						      &lat_predict, &lon_predict);
+
+
+			_mission_item.lat = lat_predict;
+			_mission_item.lon = lon_predict;
+			_mission_item.yaw = NAN;
+			_mission_item.loiter_radius = _navigator->get_loiter_radius();
+			_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
+			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
+			_mission_item.time_inside = 0.0f;
+			_mission_item.autocontinue = true;
+			_mission_item.origin = ORIGIN_ONBOARD;
+			_mission_item.deploy_gear = home_close && home_altitude_close;
+
+			break;
+
+		}
+
 	case RTL_STATE_CLIMB: {
 
 			// climb to at least a 45 degree cone
@@ -160,6 +192,7 @@ RTL::set_rtl_item()
 
 			// and also make sure that an absolute minimum altitude is obeyed so the landing gear does not catch.
 			climb_alt = math::max(climb_alt, _navigator->get_home_position()->alt + _param_min_loiter_alt.get());
+
 
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
@@ -178,6 +211,7 @@ RTL::set_rtl_item()
 		}
 
 	case RTL_STATE_PRE_RETURN: {
+
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
 
@@ -345,6 +379,11 @@ void
 RTL::advance_rtl()
 {
 	switch (_rtl_state) {
+	case RTL_STATE_BRAKE:
+		_rtl_state = RTL_STATE_CLIMB;
+
+		break;
+
 	case RTL_STATE_CLIMB:
 		_rtl_state = RTL_STATE_PRE_RETURN;
 

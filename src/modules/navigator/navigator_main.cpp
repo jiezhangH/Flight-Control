@@ -472,11 +472,13 @@ Navigator::task_main()
 					rep->current.lon = (cmd.param6 < 1000) ? cmd.param6 : cmd.param6 / (double)1e7;
 
 				} else {
-					/* predict setpoint forward*/
+					/* predict setpoint forward such that it has 3 seconds time to stop*/
 					double lat_predict;
 					double lon_predict;
-					add_vector_to_global_position(get_global_position()->lat, get_global_position()->lon, get_global_position()->vel_n,
-								      get_global_position()->vel_e, &lat_predict, &lon_predict);
+					float time_to_travel = 3.0f;
+					add_vector_to_global_position(get_global_position()->lat, get_global_position()->lon,
+								      get_global_position()->vel_n *  time_to_travel,
+								      get_global_position()->vel_e * time_to_travel, &lat_predict, &lon_predict);
 					rep->current.lat = lat_predict;
 					rep->current.lon = lon_predict;
 				}

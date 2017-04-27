@@ -48,6 +48,7 @@
 
 #include <systemlib/err.h>
 #include <systemlib/mavlink_log.h>
+#include <geo/geo.h>
 
 #include <uORB/uORB.h>
 #include <uORB/topics/position_setpoint_triplet.h>
@@ -127,6 +128,39 @@ Land::set_autoland_item()
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 
 	switch (_land_state) {
+
+	case LAND_STATE_BRAKE: {
+
+			/* we try to predict a waypoint such that the vehicle has enough time to slow down
+			 * TODO:
+			 * - navigator needs to be smarter: mission item should incorporate velocity demand (triplets already do)
+			 * such that we can demand zero velocity instead of predicting forward
+			 * - rtl and land share same logic -> combine */
+
+			double lat_predict;
+			double lon_predict;
+			float time_to_travel = 3.0f;
+			add_vector_to_global_position(_navigator->get_global_position()->lat, _navigator->get_global_position()->lon,
+						      _navigator->get_global_position()->vel_n *  time_to_travel,
+						      _navigator->get_global_position()->vel_e * time_to_travel,
+						      &lat_predict, &lon_predict);
+
+
+			_mission_item.lat = lat_predict;
+			_mission_item.lon = lon_predict;
+			_mission_item.yaw = NAN;
+			_mission_item.loiter_radius = _navigator->get_loiter_radius();
+			_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
+			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
+			_mission_item.time_inside = 0.0f;
+			_mission_item.autocontinue = true;
+			_mission_item.origin = ORIGIN_ONBOARD;
+			_mission_item.deploy_gear = false;
+
+			break;
+
+		}
+
 	case LAND_STATE_LOITER: {
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
@@ -191,15 +225,21 @@ void
 Land::advance_land()
 {
 	switch (_land_state) {
-	case LAND_STATE_LOITER:
-		if (_navigator->get_global_position()->alt > _navigator->get_home_position()->alt + _param_descend_alt.get()) {
-			_land_state = LAND_STATE_DESCEND;
-
-		} else {
-			_land_state = LAND_STATE_LAND;
-		}
+	case LAND_STATE_BRAKE:
+		_land_state = LAND_STATE_LOITER;
 
 		break;
+
+	case LAND_STATE_LOITER: {
+			if (_navigator->get_global_position()->alt > _navigator->get_home_position()->alt + _param_descend_alt.get()) {
+				_land_state = LAND_STATE_DESCEND;
+
+			} else {
+				_land_state = LAND_STATE_LAND;
+			}
+
+			break;
+		}
 
 	case LAND_STATE_DESCEND:
 		_land_state = LAND_STATE_LAND;
