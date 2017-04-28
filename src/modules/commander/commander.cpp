@@ -1084,6 +1084,9 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 				mavlink_and_console_log_info(&mavlink_log_pub, "Returning to launch");
 				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
 
+			} else if (internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL){
+				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
+
 			} else {
 				mavlink_log_critical(&mavlink_log_pub, "Return to launch denied");
 				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
