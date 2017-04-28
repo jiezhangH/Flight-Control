@@ -186,6 +186,7 @@ class uploader(object):
     CMD_SET_IV          = 24      # rev6+  , Send AES-128 initialization vector (16 bytes)
     CMD_PROG_MULTI_ENCRYPTED = 25 # rev6+  , like PROG_MULTI but encrypted with AES-128
     CMD_CHECK_CRC       = 26      # rev6+  , check CRC on device which is included in the encrypted binary
+    CMD_CHECK_KEY       = 28      # rev7+  , check if there is a valid AES-128 (invalid is all 0)
 
     MAX_DES_LENGTH      = 20
 
@@ -193,7 +194,7 @@ class uploader(object):
     CMD_INFO_BOARD_ID   = 21      # board type
     CMD_INFO_BOARD_REV  = 22      # board revision
     BL_REV_MIN          = 2       # minimum supported bootloader protocol
-    BL_REV_MAX          = 6       # maximum supported bootloader protocol
+    BL_REV_MAX          = 7       # maximum supported bootloader protocol
     CMD_INFO_FLASH_SIZE = 23      # max firmware size in bytes
 
     PROG_MULTI_MAX  = 252   # protocol max is 255, must be multiple of 4
@@ -204,9 +205,9 @@ class uploader(object):
     PROTOCOL_UKN  = -1
     PROTOCOL_0    = 0
     PROTOCOL_1    = 1
-#                           0        1        2        3        4        5        6        7        8        9       10       11       12       13       14       15       16       17      18        19       20      21        22       23      24       25       26       27
-    protocol_cmds = [(b'\x12', b'\x20', b'\x10', b'\x11', b'\x13', b'\x14', b'\x00', b'\x21', b'\x22', b'\x23', b'\x24', b'\x27', b'\x28', b'\x29', b'\x2a', b'\x2b', b'\x2c', b'\x2d', b'\x2e', b'\x30', b'\x01', b'\x02', b'\x03', b'\x04', b'\x36', b'\x37', b'\x38', b'\x15'),
-                     (b'\xab', b'\xba', b'\xf0', b'\xf1', b'\xf3', b'\x14', b'\x00', b'\xe1', b'\xe2', b'\xe3', b'\x24', b'\xe4', b'\x28', b'\xe5', b'\xe6', b'\xe7', b'\x2c', b'\x2d', b'\x2e', b'\xe8', b'\x01', b'\x02', b'\x03', b'\x04', b'\x36', b'\x37', b'\x38', b'\x15')]
+#                           0        1        2        3        4        5        6        7        8        9       10       11       12       13       14       15       16       17      18        19       20      21        22       23      24       25       26       27       28
+    protocol_cmds = [(b'\x12', b'\x20', b'\x10', b'\x11', b'\x13', b'\x14', b'\x00', b'\x21', b'\x22', b'\x23', b'\x24', b'\x27', b'\x28', b'\x29', b'\x2a', b'\x2b', b'\x2c', b'\x2d', b'\x2e', b'\x30', b'\x01', b'\x02', b'\x03', b'\x04', b'\x36', b'\x37', b'\x38', b'\x15', b'\x39'),
+                     (b'\xab', b'\xba', b'\xf0', b'\xf1', b'\xf3', b'\x14', b'\x00', b'\xe1', b'\xe2', b'\xe3', b'\x24', b'\xe4', b'\x28', b'\xe5', b'\xe6', b'\xe7', b'\x2c', b'\x2d', b'\x2e', b'\xe8', b'\x01', b'\x02', b'\x03', b'\x04', b'\x36', b'\x37', b'\x38', b'\x15', b'\x39')]
 
     NSH_INIT        = bytearray(b'\x0d\x0d\x0d')
     NSH_REBOOT_BL   = b"reboot -b\n"
@@ -556,6 +557,54 @@ class uploader(object):
                     self.__command(self.CMD_EOC))
         self.__getSync()
 
+    # check if the key is still valid when doing a unencrypted upload
+    def __check_key(self, is_encrypted):
+        self.__send(self.__command(self.CMD_CHECK_KEY) +
+                    self.__command(self.CMD_EOC))
+        self.port.flush()
+        c = bytes(self.__recv())
+        if c != self.__command(self.CMD_INSYNC):
+            raise RuntimeError("unexpected %s instead of INSYNC" % c)
+
+        c = self.__recv()
+        if c == self.__command(self.CMD_OK):
+            print("let's check")
+
+            # Warn and ask a user that tries to upload an unencrypted image
+            # to a bootloader that still has a valid key.
+            if not is_encrypted:
+                print()
+                print(
+                    "***********************************************************************\n"
+                    "* Attention, by uploading non factory firmware (a standard .px4 file) *\n"
+                    "* you will void warranty and this drone will never be able to use the *\n"
+                    "* factory releases again.                                             *\n"
+                    "***********************************************************************"
+                      )
+                print()
+                ask_string = "Do you want to continue? Type yes or no: "
+                if runningPython3:
+                    ret = input(ask_string)
+                else:
+                    ret = raw_input(ask_string) # noqa, flake8 ignore
+                if ret == "yes":
+                    return
+                else:
+                    print("Exiting")
+                    sys.exit()
+
+        elif c == self.__command(self.CMD_BAD_KEY):
+            # Inform a user that has previously wiped the key if they try
+            # to upload an encrypted image.
+            if is_encrypted:
+                print("")
+                print("The encryption key has ben wiped, you cannot upload "
+                      "encrypted images anymore.")
+                sys.exit()
+
+        else:
+            raise RuntimeError("Check for bad key failed")
+
     # get basic data about the board
     def identify(self):
         # make sure we are in sync before starting
@@ -624,6 +673,10 @@ class uploader(object):
 
         if self.bl_rev < 6 and fw.is_encrypted:
             raise Exception("Bootloader rev %d doesn't support encrypted upload" % self.bl_rev)
+
+        if self.bl_rev >= 7:
+            self.__check_key(fw.is_encrypted)
+            pass
 
         self.__erase("Erase  ")
         if not fw.is_encrypted:
