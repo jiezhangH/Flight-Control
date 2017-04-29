@@ -186,7 +186,7 @@ class uploader(object):
     CMD_SET_IV          = 24      # rev6+  , Send AES-128 initialization vector (16 bytes)
     CMD_PROG_MULTI_ENCRYPTED = 25 # rev6+  , like PROG_MULTI but encrypted with AES-128
     CMD_CHECK_CRC       = 26      # rev6+  , check CRC on device which is included in the encrypted binary
-    CMD_CHECK_KEY       = 28      # rev7+  , check if there is a valid AES-128 (invalid is all 0)
+    CMD_CHECK_KEY       = 28      # rev7+  , check if there is a valid AES-128 key
 
     MAX_DES_LENGTH      = 20
 
