@@ -568,8 +568,6 @@ class uploader(object):
 
         c = self.__recv()
         if c == self.__command(self.CMD_OK):
-            print("let's check")
-
             # Warn and ask a user that tries to upload an unencrypted image
             # to a bootloader that still has a valid key.
             if not is_encrypted:
