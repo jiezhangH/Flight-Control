@@ -586,7 +586,7 @@ PX4FMU::set_mode(Mode mode)
 		break;
 
 	case MODE_2PWM2CAP:	// v1 multi-port with flow control lines as PWM
-		up_input_capture_set(2, Rising, 0, NULL, NULL);
+		up_input_capture_set(2, Both, 0, NULL, NULL);
 		up_input_capture_set(3, Rising, 0, NULL, NULL);
 		DEVICE_DEBUG("MODE_2PWM2CAP");
 

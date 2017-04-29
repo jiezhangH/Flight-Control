@@ -148,13 +148,13 @@
 
 /* User GPIOs
  *
- * TIM3_CH1     PA6     LED_R                     JP2-23,24
- * TIM3_CH2     PA7     LED_G                     JP2-25,26
- * TIM3_CH3     PB0     LED_B                     JP2-27,28
- * TIM3_CH4     PB1     nPWM_1 AUX1(Landing Gear) JP1-21,22
+ * TIM3_CH1             PA6     LED_R                     JP2-23,24
+ * TIM3_CH2             PA7     LED_G                     JP2-25,26
+ * TIM3_CH3             PB0     LED_B                     JP2-27,28
+ * TIM3_CH4             PB1     nPWM_1 AUX1(Landing Gear) JP1-21,22
  *
- * I2C2_SDA     PB11    Sonar Echo/I2C_SDA        JP2-31,32
- * I2C2_SDL     PB10    Sonar Trig/I2C_SCL        JP2-29,30
+ * TIM2_CH3,I2C2_SDA    PB11    Sonar Echo/I2C_SDA        J30-3
+ * TIM2_CH4,I2C2_SDL    PB10    Sonar Trig/I2C_SCL        J30-4
  *
  */
 #define GPIO_GPIO0_INPUT	(GPIO_INPUT|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN6)
@@ -193,19 +193,25 @@
  * TIM3_CH2     PA7     LED_G                     JP2-25,26
  * TIM3_CH3     PB0     LED_B                     JP2-27,28
  * TIM3_CH4     PB1     nPWM_1 AUX1(Landing Gear) JP1-21,22
+ * TIM2_CH3     PB11    Sonar Echo/I2C_SDA        J30-3
+ * TIM2_CH4     PB10    Sonar Trig/I2C_SCL        J30-4
  *
  */
 #define GPIO_TIM3_CH1OUT	GPIO_TIM3_CH1OUT_1
 #define GPIO_TIM3_CH2OUT	GPIO_TIM3_CH2OUT_1
 #define GPIO_TIM3_CH3OUT	GPIO_TIM3_CH3OUT_1
 #define GPIO_TIM3_CH4OUT	GPIO_TIM3_CH4OUT_1
-#define DIRECT_PWM_OUTPUT_CHANNELS	4
+#define GPIO_TIM2_CH3OUT	GPIO_TIM2_CH3OUT_2
+#define GPIO_TIM2_CH4OUT	GPIO_TIM2_CH4OUT_2
+#define DIRECT_PWM_OUTPUT_CHANNELS	6
 
 #define GPIO_TIM3_CH1IN		GPIO_TIM3_CH1IN_1
 #define GPIO_TIM3_CH2IN		GPIO_TIM3_CH2IN_1
 #define GPIO_TIM3_CH3IN		GPIO_TIM3_CH3IN_1
 #define GPIO_TIM3_CH4IN		GPIO_TIM3_CH4IN_1
-#define DIRECT_INPUT_TIMER_CHANNELS  4
+#define GPIO_TIM2_CH3IN		GPIO_TIM2_CH3IN_2
+#define GPIO_TIM2_CH4IN		GPIO_TIM2_CH4IN_2
+#define DIRECT_INPUT_TIMER_CHANNELS  6
 
 #define BOARD_HAS_LED_PWM
 #define BOARD_HAS_SHARED_PWM_TIMERS
