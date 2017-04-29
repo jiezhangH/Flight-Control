@@ -595,9 +595,15 @@ class uploader(object):
             # Inform a user that has previously wiped the key if they try
             # to upload an encrypted image.
             if is_encrypted:
-                print("")
-                print("The encryption key has ben wiped, you cannot upload "
-                      "encrypted images anymore.")
+                print()
+                print(
+                    "***********************************************************************\n"
+                    "* Attention, this unit's warranty has been voided by uploading non-   *\n"
+                    "* factory firmware (a standard .px4 file). This drone will not accept *\n"
+                    "* factory releases. The only option is to use a standard .px4 file.   *\n"
+                    "***********************************************************************"
+                      )
+                print()
                 sys.exit()
 
         else:
