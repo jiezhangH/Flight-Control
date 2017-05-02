@@ -153,8 +153,8 @@
  * TIM3_CH3             PB0     LED_B                     JP2-27,28
  * TIM3_CH4             PB1     nPWM_1 AUX1(Landing Gear) JP1-21,22
  *
- * TIM2_CH3,I2C2_SDA    PB11    Sonar Echo/I2C_SDA        J30-3
- * TIM2_CH4,I2C2_SDL    PB10    Sonar Trig/I2C_SCL        J30-4
+ * TIM2_CH4,I2C2_SDA    PB11    Sonar Echo/I2C_SDA        J30-3
+ * TIM2_CH3,I2C2_SDL    PB10    Sonar Trig/I2C_SCL        J30-4
  *
  */
 #define GPIO_GPIO0_INPUT	(GPIO_INPUT|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN6)
@@ -193,8 +193,8 @@
  * TIM3_CH2     PA7     LED_G                     JP2-25,26
  * TIM3_CH3     PB0     LED_B                     JP2-27,28
  * TIM3_CH4     PB1     nPWM_1 AUX1(Landing Gear) JP1-21,22
- * TIM2_CH3     PB11    Sonar Echo/I2C_SDA        J30-3
- * TIM2_CH4     PB10    Sonar Trig/I2C_SCL        J30-4
+ * TIM2_CH4     PB11    Sonar Echo/I2C_SDA        J30-3
+ * TIM2_CH3     PB10    Sonar Trig/I2C_SCL        J30-4
  *
  */
 #define GPIO_TIM3_CH1OUT	GPIO_TIM3_CH1OUT_1
