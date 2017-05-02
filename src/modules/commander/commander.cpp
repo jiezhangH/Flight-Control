@@ -3162,7 +3162,6 @@ int commander_thread_main(int argc, char *argv[])
 		else if (((!was_armed && armed.armed) || (was_landed && !land_detector.landed)) &&
 			(now > commander_boot_timestamp + INAIR_RESTART_HOLDOFF_INTERVAL)) {
 			commander_set_home_position(home_pub, _home, local_position, global_position, attitude);
-
 		}
 
 		was_armed = armed.armed;

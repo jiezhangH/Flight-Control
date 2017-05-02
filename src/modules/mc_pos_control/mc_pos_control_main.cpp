@@ -306,6 +306,8 @@ private:
 	hrt_abstime _ref_timestamp;
 	hrt_abstime _last_warn;
 
+	bool _transition_to_non_manual = false;
+
 	math::Vector<3> _thrust_int;
 	math::Vector<3> _pos;
 	math::Vector<3> _pos_sp;
@@ -907,6 +909,13 @@ MulticopterPositionControl::poll_subscriptions()
 		    !PX4_ISFINITE(_pos_sp_triplet.current.lon) ||
 		    !PX4_ISFINITE(_pos_sp_triplet.current.alt)) {
 			_pos_sp_triplet.current.valid = false;
+		}
+
+		/* to avoid time scheduling issue that occurs when the navigator has not updated the triplet
+		 * but the mc_pos_control already received a non-manual control flag
+		 */
+		if (_transition_to_non_manual && !_control_mode.flag_control_manual_enabled) {
+			_transition_to_non_manual = false;
 		}
 	}
 
@@ -2252,8 +2261,14 @@ MulticopterPositionControl::do_control(float dt)
 		control_manual(dt);
 		_mode_auto = false;
 
+		_transition_to_non_manual = true;
+
 		_hold_offboard_xy = false;
 		_hold_offboard_z = false;
+
+	} else if (_transition_to_non_manual) {
+		/* we reuse the previous setpoints */
+		calculate_thrust_setpoint(dt);
 
 	} else {
 		/* reset acceleration to default */
@@ -2939,6 +2954,7 @@ MulticopterPositionControl::task_main()
 			_yaw_takeoff = _yaw;
 			_vel_sp_prev.zero();
 			_vel_prev.zero();
+
 		}
 
 		/* reset setpoints and integrators VTOL in FW mode */
@@ -2955,6 +2971,11 @@ MulticopterPositionControl::task_main()
 		if (!_vehicle_land_detected.landed && was_landed) {
 			_in_takeoff = true;
 			_takeoff_vel_limit = -0.5f;
+		}
+
+		/* set triplets to invalid if we just landed */
+		if (_vehicle_land_detected.landed && !was_landed) {
+			_pos_sp_triplet.current.valid = false;
 		}
 
 		was_landed = _vehicle_land_detected.landed;
