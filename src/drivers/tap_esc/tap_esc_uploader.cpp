@@ -177,11 +177,11 @@ TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
 		ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, bl_rev);
 
 		if (ret == OK) {
-			if (bl_rev <= PROTO_SUPPORT_BL_REV) {
-				PX4_LOG("esc_id %d found bootloader revision: %d", esc_id, bl_rev);
+			if (bl_rev <= PROTO_SUPPORT_BL_REV * 100) {
+				PX4_LOG("esc_id %d found bootloader revision: %4.4f", esc_id, (double)bl_rev / 100);
 
 			} else {
-				PX4_LOG("esc_id %d found unsupported bootloader revision %d, exiting", esc_id, bl_rev);
+				PX4_LOG("esc_id %d found unsupported bootloader revision %4.4f, exiting", esc_id, (double)bl_rev / 100);
 				return EPERM;
 			}
 
@@ -324,7 +324,8 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 		ret = get_device_info(esc_id, PROTO_DEVICE_BL_REV, temp_revision);
 
 		if (ret == OK) {
-			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found bootloader revision: %d", esc_id, temp_revision);
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found bootloader revision: %4.4f", esc_id,
+						     (double)temp_revision / 100);
 
 		} else {
 			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found bootloader revision failed", esc_id);
@@ -334,7 +335,8 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 		ret = get_device_info(esc_id, PROTO_DEVICE_FW_REV, temp_revision);
 
 		if (ret == OK) {
-			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found firmware revision: %d", esc_id, temp_revision);
+			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found firmware revision: %4.4f", esc_id,
+						     (double)temp_revision / 100);
 
 		} else {
 			mavlink_and_console_log_info(&_mavlink_log_pub, "esc_id %d found firmware revision failed");
