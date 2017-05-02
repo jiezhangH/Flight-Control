@@ -445,6 +445,9 @@ MulticopterPositionControl	*g_control;
 MulticopterPositionControl::MulticopterPositionControl() :
 	SuperBlock(nullptr, "MPC"),
 
+	_control_task(-1),
+	_mavlink_log_pub(nullptr),
+
 	/* subscriptions */
 	_ctrl_state_sub(-1),
 	_att_sp_sub(-1),
