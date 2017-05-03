@@ -78,6 +78,8 @@
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/home_position.h>
+// TODO: remove when the new trajectory module is implemented
+#include <uORB/topics/smart_heading.h>
 
 #include <float.h>
 #include <systemlib/mavlink_log.h>
@@ -170,6 +172,7 @@ private:
 	orb_advert_t	_att_sp_pub;			/**< attitude setpoint publication */
 	orb_advert_t	_local_pos_sp_pub;		/**< vehicle local position setpoint publication */
 	orb_advert_t	_global_vel_sp_pub;		/**< vehicle global velocity setpoint publication */
+	orb_advert_t	_smart_heading_pub;		/**< smart heading reference publication */
 
 	orb_id_t _attitude_setpoint_id;
 
@@ -185,6 +188,7 @@ private:
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct vehicle_global_velocity_setpoint_s	_global_vel_sp;		/**< vehicle global velocity setpoint */
 	struct home_position_s				_home_pos; 				/**< home position */
+	struct smart_heading_s 				_smart_heading;		/**< smart heading */
 
 	control::BlockParamFloat _manual_thr_min; /**< minimal throttle output when flying in manual mode */
 	control::BlockParamFloat _manual_thr_max; /**< maximal throttle output when flying in manual mode */
@@ -464,6 +468,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_att_sp_pub(nullptr),
 	_local_pos_sp_pub(nullptr),
 	_global_vel_sp_pub(nullptr),
+	_smart_heading_pub(nullptr),
 	_attitude_setpoint_id(nullptr),
 	_vehicle_status{},
 	_vehicle_land_detected{},
@@ -477,6 +482,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_local_pos_sp{},
 	_global_vel_sp{},
 	_home_pos{},
+	_smart_heading{},
 	_manual_thr_min(this, "MANTHR_MIN"),
 	_manual_thr_max(this, "MANTHR_MAX"),
 	_manual_land_alt(this, "MIS_LTRMIN_ALT", false),
@@ -2764,8 +2770,7 @@ MulticopterPositionControl::task_main()
 			_yaw_takeoff = _yaw;
 			_vel_sp_prev.zero();
 			_vel_prev.zero();
-		};
-
+		}
 
 		/* reset setpoints and integrators VTOL in FW mode */
 		if (_vehicle_status.is_vtol && !_vehicle_status.is_rotary_wing) {
@@ -2870,6 +2875,16 @@ MulticopterPositionControl::task_main()
 			} else if (_attitude_setpoint_id) {
 				_att_sp_pub = orb_advertise(_attitude_setpoint_id, &_att_sp);
 			}
+		}
+
+		/* publish the reference for the smart heading */
+		_smart_heading.smart_heading_ref = _yaw_takeoff;
+
+		if (_smart_heading_pub != nullptr) {
+			orb_publish(ORB_ID(smart_heading), _smart_heading_pub, &_smart_heading);
+
+		} else {
+			_smart_heading_pub = orb_advertise(ORB_ID(smart_heading), &_smart_heading);
 		}
 	}
 
