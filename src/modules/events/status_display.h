@@ -48,6 +48,7 @@
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/cpuload.h>
 #include <uORB/topics/led_control.h>
+#include <uORB/topics/smart_heading.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_status_flags.h>
 
@@ -90,13 +91,18 @@ protected:
 	struct vehicle_status_s _vehicle_status = {};
 	struct vehicle_status_flags_s _vehicle_status_flags = {};
 	struct vehicle_attitude_s _vehicle_attitude = {};
+	struct smart_heading_s _smart_heading = {};
 
 	struct led_control_s _led_control = {};
 
 private:
 	bool _old_gps_lock_valid = false;
 	bool _old_home_position_valid = false;
+	bool _low_battery = false;
+	bool _critical_battery = false;
 	int _old_nav_state = -1;
+	int _old_battery_status_warning = -1;
+	int _old_sector = -100;
 	orb_advert_t _led_control_pub = nullptr;
 	const events::SubscriberHandler &_subscriber_handler;
 };

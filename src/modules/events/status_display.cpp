@@ -89,6 +89,11 @@ bool StatusDisplay::check_for_updates()
 		got_updates = true;
 	}
 
+	if (_subscriber_handler.smart_heading_updated()) {
+		orb_copy(ORB_ID(smart_heading), _subscriber_handler.get_smart_heading_sub(), &_smart_heading);
+		got_updates = true;
+	}
+
 	return got_updates;
 }
 
@@ -109,10 +114,12 @@ void StatusDisplay::set_leds()
 				    vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK) ==
 				   vehicle_status_flags_s::CONDITION_HOME_POSITION_VALID_MASK;
 	int nav_state = _vehicle_status.nav_state;
+	bool restore_position_lights = _old_nav_state == vehicle_status_s::NAVIGATION_STATE_SMART
+				       && nav_state != vehicle_status_s::NAVIGATION_STATE_SMART;
 
 	// try to publish the static LED for the first 10s
 	// this avoid the problem if a LED driver did not subscribe to the topic yet
-	if (hrt_absolute_time() < 10 * 1000000) {
+	if (hrt_absolute_time() < 10 * 1000000 || restore_position_lights) {
 		// set the base color for motor 1
 		_led_control.led_mask = (1 << 1);
 		_led_control.color = led_control_s::COLOR_GREEN;
@@ -132,18 +139,48 @@ void StatusDisplay::set_leds()
 		publish();
 	}
 
+	matrix::Eulerf euler = matrix::Quatf(_vehicle_attitude.q);
+	float current_heading = euler.psi();
+	float delta_heading = current_heading - _smart_heading.smart_heading_ref;
+	int sector = round(delta_heading / (M_PI_F / 3.0f));
+
 	// set the led mask for the status led which are number 0 and 5
 	_led_control.led_mask = (1 << 0) | (1 << 5);
 
 	// choose color depending on the nav state
-	if (nav_state == vehicle_status_s::NAVIGATION_STATE_SMART) {
+	if (nav_state == vehicle_status_s::NAVIGATION_STATE_SMART
+	    || (_old_nav_state == vehicle_status_s::NAVIGATION_STATE_SMART && _old_sector != sector)) {
+		// set green position light
+		_led_control.led_mask = (1 << ((1 + sector) % 6 >= 0 ? (1 + sector) % 6 : 1 + sector + 6));
 		_led_control.color = led_control_s::COLOR_GREEN;
+		_led_control.mode = led_control_s::MODE_ON;
+		publish();
+		// set white forward LEDs
+		_led_control.led_mask = (1 << ((2 + sector) % 6 >= 0 ? (2 + sector) % 6 : 2 + sector + 6)) | (1 << ((
+						3 + sector) % 6 >= 0 ? (3 + sector) % 6 : 3 + sector + 6));
+		_led_control.color = led_control_s::COLOR_WHITE;
+		_led_control.mode = led_control_s::MODE_ON;
+		publish();
+		// set red position light
+		_led_control.led_mask = (1 << ((4 + sector) % 6 >= 0 ? (4 + sector) % 6 : 4 + sector + 6));
+		_led_control.color = led_control_s::COLOR_RED;
+		_led_control.mode = led_control_s::MODE_ON;
+		publish();
+		// set purple back LEDs
+		_led_control.led_mask = (1 << ((0 + sector) % 6 >= 0 ? (0 + sector) % 6 : 0 + sector + 6)) | (1 << ((
+						5 + sector) % 6 >= 0 ? (5 + sector) % 6 : 5 + sector + 6));
+		_led_control.color = led_control_s::COLOR_PURPLE;
+		_led_control.mode = led_control_s::MODE_ON;
+
 
 	} else if (nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_RTL) {
-		_led_control.color = led_control_s::COLOR_PURPLE;
+		_led_control.color = led_control_s::COLOR_YELLOW;
 
 	} else if (nav_state == vehicle_status_s::NAVIGATION_STATE_ALTCTL) {
-		_led_control.color = led_control_s::COLOR_CYAN;
+		_led_control.color = led_control_s::COLOR_BLUE;
+
+	} else if (nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_MISSION) {
+		_led_control.color = led_control_s::COLOR_GREEN;
 
 	} else {
 		_led_control.color = led_control_s::COLOR_PURPLE;
@@ -157,15 +194,30 @@ void StatusDisplay::set_leds()
 		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
 	}
 
+	// handle battery warnings, once a state is reached it can not be reset
+	if (_battery_status.warning == battery_status_s::BATTERY_WARNING_CRITICAL || _critical_battery) {
+		_led_control.color = led_control_s::COLOR_RED;
+		_led_control.mode = led_control_s::MODE_BLINK_FAST;
+		_critical_battery = true;
+
+	} else if (_battery_status.warning == battery_status_s::BATTERY_WARNING_LOW || _low_battery) {
+		_led_control.color = led_control_s::COLOR_RED;
+		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+		_low_battery = true;
+	}
+
 	if (nav_state != _old_nav_state || gps_lock_valid != _old_gps_lock_valid
-	    || home_position_valid != _old_home_position_valid) {
+	    || home_position_valid != _old_home_position_valid || _battery_status.warning != _old_battery_status_warning
+	    || (_old_nav_state == vehicle_status_s::NAVIGATION_STATE_SMART && _old_sector != sector)) {
 		publish();
 	}
 
 	// copy actual state
+	_old_sector = sector;
 	_old_nav_state = nav_state;
 	_old_gps_lock_valid = gps_lock_valid;
 	_old_home_position_valid = home_position_valid;
+	_old_battery_status_warning = _battery_status.warning;
 }
 
 void StatusDisplay::publish()
