@@ -202,7 +202,7 @@ void StatusDisplay::set_leds()
 
 	} else if (_battery_status.warning == battery_status_s::BATTERY_WARNING_LOW || _low_battery) {
 		_led_control.color = led_control_s::COLOR_RED;
-		_led_control.mode = led_control_s::MODE_BLINK_NORMAL;
+		_led_control.mode = led_control_s::MODE_FLASH;
 		_low_battery = true;
 	}
 
