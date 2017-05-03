@@ -3386,10 +3386,12 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_LOW) {
 				led_color = led_control_s::COLOR_AMBER;
-				prio = 2;
+				// removing high priority, the battery is also handled in the status_display inside the event module
+				// prio = 2;
 			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
 				led_color = led_control_s::COLOR_RED;
-				prio = 2;
+				// removing high priority, the battery is also handled in the status_display inside the event module
+				// prio = 2;
 			} else {
 				if (status_flags.condition_home_position_valid && status_flags.condition_global_position_valid) {
 					led_color = led_control_s::COLOR_GREEN;
