@@ -137,6 +137,34 @@ private:
 		PerPriorityData priority[led_control_s::MAX_PRIORITY + 1];
 		uint16_t current_blinking_time = 0; ///< how long the Led was in current state (in 0.1 ms, wraps if > 6.5s)
 		NextState next_state;
+
+		void set(const led_control_s &led_control)
+		{
+			int next_priority = (int)led_control.priority;
+			priority[next_priority].color = led_control.color;
+			priority[next_priority].mode = led_control.mode;
+			priority[next_priority].blink_times_left = led_control.num_blinks * 2;
+
+			if (priority[next_priority].blink_times_left == 0) {
+				// handle infinite case
+				priority[next_priority].blink_times_left = 254;
+			}
+
+		}
+
+		void apply_next_state()
+		{
+			int next_priority = (int)next_state.priority;
+			priority[next_priority].color = next_state.color;
+			priority[next_priority].mode = next_state.mode;
+			priority[next_priority].blink_times_left = next_state.num_blinks * 2;
+
+			if (priority[next_priority].blink_times_left == 0) {
+				// handle infinite case
+				priority[next_priority].blink_times_left = 254;
+			}
+
+		}
 	};
 
 	PerLedData _states[BOARD_MAX_LEDS]; ///< keep current LED states

@@ -60,9 +60,19 @@ int LedController::update(LedControlData &control_data)
 			// don't apply the new state just yet to avoid interrupting an ongoing blinking state
 			for (int i = 0; i < BOARD_MAX_LEDS; ++i) {
 				if (led_control.led_mask & (1 << i)) {
-					// if next state was reset or the new state has a higher priority
-					// than one received before, set it as next state.
-					if (!_states[i].next_state.is_valid() || led_control.priority >= _states[i].next_state.priority) {
+					// if next state has already a higher priority state than
+					// led_control set lower prio state directly, so that this
+					// information is not lost
+					if (_states[i].next_state.is_valid() && led_control.priority < _states[i].next_state.priority) {
+						_states[i].set(led_control);
+
+					} else {
+						// if a lower prio event is already in next state and an
+						// higher prio event is coming up
+						if (_states[i].next_state.is_valid() && led_control.priority > _states[i].next_state.priority) {
+							_states[i].apply_next_state();
+						}
+
 						_states[i].next_state.set(led_control);
 					}
 				}
@@ -160,16 +170,7 @@ int LedController::update(LedControlData &control_data)
 					_states[i].current_blinking_time = 0;
 					had_changes = true;
 				}
-
-				_states[i].priority[next_priority].color = _states[i].next_state.color;
-				_states[i].priority[next_priority].mode = _states[i].next_state.mode;
-				_states[i].priority[next_priority].blink_times_left = _states[i].next_state.num_blinks * 2;
-
-				if (_states[i].priority[next_priority].blink_times_left == 0) {
-					// handle infinite case
-					_states[i].priority[next_priority].blink_times_left = 254;
-				}
-
+				_states[i].apply_next_state();
 				_states[i].next_state.reset();
 			}
 
