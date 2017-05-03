@@ -34,6 +34,11 @@ then
 	fi
 fi
 
+# start hc_sr04
+if hc_sr04 start
+then
+fi
+
 if ver hwcmp TAP_V2
 then
 	# internal SPI bus

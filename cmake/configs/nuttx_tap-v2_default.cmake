@@ -22,6 +22,7 @@ set(config_module_list
 	drivers/mpc2520
 	drivers/hmc5883
 	drivers/ist8310
+	drivers/hc_sr04
 	drivers/gps
 	drivers/airspeed
 	drivers/meas_airspeed

@@ -73,17 +73,14 @@
 
 
 #include <board_config.h>
-
-
-#define SR04_MAX_RANGEFINDERS 6
-#define SR04_ID_BASE	 0x10
+#include <drivers/drv_input_capture.h>
 
 /* Configuration Constants */
 #define SR04_DEVICE_PATH	"/dev/hc_sr04"
 
 #define SUBSYSTEM_TYPE_RANGEFINDER 131072
 /* Device limits */
-#define SR04_MIN_DISTANCE 	(0.10f)
+#define SR04_MIN_DISTANCE 	(0.40f)
 #define SR04_MAX_DISTANCE 	(4.00f)
 
 #define SR04_CONVERSION_INTERVAL 	100000 /* 100ms for one sonar */
@@ -93,10 +90,12 @@
 # error This requires CONFIG_SCHED_WORKQUEUE.
 #endif
 
+static float si_units = 0;
+
 class HC_SR04 : public device::CDev
 {
 public:
-	HC_SR04(unsigned sonars = 6);
+	HC_SR04(unsigned sonars = 1);
 	virtual ~HC_SR04();
 
 	virtual int 		init();
@@ -108,7 +107,6 @@ public:
 	* Diagnostics - print some basic information about the driver.
 	*/
 	void				print_info();
-	void                            interrupt(unsigned time);
 
 protected:
 	virtual int			probe();
@@ -143,9 +141,6 @@ private:
 		uint32_t        alt;
 	};
 	static const GPIOConfig _gpio_tab[];
-	unsigned 		_raising_time;
-	unsigned 		_falling_time;
-	unsigned 		_status;
 	/**
 	* Test whether the device supported by the driver is present at a
 	* specific address.
@@ -193,23 +188,20 @@ private:
 	*/
 	static void			cycle_trampoline(void *arg);
 
+	static void capture_trampoline(void *context, uint32_t chan_index,
+						hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
+
+	void capture_callback(uint32_t chan_index,
+								hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
 
 };
 
-const HC_SR04::GPIOConfig HC_SR04::_gpio_tab[] = {
-	{GPIO_GPIO6_OUTPUT,      GPIO_GPIO7_INPUT,       0},
-	{GPIO_GPIO6_OUTPUT,      GPIO_GPIO8_INPUT,       0},
-	{GPIO_GPIO6_OUTPUT,      GPIO_GPIO9_INPUT,       0},
-	{GPIO_GPIO6_OUTPUT,      GPIO_GPIO10_INPUT,       0},
-	{GPIO_GPIO6_OUTPUT,      GPIO_GPIO11_INPUT,       0},
-	{GPIO_GPIO6_OUTPUT,      GPIO_GPIO12_INPUT,       0}
-};
+const HC_SR04::GPIOConfig HC_SR04::_gpio_tab[] = {GPIO_GPIO4_OUTPUT, GPIO_TIM2_CH4IN, 0};
 
 /*
  * Driver 'main' command.
  */
 extern "C"  __EXPORT int hc_sr04_main(int argc, char *argv[]);
-static int sonar_isr(int irq, void *context);
 
 HC_SR04::HC_SR04(unsigned sonars) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
@@ -228,10 +220,7 @@ HC_SR04::HC_SR04(unsigned sonars) :
 	_cycle_counter(0),	/* initialising counter for cycling function to zero */
 	_cycling_rate(0),	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
 	_index_counter(0), 	/* initialising temp sonar i2c address to zero */
-	_sonars(sonars),
-	_raising_time(0),
-	_falling_time(0),
-	_status(0)
+	_sonars(sonars)
 
 {
 	/* enable debug() calls */
@@ -266,7 +255,7 @@ HC_SR04::init()
 {
 	int ret = PX4_ERROR;
 
-	/* do I2C init (and probe) first */
+	/* do init (and probe) first */
 	if (CDev::init() != OK) {
 		return PX4_ERROR;
 	}
@@ -290,13 +279,16 @@ HC_SR04::init()
 		DEVICE_LOG("failed to create distance_sensor object. Did you start uOrb?");
 	}
 
-	/* init echo port : */
+	/* init trig echo port : */
 	for (unsigned i = 0; i <= _sonars; i++) {
 		px4_arch_configgpio(_gpio_tab[i].trig_port);
 		px4_arch_gpiowrite(_gpio_tab[i].trig_port, false);
 		px4_arch_configgpio(_gpio_tab[i].echo_port);
 		_latest_sonar_measurements.push_back(0);
 	}
+
+	/*TIM2-CH4*/
+	up_input_capture_set(2, Both, 0, capture_trampoline, NULL);
 
 	usleep(200000); /* wait for 200ms; */
 
@@ -340,22 +332,6 @@ float
 HC_SR04::get_maximum_distance()
 {
 	return _max_distance;
-}
-void
-HC_SR04::interrupt(unsigned time)
-{
-	if (_status == 0) {
-		_raising_time = time;
-		_status++;
-		return;
-
-	} else if (_status == 1) {
-		_falling_time = time;
-		_status++;
-		return;
-	}
-
-	return;
 }
 
 int
@@ -476,7 +452,6 @@ HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 ssize_t
 HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
 {
-
 	unsigned count = buflen / sizeof(struct distance_sensor_s);
 	struct distance_sensor_s *rbuf = reinterpret_cast<struct distance_sensor_s *>(buffer);
 	int ret = 0;
@@ -536,17 +511,14 @@ HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
 int
 HC_SR04::measure()
 {
-
 	int ret;
 	/*
 	 * Send a plus begin a measurement.
 	 */
 	px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, true);
-	usleep(10);  // 10us
+	usleep(10);  // >10us
 	px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, false);
 
-	px4_arch_gpiosetevent(_gpio_tab[_cycle_counter].echo_port, true, true, false, sonar_isr);
-	_status = 0;
 	ret = OK;
 
 	return ret;
@@ -555,65 +527,15 @@ HC_SR04::measure()
 int
 HC_SR04::collect()
 {
-	int	ret = -EIO;
-#if 0
-	perf_begin(_sample_perf);
+	int ret;
+	ret = OK;
 
-	/* read from the sensor */
-	if (_status != 2) {
-		DEVICE_DEBUG("erro sonar %d ,status=%d", _cycle_counter, _status);
-		px4_arch_gpiosetevent(_gpio_tab[_cycle_counter].echo_port, true, true, false, nullptr);
-		perf_end(_sample_perf);
-		return (ret);
-	}
-
-	unsigned  distance_time = _falling_time - _raising_time ;
-
-	float si_units = (distance_time * 0.000170f) ; /* meter */
 	struct distance_sensor_s report;
 
-	/* this should be fairly close to the end of the measurement, so the best approximation of the time */
 	report.timestamp = hrt_absolute_time();
-	report.error_count = perf_event_count(_comms_errors);
-
-	/* if only one sonar, write it to the original distance parameter so that it's still used as altitude sonar */
-	if (_sonars == 1) {
-		report.distance = si_units;
-
-		for (unsigned i = 0; i < (SRF02_MAX_RANGEFINDERS); i++) {
-			report.id[i] = 0;
-			report.distance_vector[i] = 0;
-		}
-
-		report.id[0] = SR04_ID_BASE;
-		report.distance_vector[0] = si_units; //  将测量值填入向量中，适应test()的要求
-		report.just_updated = 1;
-
-	} else {
-		/* for multiple sonars connected */
-
-		_latest_sonar_measurements[_cycle_counter] = si_units;
-		report.just_updated = 0;
-
-		for (unsigned i = 0; i < SRF02_MAX_RANGEFINDERS; i++) {
-			if (i < _sonars) {
-				report.distance_vector[i] = _latest_sonar_measurements[i];
-				report.id[i] = SR04_ID_BASE + i;
-				report.just_updated++;
-
-			} else {
-				report.distance_vector[i] = 0;
-				report.id[i] = 0;
-			}
-
-		}
-
-		report.distance =  _latest_sonar_measurements[0]; //
-	}
-
-	report.minimum_distance = get_minimum_distance();
-	report.maximum_distance = get_maximum_distance();
-	report.valid = si_units > get_minimum_distance() && si_units < get_maximum_distance() ? 1 : 0;
+	report.min_distance = get_minimum_distance();
+	report.max_distance = get_maximum_distance();
+	report.current_distance = si_units;
 
 	/* publish it, if we are the primary */
 	if (_distance_sensor_topic != nullptr) {
@@ -627,18 +549,12 @@ HC_SR04::collect()
 	/* notify anyone waiting for data */
 	poll_notify(POLLIN);
 
-	ret = OK;
-
-	px4_arch_gpiosetevent(_gpio_tab[_cycle_counter].echo_port, true, true, false, nullptr); /* close interrupt */
-	perf_end(_sample_perf);
-#endif
 	return ret;
 }
 
 void
 HC_SR04::start()
 {
-
 	/* reset the report ring and state machine */
 	_collect_phase = false;
 	_reports->flush();
@@ -681,7 +597,6 @@ HC_SR04::stop()
 void
 HC_SR04::cycle_trampoline(void *arg)
 {
-
 	HC_SR04 *dev = (HC_SR04 *)arg;
 
 	dev->cycle();
@@ -691,7 +606,7 @@ HC_SR04::cycle_trampoline(void *arg)
 void
 HC_SR04::cycle()
 {
-	/*_circle_count 计录当前sonar　*/
+	/*_circle_count record current sonar　*/
 	/* perform collection */
 	if (OK != collect()) {
 		DEVICE_DEBUG("collection error");
@@ -704,7 +619,7 @@ HC_SR04::cycle()
 		_cycle_counter = 0;
 	}
 
-	/* 测量next sonar */
+	/* measure next sonar */
 	if (OK != measure()) {
 		DEVICE_DEBUG("measure error sonar adress %d", _cycle_counter);
 	}
@@ -728,6 +643,32 @@ HC_SR04::print_info()
 	_reports->print_info("report queue");
 }
 
+void HC_SR04::capture_trampoline(void *context, uint32_t chan_index,
+					hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
+{
+	HC_SR04 *dev = reinterpret_cast<HC_SR04*>(context);
+	dev->capture_callback(chan_index, edge_time, edge_state, overflow);
+}
+
+void HC_SR04::capture_callback(uint32_t chan_index,
+							hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
+{
+	static hrt_abstime distance_time = 0;
+	static hrt_abstime raising_time = 0;
+	static hrt_abstime falling_time = 0;
+
+	if(edge_state == 1) {
+		raising_time = edge_time;
+	}
+	if(edge_state == 0) {
+		falling_time = edge_time;
+		/*calculate deltaT*/
+		distance_time = falling_time - raising_time;
+		/*calculate distance*/
+		si_units = distance_time * 0.000170f;        //meter
+	}
+}
+
 /**
  * Local functions in support of the shell command.
  */
@@ -739,7 +680,6 @@ HC_SR04	*g_dev;
 void	start();
 void	stop();
 void	test();
-void	reset();
 void	info();
 
 /**
@@ -812,7 +752,6 @@ void stop()
 void
 test()
 {
-#if 0
 	struct distance_sensor_s report;
 	ssize_t sz;
 	int ret;
@@ -831,8 +770,7 @@ test()
 	}
 
 	warnx("single read");
-	warnx("measurement: %0.2f of sonar %d,id=%d", (double)report.distance_vector[report.just_updated], report.just_updated,
-	      report.id[report.just_updated]);
+	warnx("measurement: %0.2f", (double)report.current_distance);
 	warnx("time:        %lld", report.timestamp);
 
 	/* start the sensor polling at 2Hz */
@@ -863,9 +801,7 @@ test()
 		warnx("periodic read %u", i);
 
 		/* Print the sonar rangefinder report sonar distance vector */
-		for (uint8_t count = 0; count < SRF02_MAX_RANGEFINDERS; count++) {
-			warnx("measurement: %0.3f of sonar %u, id=%d", (double)report.distance_vector[count], count + 1, report.id[count]);
-		}
+		warnx("measurement: %0.3f", (double)report.current_distance);
 
 		warnx("time:        %lld", report.timestamp);
 	}
@@ -876,31 +812,8 @@ test()
 	}
 
 	errx(0, "PASS");
-#endif
 }
 
-/**
- * Reset the driver.
- */
-void
-reset()
-{
-	int fd = open(SR04_DEVICE_PATH, O_RDONLY);
-
-	if (fd < 0) {
-		err(1, "failed ");
-	}
-
-	if (ioctl(fd, SENSORIOCRESET, 0) < 0) {
-		err(1, "driver reset failed");
-	}
-
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0) {
-		err(1, "driver poll restart failed");
-	}
-
-	exit(0);
-}
 
 /**
  * Print a little info about the driver.
@@ -919,19 +832,6 @@ info()
 }
 
 } /* namespace */
-
-static int sonar_isr(int irq, void *context)
-{
-	unsigned time = hrt_absolute_time();
-	/* ack the interrupts we just read */
-
-	if (hc_sr04::g_dev != nullptr) {
-		hc_sr04::g_dev->interrupt(time);
-	}
-
-	return OK;
-}
-
 
 
 int
@@ -959,18 +859,11 @@ hc_sr04_main(int argc, char *argv[])
 	}
 
 	/*
-	 * Reset the driver.
-	 */
-	if (!strcmp(argv[1], "reset")) {
-		hc_sr04::reset();
-	}
-
-	/*
 	 * Print driver information.
 	 */
 	if (!strcmp(argv[1], "info") || !strcmp(argv[1], "status")) {
 		hc_sr04::info();
 	}
 
-	errx(1, "unrecognized command, try 'start', 'test', 'reset' or 'info'");
+	errx(1, "unrecognized command, try 'start', 'test' or 'info'");
 }
