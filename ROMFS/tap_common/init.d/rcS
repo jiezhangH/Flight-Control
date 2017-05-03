@@ -25,7 +25,17 @@
 #
 sercon
 
-#set TUNE_ERR ML<<CP4CP4CP4CP4CP4
+#
+# Configuration defaults
+#
+# When the system configuration changes this variable
+# needs to be incremented. This will not reset the
+# calibration but will reset the system tuning and gains
+# to reflect the new defaults
+#
+set DEFAULTS_VER 51
+
+# Log file location
 set LOG_FILE /fs/microsd/bootlog.txt
 if ver hwcmp TAP_V1
 then
@@ -94,6 +104,9 @@ then
 	then
 	fi
 
+	# disable commandline param autosave
+	param autosave off
+
 
 else
 # tap v1
@@ -144,11 +157,11 @@ else
 	set AUTOCNF no
 fi
 
-if param compare SYS_PARAM_VER 48
+if param compare SYS_PARAM_VER ${DEFAULTS_VER}
 then
 	set NEW_DEFAULTS no
 else
-	param set SYS_PARAM_VER 48
+	param set SYS_PARAM_VER ${DEFAULTS_VER}
 
 	set NEW_DEFAULTS yes
 fi
@@ -185,6 +198,14 @@ then
 	param set SYS_AUTOCONFIG 0
 fi
 unset AUTOCNF
+
+if [ $NEW_DEFAULTS == yes ]
+then
+	param set SYS_PARAM_VER ${DEFAULTS_VER}
+	set NEW_DEFAULTS no
+fi
+
+
 
 #
 # Set default output if not set
@@ -469,5 +490,10 @@ else
 		fi
 	fi
 fi
+
+#
+# Enable autosave on the shell
+#
+param autosave on
 
 mavlink boot_complete

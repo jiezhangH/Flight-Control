@@ -267,6 +267,8 @@ then
 	param set SYS_CAL_ACC_TOL 1
 	param set SYS_CAL_GYRO_TOL 0.1
 
+	param save
+
 fi
 
 if tap_esc start -d ${ESC_TTY} -n 6
