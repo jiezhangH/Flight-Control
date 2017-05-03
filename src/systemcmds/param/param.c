@@ -68,6 +68,8 @@ enum COMPARE_OPERATOR {
 	COMPARE_OPERATOR_GREATER = 1,
 };
 
+static bool no_autosave = false;
+
 #ifdef __PX4_QURT
 #define PARAM_PRINT PX4_INFO
 #else
@@ -81,7 +83,7 @@ static int	do_import(const char *param_file_name);
 static int	do_show(const char *search_string);
 static int	do_show_index(const char *index, bool used_index);
 static void	do_show_print(void *arg, param_t param);
-static int	do_set(const char *name, const char *val, bool fail_on_not_found);
+static int	do_set(const char *name, const char *val, bool fail_on_not_found, bool no_save);
 static int	do_compare(const char *name, char *vals[], unsigned comparisons, enum COMPARE_OPERATOR cmd_op);
 static int 	do_reset(const char *excludes[], int num_excludes);
 static int	do_reset_nostart(const char *excludes[], int num_excludes);
@@ -145,16 +147,23 @@ param_main(int argc, char *argv[])
 			}
 		}
 
+		if (!strcmp(argv[1], "autosave")) {
+
+			no_autosave = !strcmp(argv[2], "off");
+
+			return 0;
+		}
+
 		if (!strcmp(argv[1], "set")) {
 			if (argc >= 5) {
 
 				/* if the fail switch is provided, fails the command if not found */
 				bool fail = !strcmp(argv[4], "fail");
 
-				return do_set(argv[2], argv[3], fail);
+				return do_set(argv[2], argv[3], fail, no_autosave);
 
 			} else if (argc >= 4) {
-				return do_set(argv[2], argv[3], false);
+				return do_set(argv[2], argv[3], false, no_autosave);
 
 			} else {
 				warnx("not enough arguments.\nTry 'param set PARAM_NAME 3 [fail]'");
@@ -485,7 +494,7 @@ do_show_print(void *arg, param_t param)
 }
 
 static int
-do_set(const char *name, const char *val, bool fail_on_not_found)
+do_set(const char *name, const char *val, bool fail_on_not_found, bool no_save)
 {
 	int32_t i;
 	float f;
@@ -550,10 +559,14 @@ do_set(const char *name, const char *val, bool fail_on_not_found)
 		return 1;
 	}
 
-	if (param_save_default()) {
-		warnx("Param export failed.");
-		return 1;
+	if (!no_save) {
+		if (param_save_default()) {
+			warnx("Param export failed.");
+			return 1;
 
+		} else {
+			return 0;
+		}
 	} else {
 		return 0;
 	}
