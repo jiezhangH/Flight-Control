@@ -3,6 +3,7 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/cpuload.h>
+#include <uORB/topics/smart_heading.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_status_flags.h>
@@ -28,6 +29,7 @@ public:
 	int get_vehicle_status_sub() const { return _vehicle_status_sub; }
 	int get_vehicle_status_flags_sub() const { return _vehicle_status_flags_sub; }
 	int get_vehicle_attitude_sub() const { return _vehicle_attitude_sub; }
+	int get_smart_heading_sub() const {return _smart_heading_sub; }
 	// TODO: incorporate an add_topic method, this will push back the sub handler
 	// in the subscriber vector
 
@@ -38,6 +40,7 @@ public:
 	bool vehicle_status_updated() const { return _update_bitfield & (uint32_t)StatusMask::VehicleStatus; }
 	bool vehicle_status_flags_updated() const { return _update_bitfield & (uint32_t)StatusMask::VehicleStatusFlags; }
 	bool vehicle_attitude_updated() const { return _update_bitfield & (uint32_t)StatusMask::VehicleAttitude; }
+	bool smart_heading_updated() const { return _update_bitfield & (uint32_t)StatusMask::SmartHeading; }
 
 
 private:
@@ -47,12 +50,14 @@ private:
 		VehicleStatusFlags = (0x01 << 2),
 		BatteryStatus = (0x01 << 3),
 		CpuLoad = (0x01 << 4),
-		VehicleAttitude = (0x01 << 5)
+		VehicleAttitude = (0x01 << 5),
+		SmartHeading = (0x01 << 6)
 	};
 
 	// TODO: incorporate the subscriber into a vector of int
 	int _battery_status_sub = -1;
 	int _cpuload_sub = -1;
+	int _smart_heading_sub = -1;
 	int _vehicle_command_sub = -1;
 	int _vehicle_status_sub = -1;
 	int _vehicle_status_flags_sub = -1;

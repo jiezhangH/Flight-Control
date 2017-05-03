@@ -30,6 +30,10 @@ void SubscriberHandler::subscribe()
 	if (_vehicle_attitude_sub < 0) {
 		_vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
 	}
+
+	if (_smart_heading_sub < 0) {
+		_smart_heading_sub = orb_subscribe(ORB_ID(smart_heading));
+	}
 }
 
 void SubscriberHandler::unsubscribe()
@@ -62,6 +66,11 @@ void SubscriberHandler::unsubscribe()
 	if (_vehicle_attitude_sub >= 0) {
 		orb_unsubscribe(_vehicle_attitude_sub);
 		_vehicle_attitude_sub = -1;
+	}
+
+	if (_smart_heading_sub >= 0) {
+		orb_unsubscribe(_smart_heading_sub);
+		_smart_heading_sub = -1;
 	}
 }
 
@@ -108,5 +117,12 @@ void SubscriberHandler::check_for_updates()
 
 	if (updated) {
 		_update_bitfield |= (uint32_t)StatusMask::VehicleAttitude;
+	}
+
+	updated = false;
+	orb_check(_smart_heading_sub, &updated);
+
+	if (updated) {
+		_update_bitfield |= (uint32_t)StatusMask::SmartHeading;
 	}
 }
