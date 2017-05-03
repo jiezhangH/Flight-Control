@@ -1012,7 +1012,7 @@ MulticopterPositionControl::apply_gear_switch()
 	// record the state that when disarmed in position mode and the gear switch on.
 	// TODO: avoid next time at the time armed and the gear_switch:SWITCH_POS_ON, the gear up, this is not safe
 	if ((!_was_armed && _arming.armed && _manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON)
-	    || !_arming.armed) {
+	    || !_arming.armed || _vehicle_land_detected.landed) {
 		_gear_state_initialized = false;
 	}
 
@@ -1026,7 +1026,7 @@ MulticopterPositionControl::apply_gear_switch()
 		_gear_state_initialized = true;
 	}
 
-	if (_gear_state_initialized && (!_vehicle_land_detected.landed || !_vehicle_land_detected.ground_contact)) {
+	if (_gear_state_initialized) {
 		_att_sp.landing_gear = (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) ?
 				       vehicle_attitude_setpoint_s::LANDING_GEAR_UP : vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
 	}
