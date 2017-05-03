@@ -99,6 +99,7 @@ set(msg_file_names
 	sensor_mag.msg
 	sensor_preflight.msg
 	servorail_status.msg
+	smart_heading.msg
 	subsystem_info.msg
 	system_power.msg
 	task_stack_info.msg
