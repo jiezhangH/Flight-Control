@@ -110,6 +110,7 @@ private:
 		uint8_t mode = led_control_s::MODE_DISABLED; ///< one of led_control_s::MODE_*
 		uint8_t blink_times_left = 0; ///< how many times left to blink (MSB bit is used for infinite case).
 		/// This limits the number of complete blink cycles to 64 (if not infinite)
+		uint8_t flash_counter = 0;
 	};
 
 	struct NextState {
@@ -150,6 +151,10 @@ private:
 				priority[next_priority].blink_times_left = 254;
 			}
 
+			// initialise the flash counter
+			if (led_control.mode == led_control_s::MODE_FLASH) {
+				priority[next_priority].flash_counter = 0;
+			}
 		}
 
 		void apply_next_state()
@@ -164,6 +169,10 @@ private:
 				priority[next_priority].blink_times_left = 254;
 			}
 
+			// initialise the flash counter
+			if (next_state.mode == led_control_s::MODE_FLASH) {
+				priority[next_priority].flash_counter = 0;
+			}
 		}
 	};
 

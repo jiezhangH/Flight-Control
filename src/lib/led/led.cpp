@@ -109,6 +109,7 @@ int LedController::update(LedControlData &control_data)
 			uint16_t current_blink_duration = 0;
 
 			switch (cur_data.mode) {
+			case led_control_s::MODE_FLASH:
 			case led_control_s::MODE_BLINK_FAST:
 				current_blink_duration = BLINK_FAST_DURATION / 100;
 				break;
@@ -170,6 +171,7 @@ int LedController::update(LedControlData &control_data)
 					_states[i].current_blinking_time = 0;
 					had_changes = true;
 				}
+
 				_states[i].apply_next_state();
 				_states[i].next_state.reset();
 			}
@@ -191,11 +193,13 @@ int LedController::update(LedControlData &control_data)
 
 void LedController::get_control_data(LedControlData &control_data)
 {
+	bool flash_output_active = true;
+
 	for (int i = 0; i < BOARD_MAX_LEDS; ++i) {
 		control_data.leds[i].color = led_control_s::COLOR_OFF; // set output to a defined state
 
 		for (int priority = led_control_s::MAX_PRIORITY; priority >= 0; --priority) {
-			const PerPriorityData &cur_data = _states[i].priority[priority];
+			PerPriorityData &cur_data = _states[i].priority[priority];
 
 			if (cur_data.mode == led_control_s::MODE_DISABLED) {
 				continue; // handle next priority
@@ -207,10 +211,21 @@ void LedController::get_control_data(LedControlData &control_data)
 				control_data.leds[i].color = cur_data.color;
 				break;
 
+			case led_control_s::MODE_FLASH:
+				cur_data.flash_counter++;
+
+				if (cur_data.flash_counter > 4) {
+					flash_output_active = false;
+				}
+
+				if (cur_data.flash_counter > 10) {
+					cur_data.flash_counter = 0;
+				}
+
 			case led_control_s::MODE_BLINK_FAST:
 			case led_control_s::MODE_BLINK_NORMAL:
 			case led_control_s::MODE_BLINK_SLOW:
-				if (cur_data.blink_times_left % 2 == 0) {
+				if (cur_data.blink_times_left % 2 == 0 && flash_output_active) {
 					control_data.leds[i].color = cur_data.color;
 				}
 
