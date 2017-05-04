@@ -567,6 +567,7 @@ do_set(const char *name, const char *val, bool fail_on_not_found, bool no_save)
 		} else {
 			return 0;
 		}
+
 	} else {
 		return 0;
 	}
