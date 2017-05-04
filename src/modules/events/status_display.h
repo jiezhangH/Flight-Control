@@ -102,7 +102,7 @@ private:
 	bool _critical_battery = false;
 	int _old_nav_state = -1;
 	int _old_battery_status_warning = -1;
-	int _old_sector = -100;
+	int _old_sector = -100; ///< divide the circle in 6 sector, used to keep track of the old position used in SMART mode
 	orb_advert_t _led_control_pub = nullptr;
 	const events::SubscriberHandler &_subscriber_handler;
 };
