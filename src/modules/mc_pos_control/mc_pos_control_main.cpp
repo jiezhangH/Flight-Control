@@ -2259,6 +2259,13 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 		_reset_int_xy = true;
 	}
 
+	/* if any of the velocity setpoint is bogus, it's probably safest to command no velocity at all. */
+	for (int i = 0; i < 3; ++i) {
+		if (!PX4_ISFINITE(_vel_sp(i))) {
+			_vel_sp(i) = 0.0f;
+		}
+	}
+
 	/* velocity error */
 	math::Vector<3> vel_err = _vel_sp - _vel;
 
