@@ -83,7 +83,7 @@
 #define SR04_MIN_DISTANCE 	(0.40f)
 #define SR04_MAX_DISTANCE 	(4.00f)
 
-#define SR04_CONVERSION_INTERVAL 	100000 /* 100ms for one sonar */
+#define SR04_CONVERSION_INTERVAL 	50000 /* 100ms for one sonar */
 
 
 #ifndef CONFIG_SCHED_WORKQUEUE
