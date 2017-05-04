@@ -168,12 +168,12 @@ private:
 			priority[next_priority].color = next_state.color;
 			priority[next_priority].mode = next_state.mode;
 
-			if (led_control.mode == led_control_s::MODE_FLASH) {
+			if (next_state.mode == led_control_s::MODE_FLASH) {
 				priority[next_priority].flash_counter = 0;
-				priority[next_priority].blink_times_left = led_control.num_blinks * 10;
+				priority[next_priority].blink_times_left = next_state.num_blinks * 10;
 
 			} else {
-				priority[next_priority].blink_times_left = led_control.num_blinks * 2;
+				priority[next_priority].blink_times_left = next_state.num_blinks * 2;
 			}
 
 			if (priority[next_priority].blink_times_left == 0) {
