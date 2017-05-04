@@ -288,7 +288,7 @@ HC_SR04::init()
 	}
 
 	/*TIM2-CH4*/
-	up_input_capture_set(2, Both, 0, capture_trampoline, NULL);
+	up_input_capture_set(2, Both, 0, capture_trampoline, this);
 
 	usleep(200000); /* wait for 200ms; */
 
@@ -516,8 +516,6 @@ HC_SR04::measure()
 	 * Send a plus begin a measurement.
 	 */
 	px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, true);
-	usleep(10);  // >10us
-	px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, false);
 
 	ret = OK;
 
@@ -659,8 +657,8 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 
 	if(edge_state == 1) {
 		raising_time = edge_time;
-	}
-	if(edge_state == 0) {
+		px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, false);
+	} else if(edge_state == 0) {
 		falling_time = edge_time;
 		/*calculate deltaT*/
 		distance_time = falling_time - raising_time;
