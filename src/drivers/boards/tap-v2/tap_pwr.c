@@ -71,10 +71,22 @@ extern bool prevent_poweroff_flag;
 
 // work queue element
 static struct work_s work = {};
+static struct work_s work_shutdown = {};
 
 static void pwr_down_call_back(void *args)
 {
 	led_on(BOARD_LED_BLUE);
+	// disable the interrups
+	px4_enter_critical_section();
+	// power down board
+	px4_board_pwr(false);
+
+	// keep system busy, to prevent to run other code
+	while (1);
+}
+
+static void shutdown_tune_call_back(void *args)
+{
 	// turn off LEDs
 	struct led_control_s leds = {};
 	leds.priority = 2;
@@ -86,14 +98,8 @@ static void pwr_down_call_back(void *args)
 	tune.tune_id = 16; //  shutdown
 	tune.strength = 40;
 	orb_advertise(ORB_ID(tune_control), &tune);
-	// power down board
-	usleep(2000000);
-	// disable the interrups
-	px4_enter_critical_section();
-	px4_board_pwr(false);
-
-	// keep system busy, to prevent to run other code
-	while (1);
+	// Call power done routine after tune as played
+	work_queue(HPWORK, &work_shutdown, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_SHUTDOWN_TUNE_LENGTH * 1000));
 }
 
 
@@ -116,7 +122,7 @@ static int board_button_irq(int irq, FAR void *context)
 		clock_gettime(CLOCK_REALTIME, &time_down);
 
 		if (!prevent_poweroff_flag) {
-			work_queue(HPWORK, &work, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
+			work_queue(HPWORK, &work, (worker_t)&shutdown_tune_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
 		}
 
 	} else {
