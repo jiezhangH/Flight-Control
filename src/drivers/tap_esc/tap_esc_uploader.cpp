@@ -1062,7 +1062,7 @@ TAP_ESC_UPLOADER::verify_crc(uint8_t esc_id, size_t fw_size_local)
 
 	/* compare the CRC sum from the IO with the one calculated */
 	if (sum != crc) {
-		PX4_LOG("CRC wrong: received: %d, expected: %d", crc, sum);
+		PX4_LOG("CRC mismatch: received: %u, expected: %u", static_cast<unsigned int>(crc), static_cast<unsigned int>(sum));
 		return -EINVAL;
 	}
 
