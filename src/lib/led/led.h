@@ -144,17 +144,22 @@ private:
 			int next_priority = (int)led_control.priority;
 			priority[next_priority].color = led_control.color;
 			priority[next_priority].mode = led_control.mode;
-			priority[next_priority].blink_times_left = led_control.num_blinks * 2;
+
+			// initialise the flash counter
+			if (led_control.mode == led_control_s::MODE_FLASH) {
+				priority[next_priority].flash_counter = 0;
+				priority[next_priority].blink_times_left = led_control.num_blinks * 10;
+
+			} else {
+				priority[next_priority].blink_times_left = led_control.num_blinks * 2;
+			}
 
 			if (priority[next_priority].blink_times_left == 0) {
 				// handle infinite case
 				priority[next_priority].blink_times_left = 254;
 			}
 
-			// initialise the flash counter
-			if (led_control.mode == led_control_s::MODE_FLASH) {
-				priority[next_priority].flash_counter = 0;
-			}
+
 		}
 
 		void apply_next_state()
@@ -162,16 +167,18 @@ private:
 			int next_priority = (int)next_state.priority;
 			priority[next_priority].color = next_state.color;
 			priority[next_priority].mode = next_state.mode;
-			priority[next_priority].blink_times_left = next_state.num_blinks * 2;
+
+			if (led_control.mode == led_control_s::MODE_FLASH) {
+				priority[next_priority].flash_counter = 0;
+				priority[next_priority].blink_times_left = led_control.num_blinks * 10;
+
+			} else {
+				priority[next_priority].blink_times_left = led_control.num_blinks * 2;
+			}
 
 			if (priority[next_priority].blink_times_left == 0) {
 				// handle infinite case
 				priority[next_priority].blink_times_left = 254;
-			}
-
-			// initialise the flash counter
-			if (next_state.mode == led_control_s::MODE_FLASH) {
-				priority[next_priority].flash_counter = 0;
 			}
 		}
 	};
