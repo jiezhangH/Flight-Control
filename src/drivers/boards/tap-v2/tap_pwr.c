@@ -71,7 +71,8 @@ extern bool prevent_poweroff_flag;
 
 // work queue element
 static struct work_s work = {};
-static struct work_s work_shutdown = {};
+// shutdown initiated flag
+bool shutdown_initated = false;
 
 static void pwr_down_call_back(void *args)
 {
@@ -87,6 +88,7 @@ static void pwr_down_call_back(void *args)
 
 static void shutdown_tune_call_back(void *args)
 {
+	shutdown_initated = true;
 	// turn off LEDs
 	struct led_control_s leds = {};
 	leds.priority = 2;
@@ -99,7 +101,7 @@ static void shutdown_tune_call_back(void *args)
 	tune.strength = 40;
 	orb_advertise(ORB_ID(tune_control), &tune);
 	// Call power done routine after tune as played
-	work_queue(HPWORK, &work_shutdown, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_SHUTDOWN_TUNE_LENGTH * 1000));
+	work_queue(HPWORK, &work, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_SHUTDOWN_TUNE_LENGTH * 1000));
 }
 
 
@@ -127,8 +129,13 @@ static int board_button_irq(int irq, FAR void *context)
 
 	} else {
 		led_off(BOARD_LED_RED);
-		// if the button is release before the MS_PWR_BUTTON_DOWN time is passed the work queue is canceled
-		work_cancel(HPWORK, &work);
+
+		// if the shutdown is not initiated cancel the work queue call
+		if (!shutdown_initated) {
+			// if the button is release before the MS_PWR_BUTTON_DOWN time is passed the work queue is canceled
+			work_cancel(HPWORK, &work);
+		}
+
 	}
 
 	return OK;
