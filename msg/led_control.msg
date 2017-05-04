@@ -20,7 +20,7 @@ uint8 MODE_BLINK_SLOW = 3
 uint8 MODE_BLINK_NORMAL = 4
 uint8 MODE_BLINK_FAST = 5
 uint8 MODE_BREATHE = 6 # continuously increase & decrease brightness (solid color if driver does not support it)
-uint8 MODE_FLASH = 7 # two fast blinks and then off with frequency of 1Hz
+uint8 MODE_FLASH = 7 # two blinks (on/off) with timing as in MODE_BLINK_FAST and then off with frequency of 1Hz
 
 uint8 MAX_PRIORITY = 2 # maxium priority (minimum is 0)
 
