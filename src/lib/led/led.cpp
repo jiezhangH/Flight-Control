@@ -145,6 +145,14 @@ int LedController::update(LedControlData &control_data)
 						++num_blinking_do_not_change_state;
 					}
 
+					if (cur_data.mode == led_control_s::MODE_FLASH) {
+						cur_data.flash_counter++;
+
+						if (cur_data.flash_counter > 10) {
+							cur_data.flash_counter = 0;
+						}
+					}
+
 					had_changes = true;
 
 				} else {
@@ -193,13 +201,13 @@ int LedController::update(LedControlData &control_data)
 
 void LedController::get_control_data(LedControlData &control_data)
 {
-	bool flash_output_active = true;
 
 	for (int i = 0; i < BOARD_MAX_LEDS; ++i) {
 		control_data.leds[i].color = led_control_s::COLOR_OFF; // set output to a defined state
 
 		for (int priority = led_control_s::MAX_PRIORITY; priority >= 0; --priority) {
-			PerPriorityData &cur_data = _states[i].priority[priority];
+			bool flash_output_active = true;
+			const PerPriorityData &cur_data = _states[i].priority[priority];
 
 			if (cur_data.mode == led_control_s::MODE_DISABLED) {
 				continue; // handle next priority
@@ -212,14 +220,8 @@ void LedController::get_control_data(LedControlData &control_data)
 				break;
 
 			case led_control_s::MODE_FLASH:
-				cur_data.flash_counter++;
-
 				if (cur_data.flash_counter > 4) {
 					flash_output_active = false;
-				}
-
-				if (cur_data.flash_counter > 10) {
-					cur_data.flash_counter = 0;
 				}
 
 			case led_control_s::MODE_BLINK_FAST:
