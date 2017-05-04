@@ -106,7 +106,7 @@ RTL::on_activation()
 	// for safety reasons don't go into RTL if landed
 	if (_navigator->get_land_detected()->landed) {
 		_rtl_state = RTL_STATE_LANDED;
-		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing RTL");
+		mavlink_log_info(_navigator->get_mavlink_log_pub(), "Already landed, not executing RTL");
 
 		// otherwise start RTL by braking first
 

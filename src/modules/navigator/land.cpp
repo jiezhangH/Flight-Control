@@ -93,7 +93,7 @@ Land::on_activation()
 	/* for safety reasons don't go into LAND if landed */
 	if (_navigator->get_land_detected()->landed) {
 		_land_state = LAND_STATE_LANDED;
-		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "Already landed, not executing Landing");
+		mavlink_log_info(_navigator->get_mavlink_log_pub(), "Already landed, not executing Landing");
 
 		/* if not landed, loiter first */
 
