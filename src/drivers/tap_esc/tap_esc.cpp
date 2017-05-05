@@ -79,6 +79,8 @@
  * This driver connects to TAP ESCs via serial.
  */
 
+#error we don't feel like building this now
+
 static int _uart_fd = -1; //todo:refactor in to class
 class TAP_ESC : public device::CDev
 {
