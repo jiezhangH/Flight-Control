@@ -6,13 +6,6 @@
  */
 
 #include <px4_config.h>
-
-#include <stdbool.h>
-
-#include "stm32.h"
-#include "board_config.h"
-
-#include <arch/board/board.h>
 #include "tap_esc_select_responder.h"
 
 /****************************************************************************
