@@ -124,7 +124,7 @@ set(config_extra_builtin_cmds
 	sercon
 	)
 
-set(config_tap_esc_included
+set(config_tap_esc_bin_included
 	)
 
 set(config_extra_libs
