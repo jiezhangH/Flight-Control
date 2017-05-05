@@ -62,6 +62,7 @@
 
 #include "drv_tap_esc.h"
 #include "tap_esc_uploader.h"
+#include "tap_esc_select_responder.h"
 
 // define for comms logging
 //#define UDEBUG

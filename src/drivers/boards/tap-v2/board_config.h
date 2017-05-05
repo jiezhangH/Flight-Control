@@ -400,15 +400,6 @@ bool board_pwr_button_down(void);
 
 __EXPORT bool px4_board_pwr(bool on_not_off);
 
-/****************************************************************************
- * Name: select_responder
- *
- * Description:
- *   Select tap esc responder data form ttyS2 by 74hct151
- *
- ****************************************************************************/
-
-__EXPORT void select_responder(uint8_t sel);
 
 #include "../common/board_common.h"
 

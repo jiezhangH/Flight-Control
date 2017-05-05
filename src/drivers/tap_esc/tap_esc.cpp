@@ -62,6 +62,7 @@
 #include <systemlib/mixer/mixer.h>
 #include <systemlib/param/param.h>
 #include <systemlib/pwm_limit/pwm_limit.h>
+#include "tap_esc_select_responder.h"
 
 #define NAN_VALUE	(0.0f/0.0f)
 
