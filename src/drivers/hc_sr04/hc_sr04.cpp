@@ -81,9 +81,9 @@
 #define SUBSYSTEM_TYPE_RANGEFINDER 131072
 /* Device limits */
 #define SR04_MIN_DISTANCE 	(0.40f)
-#define SR04_MAX_DISTANCE 	(4.00f)
+#define SR04_MAX_DISTANCE 	(5.00f)
 
-#define SR04_CONVERSION_INTERVAL 	50000 /* 100ms for one sonar */
+#define SR04_CONVERSION_INTERVAL 	50000 /* 50ms for one sonar */
 
 
 #ifndef CONFIG_SCHED_WORKQUEUE
@@ -290,7 +290,7 @@ HC_SR04::init()
 	/*TIM2-CH4*/
 	up_input_capture_set(2, Both, 0, capture_trampoline, this);
 
-	usleep(200000); /* wait for 200ms; */
+	usleep(35000); /* wait for 35ms; */
 
 	_cycling_rate = SR04_CONVERSION_INTERVAL;
 
@@ -658,7 +658,8 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 	if(edge_state == 1) {
 		raising_time = edge_time;
 		px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, false);
-	} else if(edge_state == 0) {
+
+	} else {
 		falling_time = edge_time;
 		/*calculate deltaT*/
 		distance_time = falling_time - raising_time;
