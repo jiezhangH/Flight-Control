@@ -52,11 +52,9 @@ before_install:
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then pip install pycrypto pyserial; fi
 
 script:
+    # Exit if one of the scripts fails.
+  - set -e
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
-
-      # Exit if one of the scripts fails.
-      set -e
-
       ./Tools/docker_run.sh 'make check_px4fmu-v2_default check_px4fmu-v4_default check_tap-v2_default';
 
       PX4_DOCKER_REPO=px4io/px4-dev-simulation ./Tools/docker_run.sh './Tools/px4_sitl_packager/create_px4_sitl_package.bash ./';
