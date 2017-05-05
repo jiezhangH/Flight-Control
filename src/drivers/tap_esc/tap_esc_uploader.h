@@ -50,6 +50,9 @@
 #define ESCBUS_DATA_CRC_LEN 248 /**< length of data field is 255 and plus one byte for CRC*/
 #define ESC_WAIT_BEFORE_READ 1	/**< ms, wait before reading to save read() calls*/
 
+namespace tap_esc
+{
+
 class TAP_ESC_UPLOADER
 {
 public:
@@ -239,5 +242,5 @@ private:
 	int 		initialise_uart();
 	void		deinitialize_uart();
 };
-
+} /* tap_esc */
 #endif

@@ -78,6 +78,8 @@
 /*
  * This driver connects to TAP ESCs via serial.
  */
+namespace tap_esc
+{
 
 static int _uart_fd = -1; //todo:refactor in to class
 class TAP_ESC : public device::CDev
@@ -1430,3 +1432,4 @@ int tap_esc_main(int argc, char *argv[])
 
 	return 0;
 }
+} /* tap_esc */

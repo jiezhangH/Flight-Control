@@ -17,7 +17,7 @@
  *
  ****************************************************************************/
 
-void select_responder(uint8_t sel)
+void tap_esc::select_responder(uint8_t sel)
 {
 #if defined(GPIO_S0)
 	px4_arch_gpiowrite(GPIO_S0, sel & 1);
