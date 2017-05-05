@@ -81,9 +81,15 @@ if(NOT ${BOARD} STREQUAL "sim")
 
 	if ("${romfs_used}" STREQUAL "y")
 
+		set(extras "")
+
 		if (config_io_board)
-			set(extras "${CMAKE_BINARY_DIR}/src/modules/px4iofirmware/${config_io_board}.bin")
-			set(extras "${CMAKE_BINARY_DIR}/ROMFS/tap_common/extras/tap_esc.bin")
+			set(extras "${extras} ${CMAKE_BINARY_DIR}/src/modules/px4iofirmware/${config_io_board}.bin")
+		endif()
+
+		# For tap, we include the ESC binary in the ROMFS.
+		if (config_tap_esc_included)
+			set(extras "${extras} ${CMAKE_BINARY_DIR}/ROMFS/tap_common/extras/tap_esc.bin")
 		endif()
 
 		message(STATUS "Adding ROMFS on ${BOARD}")
