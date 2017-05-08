@@ -71,8 +71,12 @@ extern bool prevent_poweroff_flag;
 
 // work queue element
 static struct work_s work = {};
+// define the different states for the shutdown
+#define SHUTDOWN_STATE_INIT 0
+#define SHUTDOWN_STATE_PENDING 1
+#define SHUTDOWN_STATE_COMMITTED 2
 // shutdown initiated flag
-bool shutdown_initated = false;
+static int shutdown_state = 0;
 
 static void pwr_down_call_back(void *args)
 {
@@ -88,7 +92,7 @@ static void pwr_down_call_back(void *args)
 
 static void shutdown_tune_call_back(void *args)
 {
-	shutdown_initated = true;
+	shutdown_state = SHUTDOWN_STATE_COMMITTED;
 	// turn off LEDs
 	struct led_control_s leds = {};
 	leds.priority = 2;
@@ -115,15 +119,12 @@ static void shutdown_tune_call_back(void *args)
 
 static int board_button_irq(int irq, FAR void *context)
 {
-	static struct timespec time_down;
-
 	if (board_pwr_button_down()) {
 
 		led_on(BOARD_LED_RED);
 
-		clock_gettime(CLOCK_REALTIME, &time_down);
-
-		if (!prevent_poweroff_flag) {
+		if (!prevent_poweroff_flag && shutdown_state == SHUTDOWN_STATE_INIT) {
+			shutdown_state = SHUTDOWN_STATE_PENDING;
 			work_queue(HPWORK, &work, (worker_t)&shutdown_tune_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
 		}
 
@@ -131,8 +132,9 @@ static int board_button_irq(int irq, FAR void *context)
 		led_off(BOARD_LED_RED);
 
 		// if the shutdown is not initiated cancel the work queue call
-		if (!shutdown_initated) {
+		if (shutdown_state == SHUTDOWN_STATE_PENDING) {
 			// if the button is release before the MS_PWR_BUTTON_DOWN time is passed the work queue is canceled
+			shutdown_state = SHUTDOWN_STATE_INIT;
 			work_cancel(HPWORK, &work);
 		}
 
