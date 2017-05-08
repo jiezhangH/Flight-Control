@@ -53,14 +53,14 @@ then
 	else
 		# TAP v2
 		# pitch angle & rate setting
-		param set MC_PITCHRATE_P 0.115
+		param set MC_PITCHRATE_P 0.10
 		param set MC_PITCHRATE_I 0.09775
 		param set MC_PITCHRATE_D 0.00115
 		param set MC_PITCHRATE_MAX 360.0
 		param set MC_PITCH_P 7.2
 
 		# roll angle & rate setting
-		param set MC_ROLLRATE_P 0.115
+		param set MC_ROLLRATE_P 0.10
 		param set MC_ROLLRATE_I 0.09775
 		param set MC_ROLLRATE_D 0.00115
 		param set MC_ROLLRATE_MAX 360.0
@@ -77,7 +77,7 @@ then
 		param set MPC_THR_HOVER 0.38
 
 		# Position control parameters
-		param set MPC_XY_P 2.5
+		param set MPC_XY_P 1.4
 		param set MPC_XY_VEL_P 0.17
 		param set MPC_XY_VEL_D 0.007
 		param set MPC_XY_VEL_I 0.02
@@ -95,6 +95,7 @@ then
 
 		# Position control velocity
 		param set MPC_XY_CRUISE 5.0
+		param set MPC_CRUISE_MIN 0.3
 		param set MPC_VEL_MANUAL 13.5
 		param set MPC_XY_VEL_MAX 14.0
 		param set MPC_ACC_HOR_MAX 9.0
