@@ -76,7 +76,7 @@ static struct work_s work = {};
 #define SHUTDOWN_STATE_PENDING 1
 #define SHUTDOWN_STATE_COMMITTED 2
 // shutdown initiated flag
-static int shutdown_state = SHUTDOWN_STATE_INIT;
+static volatile int shutdown_state = SHUTDOWN_STATE_INIT;
 
 static void pwr_down_call_back(void *args)
 {
@@ -92,7 +92,11 @@ static void pwr_down_call_back(void *args)
 
 static void shutdown_tune_call_back(void *args)
 {
+	// lock out button interrupts
+	irqstate_t flags = px4_enter_critical_section();
 	shutdown_state = SHUTDOWN_STATE_COMMITTED;
+	px4_leave_critical_section(flags);
+
 	// turn off LEDs
 	struct led_control_s leds = {};
 	leds.priority = 2;
