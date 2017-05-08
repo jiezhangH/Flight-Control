@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+namespace tap_esc_common
+{
 /****************************************************************************
  * Name: select_responder
  *
@@ -14,7 +16,5 @@
  *   Select tap esc responder data for serial interface by 74hct151
  *
  ****************************************************************************/
-namespace tap_esc
-{
 void select_responder(uint8_t sel);
 } /* tap_esc */

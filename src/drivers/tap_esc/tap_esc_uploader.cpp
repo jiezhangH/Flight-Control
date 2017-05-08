@@ -66,7 +66,6 @@
 
 // define for comms logging
 //#define UDEBUG
-using namespace tap_esc;
 
 const uint8_t TAP_ESC_UPLOADER::_crc_table[256] = TAP_ESC_CRC;
 const uint8_t TAP_ESC_UPLOADER::_device_mux_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_POS;
@@ -539,7 +538,7 @@ TAP_ESC_UPLOADER::send_packet(EscUploaderMessage &packet, int responder)
 			return -EINVAL;
 		}
 
-		select_responder(_device_mux_map[responder]);
+		tap_esc_common::select_responder(_device_mux_map[responder]);
 	}
 
 	int packet_len = crc_packet(packet);
