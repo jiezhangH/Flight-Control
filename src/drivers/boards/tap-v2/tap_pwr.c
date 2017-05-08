@@ -76,7 +76,7 @@ static struct work_s work = {};
 #define SHUTDOWN_STATE_PENDING 1
 #define SHUTDOWN_STATE_COMMITTED 2
 // shutdown initiated flag
-static int shutdown_state = 0;
+static int shutdown_state = SHUTDOWN_STATE_INIT;
 
 static void pwr_down_call_back(void *args)
 {
