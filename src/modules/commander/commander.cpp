@@ -161,7 +161,7 @@ bool prevent_poweroff_flag = false; ///< If the system is armed it is not allowe
 #define HIL_ID_MIN 1000
 #define HIL_ID_MAX 1999
 
-#define SENSOR_VALUE_TOL 0.000001
+#define SENSOR_VALUE_TOL 0.000001f
 
 /* Mavlink log uORB handle */
 static orb_advert_t mavlink_log_pub = nullptr;
@@ -2408,27 +2408,37 @@ int commander_thread_main(int argc, char *argv[])
 			status_changed = true;
 		}
 
-		if(fabs(sensors.gyro_rad[0]) > SENSOR_VALUE_TOL && fabs(sensors.gyro_rad[1]) > SENSOR_VALUE_TOL && fabs(sensors.gyro_rad[2]) > SENSOR_VALUE_TOL &&
-				fabs(sensors.accelerometer_m_s2[0]) > SENSOR_VALUE_TOL && fabs(sensors.accelerometer_m_s2[1]) > SENSOR_VALUE_TOL && fabs(sensors.accelerometer_m_s2[2]) > SENSOR_VALUE_TOL) {
+		/*
+		 * These zero checks are somewhat very basic, however, they are a sensible first step as we do have
+		 * noise on these and the system is already checking for low variance and failing over to other sensors.
+		 */
+
+		/* Check if the main gyro is non-zero */
+		if (fabsf(sensors.gyro_rad[0]) > SENSOR_VALUE_TOL && fabsf(sensors.gyro_rad[1]) > SENSOR_VALUE_TOL && fabsf(sensors.gyro_rad[2]) > SENSOR_VALUE_TOL) {
 			status.onboard_control_sensors_present |= 0x01;
 			status.onboard_control_sensors_enabled |= 0x01;
 			status.onboard_control_sensors_health  |= 0x01;
 		}
 
-		if(fabs(sensors.magnetometer_ga[0]) > SENSOR_VALUE_TOL && fabs(sensors.magnetometer_ga[1]) > SENSOR_VALUE_TOL &&fabs(sensors.magnetometer_ga[2]) > SENSOR_VALUE_TOL) {
+		/* Check if the main accel is non-zero */
+		if (fabsf(sensors.accelerometer_m_s2[0]) > SENSOR_VALUE_TOL && fabsf(sensors.accelerometer_m_s2[1]) > SENSOR_VALUE_TOL && fabsf(sensors.accelerometer_m_s2[2]) > SENSOR_VALUE_TOL) {
+			status.onboard_control_sensors_present |= 0x02;
+			status.onboard_control_sensors_enabled |= 0x02;
+			status.onboard_control_sensors_health  |= 0x02;
+		}
+
+		/* Check if the main mag is non-zero */
+		if (fabsf(sensors.magnetometer_ga[0]) > SENSOR_VALUE_TOL && fabsf(sensors.magnetometer_ga[1]) > SENSOR_VALUE_TOL && fabsf(sensors.magnetometer_ga[2]) > SENSOR_VALUE_TOL) {
 			status.onboard_control_sensors_present |= 0x04;
 			status.onboard_control_sensors_enabled |= 0x04;
 			status.onboard_control_sensors_health  |= 0x04;
 		}
 
-		if(fabs(sensors.baro_alt_meter) > SENSOR_VALUE_TOL) {
+		/* Check if the main baro is non-zero */
+		if (fabsf(sensors.baro_alt_meter) > SENSOR_VALUE_TOL) {
 			status.onboard_control_sensors_present |= 0x08;
 			status.onboard_control_sensors_enabled |= 0x08;
 			status.onboard_control_sensors_health  |= 0x08;
-			status.onboard_control_sensors_present |= 0x10;
-			status.onboard_control_sensors_enabled |= 0x10;
-			status.onboard_control_sensors_health  |= 0x10;
-
 		}
 
 		/* update position setpoint triplet */
@@ -2475,6 +2485,9 @@ int commander_thread_main(int argc, char *argv[])
 
 		if (updated) {
 			orb_copy(ORB_ID(vehicle_gps_position), gps_sub, &gps_position);
+			/* GPS is there */
+			status.onboard_control_sensors_present |= 0x20;
+			status.onboard_control_sensors_enabled |= 0x20;
 		}
 
 		/* Initialize map projection if gps is valid */
@@ -2485,6 +2498,9 @@ int commander_thread_main(int argc, char *argv[])
 			/* set reference for global coordinates <--> local coordiantes conversion and map_projection */
 			globallocalconverter_init((double)gps_position.lat * 1.0e-7, (double)gps_position.lon * 1.0e-7,
 						  (float)gps_position.alt * 1.0e-3f, hrt_absolute_time());
+
+			/* GPS is valid */
+			status.onboard_control_sensors_health  |= 0x20;
 		}
 
 		/* check if GPS is ok */
