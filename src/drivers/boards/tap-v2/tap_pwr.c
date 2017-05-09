@@ -70,7 +70,8 @@ extern void led_off(int led);
 extern bool prevent_poweroff_flag;
 
 // work queue element
-static struct work_s work = {};
+static struct work_s work;
+
 // define the different states for the shutdown
 #define SHUTDOWN_STATE_INIT 0
 #define SHUTDOWN_STATE_PENDING 1
@@ -98,7 +99,7 @@ static void shutdown_tune_call_back(void *args)
 	px4_leave_critical_section(flags);
 
 	// turn off LEDs
-	struct led_control_s leds = {};
+	struct led_control_s leds = {0};
 	leds.priority = 2;
 	leds.led_mask = 0xff;
 	leds.mode = 0; // LED OFF
