@@ -161,6 +161,8 @@ bool prevent_poweroff_flag = false; ///< If the system is armed it is not allowe
 #define HIL_ID_MIN 1000
 #define HIL_ID_MAX 1999
 
+#define SENSOR_VALUE_TOL 0.000001
+
 /* Mavlink log uORB handle */
 static orb_advert_t mavlink_log_pub = nullptr;
 
@@ -2404,6 +2406,29 @@ int commander_thread_main(int argc, char *argv[])
 			}
 
 			status_changed = true;
+		}
+
+		if(fabs(sensors.gyro_rad[0]) > SENSOR_VALUE_TOL && fabs(sensors.gyro_rad[1]) > SENSOR_VALUE_TOL && fabs(sensors.gyro_rad[2]) > SENSOR_VALUE_TOL &&
+				fabs(sensors.accelerometer_m_s2[0]) > SENSOR_VALUE_TOL && fabs(sensors.accelerometer_m_s2[1]) > SENSOR_VALUE_TOL && fabs(sensors.accelerometer_m_s2[2]) > SENSOR_VALUE_TOL) {
+			status.onboard_control_sensors_present |= 0x01;
+			status.onboard_control_sensors_enabled |= 0x01;
+			status.onboard_control_sensors_health  |= 0x01;
+		}
+
+		if(fabs(sensors.magnetometer_ga[0]) > SENSOR_VALUE_TOL && fabs(sensors.magnetometer_ga[1]) > SENSOR_VALUE_TOL &&fabs(sensors.magnetometer_ga[2]) > SENSOR_VALUE_TOL) {
+			status.onboard_control_sensors_present |= 0x04;
+			status.onboard_control_sensors_enabled |= 0x04;
+			status.onboard_control_sensors_health  |= 0x04;
+		}
+
+		if(fabs(sensors.baro_alt_meter) > SENSOR_VALUE_TOL) {
+			status.onboard_control_sensors_present |= 0x08;
+			status.onboard_control_sensors_enabled |= 0x08;
+			status.onboard_control_sensors_health  |= 0x08;
+			status.onboard_control_sensors_present |= 0x10;
+			status.onboard_control_sensors_enabled |= 0x10;
+			status.onboard_control_sensors_health  |= 0x10;
+
 		}
 
 		/* update position setpoint triplet */
