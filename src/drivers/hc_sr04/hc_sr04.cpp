@@ -41,6 +41,7 @@
 
 #include <drivers/device/device.h>
 #include <px4_defines.h>
+#include <px4_log.h>
 
 #include <sys/types.h>
 #include <stdint.h>
@@ -55,6 +56,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <vector>
+#include <getopt.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/wqueue.h>
@@ -71,6 +73,7 @@
 #include <uORB/topics/subsystem_info.h>
 #include <uORB/topics/distance_sensor.h>
 
+#include <lib/conversion/rotation.h>
 
 #include <board_config.h>
 #include <drivers/drv_input_capture.h>
@@ -85,6 +88,8 @@
 
 #define SR04_CONVERSION_INTERVAL 	50000 /* 50ms for one sonar */
 
+#define _MF_WINDOW_SIZE 5 ///< window size for median filter on sonar range
+
 
 #ifndef CONFIG_SCHED_WORKQUEUE
 # error This requires CONFIG_SCHED_WORKQUEUE.
@@ -92,10 +97,15 @@
 
 static float si_units = 0;
 
+int static cmp(const void *a, const void *b)
+{
+	return (*(float *)a - * (float *)b);
+}
+
 class HC_SR04 : public device::CDev
 {
 public:
-	HC_SR04(unsigned sonars = 1);
+	HC_SR04(enum Rotation rotation, unsigned sonars = 1);
 	virtual ~HC_SR04();
 
 	virtual int 		init();
@@ -114,6 +124,10 @@ protected:
 private:
 	float				_min_distance;
 	float				_max_distance;
+	float 				_mf_window[_MF_WINDOW_SIZE] = {0.0f};
+	float				_mf_window_sorted[_MF_WINDOW_SIZE] = {0.0f};
+	float				_mf_prev_value;
+	int 				_mf_cycle_counter;
 	work_s				_work;
 	ringbuffer::RingBuffer	*_reports;
 	bool				_sensor_ok;
@@ -121,6 +135,8 @@ private:
 	bool				_collect_phase;
 	int					_class_instance;
 	int					_orb_class_instance;
+
+	enum Rotation 		_rotation;
 
 	orb_advert_t		_distance_sensor_topic;
 
@@ -141,6 +157,8 @@ private:
 		uint32_t        alt;
 	};
 	static const GPIOConfig _gpio_tab[];
+
+
 	/**
 	* Test whether the device supported by the driver is present at a
 	* specific address.
@@ -189,30 +207,37 @@ private:
 	static void			cycle_trampoline(void *arg);
 
 	static void capture_trampoline(void *context, uint32_t chan_index,
-						hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
+				       hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
 
 	void capture_callback(uint32_t chan_index,
-								hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
+			      hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow);
+
+	float median_filter(float value);
+
 
 };
 
 const HC_SR04::GPIOConfig HC_SR04::_gpio_tab[] = {GPIO_GPIO4_OUTPUT, GPIO_TIM2_CH4IN, 0};
+
 
 /*
  * Driver 'main' command.
  */
 extern "C"  __EXPORT int hc_sr04_main(int argc, char *argv[]);
 
-HC_SR04::HC_SR04(unsigned sonars) :
+HC_SR04::HC_SR04(enum Rotation rotation, unsigned sonars) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
 	_min_distance(SR04_MIN_DISTANCE),
 	_max_distance(SR04_MAX_DISTANCE),
+	_mf_prev_value(0.0f),
+	_mf_cycle_counter(0),
 	_reports(nullptr),
 	_sensor_ok(false),
 	_measure_ticks(0),
 	_collect_phase(false),
 	_class_instance(-1),
 	_orb_class_instance(-1),
+	_rotation(rotation),
 	_distance_sensor_topic(nullptr),
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
@@ -522,18 +547,22 @@ HC_SR04::measure()
 	return ret;
 }
 
+
 int
 HC_SR04::collect()
 {
 	int ret;
 	ret = OK;
 
+
 	struct distance_sensor_s report;
 
 	report.timestamp = hrt_absolute_time();
 	report.min_distance = get_minimum_distance();
 	report.max_distance = get_maximum_distance();
-	report.current_distance = si_units;
+	report.current_distance = median_filter(si_units);
+	report.orientation = _rotation;
+	_mf_cycle_counter++;
 
 	/* publish it, if we are the primary */
 	if (_distance_sensor_topic != nullptr) {
@@ -548,6 +577,26 @@ HC_SR04::collect()
 	poll_notify(POLLIN);
 
 	return ret;
+}
+
+float
+HC_SR04::median_filter(float value)
+{
+	_mf_window[(_mf_cycle_counter + 1) % _MF_WINDOW_SIZE] = value;
+
+	for (int i = 0; i < _MF_WINDOW_SIZE; ++i) {
+		_mf_window_sorted[i] = _mf_window[i];
+	}
+
+	qsort(_mf_window_sorted, _MF_WINDOW_SIZE, sizeof(float), cmp);
+
+	if (_mf_window_sorted[(_MF_WINDOW_SIZE / 2)] < get_maximum_distance()) {
+		_mf_prev_value = _mf_window_sorted[(_MF_WINDOW_SIZE / 2)];
+		return _mf_window_sorted[(_MF_WINDOW_SIZE / 2)];
+
+	} else {
+		return _mf_prev_value;
+	}
 }
 
 void
@@ -642,20 +691,20 @@ HC_SR04::print_info()
 }
 
 void HC_SR04::capture_trampoline(void *context, uint32_t chan_index,
-					hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
+				 hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
 {
-	HC_SR04 *dev = reinterpret_cast<HC_SR04*>(context);
+	HC_SR04 *dev = reinterpret_cast<HC_SR04 *>(context);
 	dev->capture_callback(chan_index, edge_time, edge_state, overflow);
 }
 
 void HC_SR04::capture_callback(uint32_t chan_index,
-							hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
+			       hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
 {
 	static hrt_abstime distance_time = 0;
 	static hrt_abstime raising_time = 0;
 	static hrt_abstime falling_time = 0;
 
-	if(edge_state == 1) {
+	if (edge_state == 1) {
 		raising_time = edge_time;
 		px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, false);
 
@@ -676,7 +725,7 @@ namespace  hc_sr04
 
 HC_SR04	*g_dev;
 
-void	start();
+void	start(enum Rotation rotation);
 void	stop();
 void	test();
 void	info();
@@ -685,7 +734,7 @@ void	info();
  * Start the driver.
  */
 void
-start()
+start(enum Rotation rotation)
 {
 	int fd;
 
@@ -693,8 +742,9 @@ start()
 		errx(1, "already started");
 	}
 
+	warnx("rot %d", rotation);
 	/* create the driver */
-	g_dev = new HC_SR04();
+	g_dev = new HC_SR04(rotation);
 
 	if (g_dev == nullptr) {
 		goto fail;
@@ -836,31 +886,49 @@ info()
 int
 hc_sr04_main(int argc, char *argv[])
 {
+
+	int ch;
+	enum Rotation rotation = ROTATION_NONE;
+
+
+	while ((ch = getopt(argc, argv, "R:")) != EOF) {
+		switch (ch) {
+		case 'R':
+			rotation = (enum Rotation)atoi(optarg);
+			break;
+
+		default:
+			PX4_WARN("missing rotation information");
+		}
+	}
+
+	const char *verb = argv[optind];
+
 	/*
 	 * Start/load the driver.
 	 */
-	if (!strcmp(argv[1], "start")) {
-		hc_sr04::start();
+	if (!strcmp(verb, "start")) {
+		hc_sr04::start(rotation);
 	}
 
 	/*
 	 * Stop the driver
 	 */
-	if (!strcmp(argv[1], "stop")) {
+	if (!strcmp(verb, "stop")) {
 		hc_sr04::stop();
 	}
 
 	/*
 	 * Test the driver/device.
 	 */
-	if (!strcmp(argv[1], "test")) {
+	if (!strcmp(verb, "test")) {
 		hc_sr04::test();
 	}
 
 	/*
 	 * Print driver information.
 	 */
-	if (!strcmp(argv[1], "info") || !strcmp(argv[1], "status")) {
+	if (!strcmp(verb, "info") || !strcmp(verb, "status")) {
 		hc_sr04::info();
 	}
 
