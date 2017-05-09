@@ -80,6 +80,7 @@
 #include <uORB/topics/home_position.h>
 // TODO: remove when the new trajectory module is implemented
 #include <uORB/topics/smart_heading.h>
+#include <uORB/topics/distance_sensor.h>
 
 #include <float.h>
 #include <systemlib/mavlink_log.h>
@@ -152,6 +153,7 @@ private:
 	bool 		_in_landing = false;				/**<true if landing descent (only used in auto) */
 	bool 		_lnd_reached_ground = false; 		/**<true if controller assumes the vehicle has reached the ground after landing */
 	bool 		_state_updn_revert = false; 		/**<true if vehicle is upside down */
+	bool 		_obstacle_ahead_sp = false;			/**< true if an obstacle is present */
 
 	int		_control_task;			/**< task handle for task */
 	orb_advert_t	_mavlink_log_pub;		/**< mavlink log advert */
@@ -169,6 +171,7 @@ private:
 	int		_local_pos_sp_sub;		/**< offboard local position setpoint */
 	int		_global_vel_sp_sub;		/**< offboard global velocity setpoint */
 	int		_home_pos_sub; 			/**< home position */
+	int 	_sonar_sub;				/**< sonar data */
 	orb_advert_t	_att_sp_pub;			/**< attitude setpoint publication */
 	orb_advert_t	_local_pos_sp_pub;		/**< vehicle local position setpoint publication */
 	orb_advert_t	_global_vel_sp_pub;		/**< vehicle global velocity setpoint publication */
@@ -188,6 +191,7 @@ private:
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct vehicle_global_velocity_setpoint_s	_global_vel_sp;		/**< vehicle global velocity setpoint */
 	struct home_position_s				_home_pos; 				/**< home position */
+	struct distance_sensor_s _sonar_measurament; /**<sonar neasurament message>*/
 
 	control::BlockParamFloat _manual_thr_min; /**< minimal throttle output when flying in manual mode */
 	control::BlockParamFloat _manual_thr_max; /**< maximal throttle output when flying in manual mode */
@@ -318,6 +322,7 @@ private:
 	math::Vector<3> _curr_pos_sp;  /**< current setpoint of the triplets */
 	math::Vector<3> _prev_pos_sp; /**< previous setpoint of the triples */
 	matrix::Vector2f _stick_input_xy_prev; /*for manual controlled mode to detect direction change in xy*/
+	math::Vector<3> _stop_sp;		/*<setpoint for obstacle avoidance>*/
 
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
@@ -469,6 +474,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp_triplet_sub(-1),
 	_global_vel_sp_sub(-1),
 	_home_pos_sub(-1),
+	_sonar_sub(-1),
 
 	/* publications */
 	_att_sp_pub(nullptr),
@@ -488,6 +494,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_local_pos_sp{},
 	_global_vel_sp{},
 	_home_pos{},
+	_sonar_measurament{},
 	_manual_thr_min(this, "MANTHR_MIN"),
 	_manual_thr_max(this, "MANTHR_MAX"),
 	_manual_land_alt(this, "MIS_LTRMIN_ALT", false),
@@ -559,6 +566,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_curr_pos_sp.zero();
 	_prev_pos_sp.zero();
 	_stick_input_xy_prev = matrix::Vector2f(0.0f, 0.0f);
+	_stop_sp.zero();
 
 	_R.identity();
 
@@ -924,6 +932,13 @@ MulticopterPositionControl::poll_subscriptions()
 	if (updated) {
 		orb_copy(ORB_ID(home_position), _home_pos_sub, &_home_pos);
 	}
+
+	orb_check(_sonar_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(distance_sensor), _sonar_sub, &_sonar_measurament);
+	}
+
 }
 
 float
@@ -1909,6 +1924,45 @@ void MulticopterPositionControl::control_auto(float dt)
 		    PX4_ISFINITE(next_sp(1)) &&
 		    PX4_ISFINITE(next_sp(2))) {
 			next_setpoint_valid = true;
+		}
+	}
+
+	/* only if distance data come from forward facing sensor */
+	if (_sonar_measurament.orientation == 24) {
+		const bool got_takeoff_setpoint = (_pos_sp_triplet.current.valid &&
+						   _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF) ||
+						  _control_mode.flag_control_offboard_enabled;
+
+		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
+			if (!_vehicle_land_detected.landed && !got_takeoff_setpoint) {
+				if (_obstacle_ahead_sp == false) {
+					_stop_sp = _pos;
+					_obstacle_ahead_sp = true;
+					PX4_WARN("stop sp %f %f dist %f", (double)_stop_sp(0), (double)_stop_sp(1),
+						 (double)_sonar_measurament.current_distance);
+				}
+
+
+				if (_obstacle_ahead_sp == true && _sonar_measurament.current_distance < 0.6f) {
+					matrix::Vector2f unit_pos_to_home((_home_pos.x - _pos(0)), (_home_pos.y - _pos(1)));
+					unit_pos_to_home = unit_pos_to_home.normalized();
+					_stop_sp(0) = _pos(0) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(
+							      0);  //prev_sp(0);
+					_stop_sp(1) = _pos(1) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(1);
+					PX4_WARN("obstacle within 0.6m");
+				}
+
+				_curr_pos_sp(0) = _stop_sp(0);
+				_curr_pos_sp(1) = _stop_sp(1);
+				_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
+			}
+
+		} else {
+			if (_obstacle_ahead_sp == true) {
+				_curr_pos_sp(0) = _stop_sp(0);
+				_curr_pos_sp(1) = _stop_sp(1);
+				_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
+			}
 		}
 	}
 
@@ -2948,6 +3002,7 @@ MulticopterPositionControl::task_main()
 	_local_pos_sp_sub = orb_subscribe(ORB_ID(vehicle_local_position_setpoint));
 	_global_vel_sp_sub = orb_subscribe(ORB_ID(vehicle_global_velocity_setpoint));
 	_home_pos_sub = orb_subscribe(ORB_ID(home_position));
+	_sonar_sub = orb_subscribe(ORB_ID(distance_sensor));
 
 	parameters_update(true);
 
