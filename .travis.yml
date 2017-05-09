@@ -48,7 +48,7 @@ virtualenv:
 
 before_install:
   - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && pip install empy jinja2 && pip install --user s3cmd; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then sudo -H easy_install pip && sudo -H pip install empy jinja2; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then sudo -H easy_install pip && sudo -H pip install empy jinja2; brew tap px4/simulation; brew update; brew install homebrew/science/opencv; brew install gazebo7; fi
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then pip install pycrypto pyserial; fi
 
 script:
@@ -76,6 +76,11 @@ script:
       PX4_DOCKER_REPO=px4io/px4-dev-clang ./Tools/docker_run.sh 'make clang-tidy-parallel';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       make tests;
+
+      ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
+      mkdir -p s3sitl;
+      cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
+      echo ${TRAVIS_TAG} > s3sitl/version;
     fi
 
 after_success:
