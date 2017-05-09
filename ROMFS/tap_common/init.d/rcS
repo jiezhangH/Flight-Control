@@ -300,7 +300,7 @@ mavlink_dup start -d /dev/mavlink_dup
 mavlink_dup add -d /dev/mavlink -b $BAUDRATE
 mavlink_dup add -d /dev/ttyACM0 -p
 # mavlink rate depends on baudrate
-set MAV_RATE 30000
+set MAV_RATE 8000
 if [ $BAUDRATE -lt 500000 ]
 then
 	set MAV_RATE 8000
