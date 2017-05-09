@@ -250,7 +250,7 @@ fi
 if [ $DO_TEMP_CALIB == 0 ]
 then
 
-	gps start -d /dev/ttyS0
+	gps start -d /dev/ttyS0 -s
 
 	# waypoint storage
 	# REBOOTWORK this needs to start in parallel
