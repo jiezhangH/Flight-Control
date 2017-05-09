@@ -237,6 +237,11 @@ int do_mag_calibration(orb_advert_t *mavlink_log_pub)
 			result = PX4_ERROR;
 			break;
 
+		case calibrate_return_error:
+			// Error message already displayed, we're done here
+			result = PX4_ERROR;
+			break;
+
 		case calibrate_return_ok:
 			/* auto-save to EEPROM */
 			result = param_save_default();
@@ -378,6 +383,13 @@ static calibrate_return mag_calibration_worker(detect_orientation_return orienta
 
 		if (calibrate_cancel_check(worker_data->mavlink_log_pub, cancel_sub)) {
 			result = calibrate_return_cancelled;
+			break;
+		}
+
+		if (cal_method != 0 && hrt_absolute_time() > (calibration_deadline - 1000000)) {
+			calibration_log_critical(worker_data->mavlink_log_pub, CAL_QGC_FAILED_MSG, "calibrate error");
+			usleep(20000);
+			result = calibrate_return_error;
 			break;
 		}
 

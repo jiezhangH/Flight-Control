@@ -89,6 +89,7 @@
 #include <poll.h>
 #include <float.h>
 #include <matrix/math.hpp>
+#include <lib/mathlib/mathlib.h>
 
 #include <uORB/uORB.h>
 #include <uORB/topics/actuator_armed.h>
@@ -161,7 +162,23 @@ bool prevent_poweroff_flag = false; ///< If the system is armed it is not allowe
 #define HIL_ID_MIN 1000
 #define HIL_ID_MAX 1999
 
+
 #define SENSOR_VALUE_TOL 0.000001f
+
+
+//
+// CODE REWORK MARKER START: THIS PART SHOULD BE MOVED TO EVENT LIBRARY
+//
+
+/* Params for factory calibration */
+#define RESCOVER_ATTITUDE				 5.0f
+#define ENTER_MIN_NEGATIVE_ATTITUDE		-25.0f
+#define ENTER_MAX_NEGATIVE_ATTITUDE		-75.0f
+#define NUMBER_SHAKE				2
+
+//
+// CODE REWORK MARKER STOP: THIS PART SHOULD BE MOVED TO EVENT LIBRARY
+//
 
 /* Mavlink log uORB handle */
 static orb_advert_t mavlink_log_pub = nullptr;
@@ -3417,7 +3434,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 
 		if (set_normal_color) {
 			// make sure that only an error state can reset the high priority event and not a calibration event
-			if (activated_high_prio_event && !status_flags.condition_calibration_enabled) {
+			if (activated_high_prio_event) {
 				rgbled_reset_high_prio_event();
 				activated_high_prio_event = false;
 			}
@@ -3442,7 +3459,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 				}
 			}
 		}
-		if (led_mode != led_control_s::MODE_OFF) {
+		if (led_mode != led_control_s::MODE_OFF && !status_flags.condition_calibration_enabled) {
 			rgbled_set_color_and_mode(led_color, led_mode, 0, prio);
 		}
 	}
@@ -4178,6 +4195,33 @@ void *commander_low_prio_loop(void *arg)
 	/* timeout for param autosave */
 	hrt_abstime need_param_autosave_timeout = 0;
 
+//
+// CODE REWORK MARKER START: THIS PART SHOULD BE MOVED TO EVENT LIBRARY
+//
+
+	/* subscribe to vehicle attitude topic */
+	int v_att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+	struct vehicle_attitude_s v_att;
+	memset(&v_att, 0, sizeof(v_att));
+
+	/* param for factory calibration (geomagnetic and static) */
+	bool done_mag_cali = false;
+	bool flag = false;
+	unsigned pitch_zero_counter = 0;
+	unsigned pitch_negative_counter = 0;
+	uint32_t done_factory_cal = 0;
+	int time_out = 1000;
+
+	(void)param_get(param_find("CAL_MAG0_ID"), &done_factory_cal);
+
+	if (!done_factory_cal) {
+		time_out = 100;
+	}
+
+//
+// CODE REWORK MARKER STOP: THIS PART SHOULD BE MOVED TO EVENT LIBRARY
+//
+
 	/* wakeup source(s) */
 	px4_pollfd_struct_t fds[1];
 
@@ -4186,8 +4230,8 @@ void *commander_low_prio_loop(void *arg)
 	fds[0].events = POLLIN;
 
 	while (!thread_should_exit) {
-		/* wait for up to 1000ms for data */
-		int pret = px4_poll(&fds[0], (sizeof(fds) / sizeof(fds[0])), 1000);
+		/* wait for up to 1000ms/100ms for data */
+		int pret = px4_poll(&fds[0], (sizeof(fds) / sizeof(fds[0])), time_out);
 
 		/* timed out - periodic check for thread_should_exit, etc. */
 		if (pret == 0) {
@@ -4208,6 +4252,101 @@ void *commander_low_prio_loop(void *arg)
 					need_param_autosave_timeout = hrt_absolute_time();
 				}
 			}
+
+//
+// CODE REWORK MARKER START: THIS PART SHOULD BE MOVED TO EVENT LIBRARY
+//
+
+			/* trigger factory geomagnetic and static calibration */
+			if (!done_factory_cal && !armed.armed) {
+				bool updated = false;
+				orb_check(v_att_sub, &updated);
+
+				if (updated) {
+					/* get pitch angle of the vehicle, trigger calibration by nodding two times*/
+					math::Quaternion q;
+					math::Vector<3> euler;
+
+					orb_copy(ORB_ID(vehicle_attitude), v_att_sub, &v_att);
+					q(0) = v_att.q[0];
+					q(1) = v_att.q[1];
+					q(2) = v_att.q[2];
+					q(3) = v_att.q[3];
+
+					euler = q.to_euler();
+
+					float pitch_angle = euler(1) * 57.3f;
+
+					/* back to level and status flag to true */
+					if (fabsf(pitch_angle) < RESCOVER_ATTITUDE) {
+						flag = true;
+						pitch_zero_counter++;
+
+						/* enter factory calibration */
+						if (pitch_negative_counter >= NUMBER_SHAKE) {
+							pitch_negative_counter = 0;
+							status_flags.condition_calibration_enabled = true;
+							set_tune(TONE_NOTIFY_POSITIVE_TUNE);
+
+							if (PX4_OK == do_mag_calibration(&mavlink_log_pub)) {
+								done_mag_cali = true;
+								rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_BLINK_FAST, 0, 2);
+							} else {
+								status_flags.condition_calibration_enabled = false;
+								rgbled_set_color_and_mode(led_control_s::COLOR_RED, led_control_s::MODE_ON, 0, 2);
+								break;
+							}
+						}
+
+						/* trigger factory calibration within 2 senconds (20 * 100ms), otherwise restart the count */
+						if (pitch_zero_counter > 20) {
+							pitch_zero_counter = 0;
+							pitch_negative_counter = 0;
+						}
+					}
+
+					/* at a negative angle and previous status flag is at level */
+					if (pitch_angle < ENTER_MIN_NEGATIVE_ATTITUDE && pitch_angle > ENTER_MAX_NEGATIVE_ATTITUDE && flag) {
+						flag = false;
+						pitch_zero_counter = 0;
+						pitch_negative_counter++;
+					}
+
+					/* have done factory geomagnetic and then static calibration */
+					if (done_mag_cali) {
+						if (PX4_OK == do_gyro_calibration(&mavlink_log_pub)) {
+							rgbled_set_color_and_mode(led_control_s::COLOR_GREEN, led_control_s::MODE_ON, 0, 2);
+
+							/* set param SYS_CAL_FACTORY, done factory calibration only once */
+							int32_t enabled = 1;
+							if (PX4_OK != param_set_no_notification(param_find("SYS_CAL_FACTORY"), &enabled)) {
+								PX4_ERR("unable to reset SYS_CAL_FACTORY");
+							}
+
+							/* save param changes */
+							param_notify_changes();
+							int ret = param_save_default();
+							if (ret != 0) {
+								PX4_ERR("Failed to save params (%i)", ret);
+							}
+
+							/* sleep 3 seconds and then shutdown */
+							usleep(3000000);
+							px4_board_pwr(false);
+						}
+						else {
+							status_flags.condition_calibration_enabled = false;
+							rgbled_set_color_and_mode(led_control_s::COLOR_RED, led_control_s::MODE_ON, 0, 2);
+						}
+						break;
+					}
+				}
+			}
+
+//
+// CODE REWORK MARKER STOP: THIS PART SHOULD BE MOVED TO EVENT LIBRARY
+//
+
 		} else if (pret < 0) {
 		/* this is undesirable but not much we can do - might want to flag unhappy status */
 			warn("commander: poll error %d, %d", pret, errno);
