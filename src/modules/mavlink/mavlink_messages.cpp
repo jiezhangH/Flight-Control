@@ -3989,7 +3989,6 @@ protected:
 				msg.satellite_elevation[i] = _gps.elevation[i];
 				msg.satellite_used[i] = _gps.used[i];
 				msg.satellite_prn[i] = _gps.svid[i];
-				printf("%d  %d\n",i,msg.satellite_snr[i]);
 			}
 		}
 
