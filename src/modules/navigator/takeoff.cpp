@@ -144,10 +144,10 @@ Takeoff::set_takeoff_position()
 
 	// convert mission item to current setpoint
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
-	pos_sp_triplet->previous.valid = false;
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
-	pos_sp_triplet->current.yaw = NAN;
-	pos_sp_triplet->current.yaw_valid = false;
+	pos_sp_triplet->previous.valid = false;
+	pos_sp_triplet->current.yaw_valid = true;
+
 	pos_sp_triplet->next.valid = false;
 
 	if (rep->current.valid) {
