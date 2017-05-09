@@ -202,7 +202,9 @@ unset AUTOCNF
 if [ $NEW_DEFAULTS == yes ]
 then
 	param set SYS_PARAM_VER ${DEFAULTS_VER}
+	param save
 	set NEW_DEFAULTS no
+	reboot
 fi
 
 

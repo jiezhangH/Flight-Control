@@ -278,7 +278,7 @@ then
 
 	# Reboot to be on the safe side that the ESC update
 	# did not consume RAM we are missing to fly
-	reboot
+	# reboot
 
 fi
 
