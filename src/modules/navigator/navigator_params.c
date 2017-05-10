@@ -108,7 +108,7 @@ PARAM_DEFINE_FLOAT(NAV_MC_ALT_RAD, 0.8f);
  *
  * @value 0 Disabled
  * @value 1 Loiter
- * @value 2 Return to Land
+ * @value 2 Return to Launch
  * @value 3 Land at current position
  * @value 4 Data Link Auto Recovery (CASA Outback Challenge rules)
  * @value 5 Terminate
@@ -129,7 +129,7 @@ PARAM_DEFINE_INT32(NAV_DLL_ACT, 0);
  *
  * @value 0 Disabled
  * @value 1 Loiter
- * @value 2 Return to Land
+ * @value 2 Return to Launch
  * @value 3 Land at current position
  * @value 4 RC Auto Recovery (CASA Outback Challenge rules)
  * @value 5 Terminate

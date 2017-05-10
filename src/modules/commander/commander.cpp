@@ -2297,7 +2297,7 @@ int commander_thread_main(int argc, char *argv[])
 				   !low_battery_voltage_actions_done) {
 					low_battery_voltage_actions_done = true;
 					if (armed.armed) {
-						mavlink_log_critical(&mavlink_log_pub, "LOW BATTERY, RETURN TO LAND ADVISED");
+						mavlink_log_critical(&mavlink_log_pub, "LOW BATTERY, RETURN TO LAUNCH ADVISED");
 					} else {
 						mavlink_log_critical(&mavlink_log_pub, "LOW BATTERY, TAKEOFF DISCOURAGED");
 					}
@@ -2681,7 +2681,7 @@ int commander_thread_main(int argc, char *argv[])
 						// It is normal to take over with sticks after takeoff and loiter
 						break;
 					case commander_state_s::MAIN_STATE_AUTO_RTL:
-						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, aborted return to land");
+						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, aborted return to launch");
 						break;
 					case commander_state_s::MAIN_STATE_AUTO_MISSION:
 						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, paused mission");

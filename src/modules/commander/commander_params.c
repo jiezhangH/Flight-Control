@@ -328,7 +328,7 @@ PARAM_DEFINE_INT32(COM_ARM_SWISBTN, 0);
  *
  * @group Commander
  * @value 0 Warning
- * @value 1 Return to land
+ * @value 1 Return to Launch
  * @value 2 Land at current position
  * @value 3 RTL, land immediately if battery too low
  * @decimal 0
@@ -356,7 +356,7 @@ PARAM_DEFINE_FLOAT(COM_OF_LOSS_T, 0.0f);
  *
  * @value 0 Land at current position
  * @value 1 Loiter
- * @value 2 Return to Land
+ * @value 2 Return to Launch
  *
  * @group Mission
  */
@@ -371,7 +371,7 @@ PARAM_DEFINE_INT32(COM_OBL_ACT, 0);
  * @value 0 Position control
  * @value 1 Altitude control
  * @value 2 Manual
- * @value 3 Return to Land
+ * @value 3 Return to Launch
  * @value 4 Land at current position
  *
  * @group Mission

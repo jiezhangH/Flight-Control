@@ -52,6 +52,6 @@
  * @max 300
  * @decimal 1
  * @increment 0.5
- * @group Return To Land
+ * @group Return to Launch
  */
 PARAM_DEFINE_FLOAT(LAND_LOI_DELAY, 3.0f);
