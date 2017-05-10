@@ -243,6 +243,7 @@ then
 	# Switch mapping
 	#
 	param set RC_MAP_FLTMODE 5
+	param set RC_MAP_KILL_SW 6
 	param set RC_MAP_GEAR_SW 11
 
 	# pan control
