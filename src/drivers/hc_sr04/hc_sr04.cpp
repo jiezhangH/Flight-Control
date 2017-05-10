@@ -313,6 +313,7 @@ HC_SR04::init()
 	// }
 
 	DevMgr::getHandle(PX4FMU_DEVICE_PATH, _h_fmu);
+
 	if (!_h_fmu.isValid()) {
 		PX4_WARN("FMU: px4_open fail\n");
 		return PX4_ERROR;
@@ -585,12 +586,14 @@ HC_SR04::collect()
 	_mf_cycle_counter++;
 
 	PX4_INFO("collect pusblish msg");
+
 	/* publish it, if we are the primary */
 	if (_distance_sensor_topic != nullptr) {
 		orb_publish(ORB_ID(distance_sensor), _distance_sensor_topic, &report);
+
 	} else {
 		_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
-				 &_orb_class_instance, ORB_PRIO_LOW);
+					 &_orb_class_instance, ORB_PRIO_LOW);
 	}
 
 	if (_reports->force(&report)) {
