@@ -33,7 +33,7 @@ sercon
 # calibration but will reset the system tuning and gains
 # to reflect the new defaults
 #
-set DEFAULTS_VER 53
+set DEFAULTS_VER 54
 
 # Log file location
 set LOG_FILE /fs/microsd/bootlog.txt
