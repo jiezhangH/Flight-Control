@@ -306,8 +306,6 @@ private:
 	hrt_abstime _ref_timestamp;
 	hrt_abstime _last_warn;
 
-	bool _transition_to_non_manual = false;
-
 	math::Vector<3> _thrust_int;
 	math::Vector<3> _pos;
 	math::Vector<3> _pos_sp;
@@ -909,13 +907,6 @@ MulticopterPositionControl::poll_subscriptions()
 		    !PX4_ISFINITE(_pos_sp_triplet.current.lon) ||
 		    !PX4_ISFINITE(_pos_sp_triplet.current.alt)) {
 			_pos_sp_triplet.current.valid = false;
-		}
-
-		/* to avoid time scheduling issue that occurs when the navigator has not updated the triplet
-		 * but the mc_pos_control already received a non-manual control flag
-		 */
-		if (_transition_to_non_manual && !_control_mode.flag_control_manual_enabled) {
-			_transition_to_non_manual = false;
 		}
 	}
 
@@ -2191,8 +2182,7 @@ void MulticopterPositionControl::control_auto(float dt)
 
 
 	} else {
-		/* idle or triplet not valid, do nothing and set setpoint to current position */
-		_pos_sp = _pos;
+		/* idle or triplet not valid, do nothing */
 	}
 }
 
@@ -2261,14 +2251,14 @@ MulticopterPositionControl::do_control(float dt)
 		control_manual(dt);
 		_mode_auto = false;
 
-		_transition_to_non_manual = true;
+		/* we set tiplets to false
+		 * this ensures that when switching to auto, the position
+		 * controller will not use the old triplets but waits until triplets
+		 * have been updated */
+		_pos_sp_triplet.current.valid = false;
 
 		_hold_offboard_xy = false;
 		_hold_offboard_z = false;
-
-	} else if (_transition_to_non_manual) {
-		/* we reuse the previous setpoints */
-		calculate_thrust_setpoint(dt);
 
 	} else {
 		/* reset acceleration to default */
