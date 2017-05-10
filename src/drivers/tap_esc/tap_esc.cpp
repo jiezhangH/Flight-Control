@@ -818,6 +818,13 @@ TAP_ESC::cycle()
 			}
 		}
 
+		/* Kill switch is enabled, emergency stop */
+		if (_armed.manual_lockdown) {
+			for (int i = 0; i < esc_count; ++i) {
+				motor_out[i] = RPMSTOPPED;
+			}
+		}
+
 		send_esc_outputs(motor_out, esc_count);
 		read_data_from_uart();
 
