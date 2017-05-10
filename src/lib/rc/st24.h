@@ -41,8 +41,6 @@
 
 #pragma once
 
-#include <stdint.h>
-
 __BEGIN_DECLS
 
 #define ST24_DATA_LEN_MAX	64
@@ -50,6 +48,7 @@ __BEGIN_DECLS
 #define ST24_STX2		0x55
 
 #define ST16_VIRTUAL_ARM_BUTTON_CHANNEL (12 -1) // override channel 12, be careful not to exceed channel count
+#define ST16_VIRTUAL_KILL_SWITCH_CHANNEL (6 -1) // override channel 12, be careful not to exceed channel count
 #define ST16_ARM_BUTTON_THROTTLE_VALUE_RAW 660
 
 enum ST24_PACKET_TYPE {

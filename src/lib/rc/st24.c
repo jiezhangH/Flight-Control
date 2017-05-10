@@ -40,9 +40,11 @@
  */
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "st24.h"
 #include "string.h"
+#include <drivers/drv_hrt.h>
 
 enum ST24_DECODE_STATE {
 	ST24_DECODE_STATE_UNSYNCED = 0,
@@ -68,12 +70,19 @@ const char *decode_states[] = {"UNSYNCED",
 #define ST24_TARGET_MIN 1000.0f
 #define ST24_TARGET_MAX 2000.0f
 
+#define KILL_HOTKEY_TIME 1000000
+
 /* pre-calculate the floating point stuff as far as possible at compile time */
 #define ST24_SCALE_FACTOR ((ST24_TARGET_MAX - ST24_TARGET_MIN) / (ST24_RANGE_MAX - ST24_RANGE_MIN))
 #define ST24_SCALE_OFFSET (ST24_TARGET_MIN - (ST24_SCALE_FACTOR * ST24_RANGE_MIN))
 
 static enum ST24_DECODE_STATE _decode_state = ST24_DECODE_STATE_UNSYNCED;
 static uint8_t _rxlen;
+
+static uint16_t _last_channel_0 = 0; /* the last raw value channel 0 (throttle and button) had */
+static hrt_abstime _kill_hotkey_start = 0; /* the time when the hotkey started to measure timeout */
+static int _kill_hotkey_button_count = 0; /* how many times the button was pressed during the hotkey */
+static bool _kill_state = false; /* the kill state in with we lockdown the motors until restart */
 
 static ReceiverFcPacket _rxpacket;
 static ReceiverFcPacket _txpacket;
@@ -204,10 +213,40 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 						chan_index++;
 					}
 
+					const bool arm_button_pressed = channels[0] == 0;
+
+					/* Kill hotkey: pressing the arm button three times with low throttle within 1.5s
+					 * overrides a free channel with a virtual switch which has maximum value when kill was triggered
+					 * need to be used in combination with RC_MAP_KILL_SW mapped to the channel */
+					const bool first_time = _kill_hotkey_button_count == 0;
+					const bool within_timeout = hrt_elapsed_time(&_kill_hotkey_start) < KILL_HOTKEY_TIME;
+					const bool hotkey_complete = _kill_hotkey_button_count > 2;
+
+					if (hotkey_complete) {
+						_kill_state = !_kill_state;
+					}
+
+					if (_last_channel_0 < 1250 && (first_time || within_timeout) && !hotkey_complete) {
+						if (_last_channel_0 != 0 && arm_button_pressed) {
+							if (first_time) {
+								_kill_hotkey_start = hrt_absolute_time();
+							}
+
+							_kill_hotkey_button_count++;
+						}
+
+					} else {
+						_kill_hotkey_button_count = 0;
+						_kill_hotkey_start = 0;
+					}
+
+					_last_channel_0 = channels[0];
+					channels[ST16_VIRTUAL_KILL_SWITCH_CHANNEL] = _kill_state ? (uint16_t)ST24_RANGE_MAX : (uint16_t)ST24_RANGE_MIN;
+
 					/* Handle the red arm/disarm button of the ST16 which is mapped to Channel 1 (Throttle) raw value 0 when pressed
 					 * Override a free channel with a virtual switch which has maximum value when button is pressed
 					 * needs to be used in combination with RC_MAP_ARM_SW mapped to the channel and parameter COM_ARM_SWISBTN enabled */
-					if (channels[0] == 0) {
+					if (arm_button_pressed) {
 						channels[ST16_VIRTUAL_ARM_BUTTON_CHANNEL] = (uint16_t)ST24_RANGE_MAX;
 						/* set a low throttle value when ST16 arm button pressed to descend */
 						channels[0] = ST16_ARM_BUTTON_THROTTLE_VALUE_RAW;
