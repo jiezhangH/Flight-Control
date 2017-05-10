@@ -2698,7 +2698,7 @@ int commander_thread_main(int argc, char *argv[])
 		}
 
 		if(gohome_land_iterrupt) {
-			if(pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND &&(
+			if((pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL)) {
 				if((fabsf(sp_man.x - 0.f) > min_interrupt_stick_change ||
