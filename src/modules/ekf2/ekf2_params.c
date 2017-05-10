@@ -514,7 +514,7 @@ PARAM_DEFINE_INT32(EKF2_REC_RPL, 0);
  * Set bits in the following positions to enable:
  * 0 : Set to true to use GPS data if available
  * 1 : Set to true to use optical flow data if available
- * 2 : Set to true to inhibit IMU bias estimation
+ * 2 : Set to true to inhibit IMU delta velocity bias estimation. Individual axes can be controlled by the EKF2_DVBIAS_MASK parameter.
  * 3 : Set to true to enable vision position fusion
  * 4 : Set to true to enable vision yaw fusion
  * 5 : Set to true to enable multi-rotor drag specific force fusion
@@ -530,6 +530,23 @@ PARAM_DEFINE_INT32(EKF2_REC_RPL, 0);
  * @bit 5 multi-rotor drag fusion
  */
 PARAM_DEFINE_INT32(EKF2_AID_MASK, 1);
+
+/**
+ * Integer bitmask controlling which IMU axis has the delta velocity bias learned. No bias learning will occur if bit position 2 of EKF2_AID_MASK is true.
+ *
+ * Set bits in the following positions to enable:
+ * 0 : Set to true to learn IMU X axis delta velocity bias
+ * 1 : Set to true to learn IMU Y axis delta velocity bias
+ * 2 : Set to true to learn IMU Z axis delta velocity bias
+ *
+ * @group EKF2
+ * @min 0
+ * @max 7
+ * @bit 0 X-axis
+ * @bit 1 Y-axis
+ * @bit 2 Z-axis
+ */
+PARAM_DEFINE_INT32(EKF2_DVBIAS_MASK, 4);
 
 /**
  * Determines the primary source of height data used by the EKF.
