@@ -275,6 +275,13 @@ then
 fi
 
 #
+# Start the RC input driver
+#
+if fmu mode_pwm1
+then
+fi
+
+#
 # Sensors System (start before Commander so Preflight checks are properly run)
 #
 sh /etc/init.d/rc.sensors
@@ -458,13 +465,6 @@ fi
 unset MIXER
 unset MAV_TYPE
 unset OUTPUT_MODE
-
-#
-# Start the RC input driver
-#
-if fmu mode_pwm1
-then
-fi
 
 #
 # Use 400 Hz PWM output for landing gear (frequency also affects RGB LED)
