@@ -42,6 +42,7 @@
 #include <drivers/device/device.h>
 #include <px4_defines.h>
 #include <px4_log.h>
+#include <platforms/px4_getopt.h>
 
 #include <sys/types.h>
 #include <stdint.h>
@@ -739,10 +740,10 @@ start(enum Rotation rotation)
 	int fd;
 
 	if (g_dev != nullptr) {
-		errx(1, "already started");
+		PX4_ERR("already started");
+		exit(1);
 	}
 
-	warnx("rot %d", rotation);
 	/* create the driver */
 	g_dev = new HC_SR04(rotation);
 
@@ -774,7 +775,8 @@ fail:
 		g_dev = nullptr;
 	}
 
-	errx(1, "driver start failed");
+	PX4_ERR("driver start failed");
+	exit(1);
 }
 
 /**
@@ -787,7 +789,8 @@ void stop()
 		g_dev = nullptr;
 
 	} else {
-		errx(1, "driver not running");
+		PX4_ERR("driver not running");
+		exit(1);
 	}
 
 	exit(0);
@@ -808,23 +811,26 @@ test()
 	int fd = open(SR04_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0) {
-		err(1, "%s open failed (try 'hc_sr04 start' if the driver is not running", SR04_DEVICE_PATH);
+		PX4_ERR("%s open failed (try 'hc_sr04 start' if the driver is not running", SR04_DEVICE_PATH);
+		exit(1);
 	}
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
 
 	if (sz != sizeof(report)) {
-		err(1, "immediate read failed");
+		PX4_ERR("immediate read failed");
+		exit(1);
 	}
 
-	warnx("single read");
-	warnx("measurement: %0.2f", (double)report.current_distance);
-	warnx("time:        %lld", report.timestamp);
+	PX4_WARN("single read");
+	PX4_WARN("measurement: %0.2f", (double)report.current_distance);
+	PX4_WARN("time:        %lld", report.timestamp);
 
 	/* start the sensor polling at 2Hz */
 	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2)) {
-		errx(1, "failed to set 2Hz poll rate");
+		PX4_ERR("failed to set 2Hz poll rate");
+		exit(1);
 	}
 
 	/* read the sensor 5x and report each value */
@@ -837,30 +843,34 @@ test()
 		ret = poll(&fds, 1, 2000);
 
 		if (ret != 1) {
-			errx(1, "timed out waiting for sensor data");
+			PX4_ERR("timed out waiting for sensor data");
+			exit(1);
 		}
 
 		/* now go get it */
 		sz = read(fd, &report, sizeof(report));
 
 		if (sz != sizeof(report)) {
-			err(1, "periodic read failed");
+			PX4_ERR("periodic read failed");
+			exit(1);
 		}
 
-		warnx("periodic read %u", i);
+		PX4_WARN("periodic read %u", i);
 
 		/* Print the sonar rangefinder report sonar distance vector */
-		warnx("measurement: %0.3f", (double)report.current_distance);
+		PX4_WARN("measurement: %0.3f", (double)report.current_distance);
 
-		warnx("time:        %lld", report.timestamp);
+		PX4_WARN("time:        %lld", report.timestamp);
 	}
 
 	/* reset the sensor polling to default rate */
 	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT)) {
-		errx(1, "failed to set default poll rate");
+		PX4_ERR("failed to set default poll rate");
+		exit(1);;
 	}
 
-	errx(0, "PASS");
+	PX4_ERR("PASS");
+	exit(0);
 }
 
 
@@ -871,7 +881,8 @@ void
 info()
 {
 	if (g_dev == nullptr) {
-		errx(1, "driver not running");
+		PX4_ERR("driver not running");
+		exit(1);
 	}
 
 	printf("state @ %p\n", g_dev);
@@ -889,12 +900,14 @@ hc_sr04_main(int argc, char *argv[])
 
 	int ch;
 	enum Rotation rotation = ROTATION_NONE;
+	int myoptind = 1;
+	const char *myoptarg = NULL;
 
 
-	while ((ch = getopt(argc, argv, "R:")) != EOF) {
+	while ((ch = px4_getopt(argc, argv, "R:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'R':
-			rotation = (enum Rotation)atoi(optarg);
+			rotation = (enum Rotation)atoi(myoptarg);
 			break;
 
 		default:
@@ -902,7 +915,7 @@ hc_sr04_main(int argc, char *argv[])
 		}
 	}
 
-	const char *verb = argv[optind];
+	const char *verb = argv[myoptind];
 
 	/*
 	 * Start/load the driver.
@@ -932,5 +945,6 @@ hc_sr04_main(int argc, char *argv[])
 		hc_sr04::info();
 	}
 
-	errx(1, "unrecognized command, try 'start', 'test' or 'info'");
+	PX4_ERR("unrecognized command, try 'start', 'test' or 'info'");
+	exit(1);
 }
