@@ -78,6 +78,9 @@
 
 #include <board_config.h>
 #include <drivers/drv_input_capture.h>
+#include <drivers/drv_gpio.h>
+
+#include <DevMgr.hpp>
 
 /* Configuration Constants */
 #define SR04_DEVICE_PATH	"/dev/hc_sr04"
@@ -95,6 +98,8 @@
 #ifndef CONFIG_SCHED_WORKQUEUE
 # error This requires CONFIG_SCHED_WORKQUEUE.
 #endif
+
+using namespace DriverFramework;
 
 static float si_units = 0;
 
@@ -158,6 +163,8 @@ private:
 		uint32_t        alt;
 	};
 	static const GPIOConfig _gpio_tab[];
+
+	DevHandle _h_fmu;
 
 
 	/**
@@ -296,20 +303,31 @@ HC_SR04::init()
 	_class_instance = register_class_devname(RANGE_FINDER_BASE_DEVICE_PATH);
 
 	/* get a publish handle on the range finder topic */
-	struct distance_sensor_s ds_report = {};
+	// struct distance_sensor_s ds_report = {};
 
-	_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &ds_report,
-				 &_orb_class_instance, ORB_PRIO_LOW);
+	// _distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &ds_report,
+	// 			 &_orb_class_instance, ORB_PRIO_LOW);
 
-	if (_distance_sensor_topic == nullptr) {
-		DEVICE_LOG("failed to create distance_sensor object. Did you start uOrb?");
+	// if (_distance_sensor_topic == nullptr) {
+	// 	DEVICE_LOG("failed to create distance_sensor object. Did you start uOrb?");
+	// }
+
+	DevMgr::getHandle(PX4FMU_DEVICE_PATH, _h_fmu);
+	if (!_h_fmu.isValid()) {
+		PX4_WARN("FMU: px4_open fail\n");
+		return PX4_ERROR;
 	}
 
+
+
 	/* init trig echo port : */
-	for (unsigned i = 0; i <= _sonars; i++) {
-		px4_arch_configgpio(_gpio_tab[i].trig_port);
+	for (unsigned i = 0; i < _sonars; i++) {
+		// px4_arch_configgpio(_gpio_tab[i].trig_port);
+		_h_fmu.ioctl(GPIO_SET_OUTPUT, 1 << 4);
+		PX4_INFO("pin %x", _gpio_tab[i].trig_port);
 		px4_arch_gpiowrite(_gpio_tab[i].trig_port, false);
 		px4_arch_configgpio(_gpio_tab[i].echo_port);
+		PX4_INFO("echo %x", _gpio_tab[i].echo_port);
 		_latest_sonar_measurements.push_back(0);
 	}
 
@@ -556,18 +574,23 @@ HC_SR04::collect()
 	ret = OK;
 
 
-	struct distance_sensor_s report;
+	struct distance_sensor_s report = {};
 
 	report.timestamp = hrt_absolute_time();
 	report.min_distance = get_minimum_distance();
 	report.max_distance = get_maximum_distance();
 	report.current_distance = median_filter(si_units);
+	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
 	report.orientation = _rotation;
 	_mf_cycle_counter++;
 
+	PX4_INFO("collect pusblish msg");
 	/* publish it, if we are the primary */
 	if (_distance_sensor_topic != nullptr) {
 		orb_publish(ORB_ID(distance_sensor), _distance_sensor_topic, &report);
+	} else {
+		_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
+				 &_orb_class_instance, ORB_PRIO_LOW);
 	}
 
 	if (_reports->force(&report)) {
@@ -823,9 +846,9 @@ test()
 		exit(1);
 	}
 
-	PX4_WARN("single read");
-	PX4_WARN("measurement: %0.2f", (double)report.current_distance);
-	PX4_WARN("time:        %lld", report.timestamp);
+	PX4_INFO("single read");
+	PX4_INFO("measurement: %0.2f", (double)report.current_distance);
+	PX4_INFO("time:        %lld", report.timestamp);
 
 	/* start the sensor polling at 2Hz */
 	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2)) {
@@ -855,12 +878,12 @@ test()
 			exit(1);
 		}
 
-		PX4_WARN("periodic read %u", i);
+		PX4_INFO("periodic read %u", i);
 
 		/* Print the sonar rangefinder report sonar distance vector */
-		PX4_WARN("measurement: %0.3f", (double)report.current_distance);
+		PX4_INFO("measurement: %0.3f", (double)report.current_distance);
 
-		PX4_WARN("time:        %lld", report.timestamp);
+		PX4_INFO("time:        %lld", report.timestamp);
 	}
 
 	/* reset the sensor polling to default rate */
@@ -869,7 +892,7 @@ test()
 		exit(1);;
 	}
 
-	PX4_ERR("PASS");
+	PX4_INFO("PASS");
 	exit(0);
 }
 
