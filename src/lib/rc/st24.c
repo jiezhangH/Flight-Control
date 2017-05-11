@@ -223,7 +223,7 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 					const bool hotkey_complete = _kill_hotkey_button_count > 2;
 
 					if (hotkey_complete) {
-						_kill_state = !_kill_state;
+						_kill_state = true;
 					}
 
 					if (_last_channel_0 < 1250 && (first_time || within_timeout) && !hotkey_complete) {
