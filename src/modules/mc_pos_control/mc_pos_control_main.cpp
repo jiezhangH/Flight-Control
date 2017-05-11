@@ -902,7 +902,7 @@ MulticopterPositionControl::poll_subscriptions()
 	if (updated) {
 		orb_copy(ORB_ID(position_setpoint_triplet), _pos_sp_triplet_sub, &_pos_sp_triplet);
 
-		/* we need either valid position setpoint or valid velcoity septoin */
+		/* we need either a valid position setpoint or a valid velocity setpoint */
 		_pos_sp_triplet.current.valid = false;
 
 		if (PX4_ISFINITE(_pos_sp_triplet.current.lat) && PX4_ISFINITE(_pos_sp_triplet.current.lon)
