@@ -95,10 +95,10 @@ Land::on_activation()
 		_land_state = LAND_STATE_LANDED;
 		mavlink_log_info(_navigator->get_mavlink_log_pub(), "Already landed, not executing Landing");
 
-		/* if not landed, loiter first */
+		/* if not landed, brake first */
 
 	} else {
-		_land_state = LAND_STATE_LOITER;
+		_land_state = LAND_STATE_BRAKE;
 	}
 
 	set_autoland_item();
