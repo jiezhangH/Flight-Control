@@ -316,7 +316,6 @@ private:
 	control::BlockParamExtFloat _acc_bias_learn_acc_lim;
 	control::BlockParamExtFloat _acc_bias_learn_gyr_lim;
 	control::BlockParamExtFloat _acc_bias_learn_tc;
-	control::BlockParamExtInt _acc_bias_learn_mask;
 
 	// EKF saved XYZ magnetometer bias values
 	control::BlockParamFloat _mag_bias_x; // X bias (mGauss)
@@ -446,7 +445,6 @@ Ekf2::Ekf2():
 	_acc_bias_learn_acc_lim(this, "EKF2_ABL_ACCLIM", false, _params->acc_bias_learn_acc_lim),
 	_acc_bias_learn_gyr_lim(this, "EKF2_ABL_GYRLIM", false, _params->acc_bias_learn_gyr_lim),
 	_acc_bias_learn_tc(this, "EKF2_ABL_TAU", false, _params->acc_bias_learn_tc),
-	_acc_bias_learn_mask(this, "EKF2_DVBIAS_MASK", false, _params->acc_bias_learn_mask),
 	_mag_bias_x(this, "EKF2_MAGBIAS_X", false),
 	_mag_bias_y(this, "EKF2_MAGBIAS_Y", false),
 	_mag_bias_z(this, "EKF2_MAGBIAS_Z", false),
