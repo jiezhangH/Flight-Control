@@ -131,6 +131,12 @@ protected:
 	 */
 	void set_follow_target_item(struct mission_item_s *item, float min_clearance, follow_target_s &target, float yaw);
 
+	/**
+	 * Set brake item
+	 */
+	void set_brake_item(struct mission_item_s *item);
+
+
 	void issue_command(const struct mission_item_s *item);
 
 	mission_item_s _mission_item;

@@ -131,34 +131,10 @@ Land::set_autoland_item()
 
 	case LAND_STATE_BRAKE: {
 
-			/* we try to predict a waypoint such that the vehicle has enough time to slow down
-			 * TODO:
-			 * - navigator needs to be smarter: mission item should incorporate velocity demand (triplets already do)
-			 * such that we can demand zero velocity instead of predicting forward
-			 * - rtl and land share same logic -> combine */
-
-			double lat_predict;
-			double lon_predict;
-			float time_to_travel = 1.6f;
-			add_vector_to_global_position(_navigator->get_global_position()->lat, _navigator->get_global_position()->lon,
-						      _navigator->get_global_position()->vel_n *  time_to_travel,
-						      _navigator->get_global_position()->vel_e * time_to_travel,
-						      &lat_predict, &lon_predict);
-
-
-			_mission_item.lat = lat_predict;
-			_mission_item.lon = lon_predict;
-			_mission_item.yaw = NAN;
-			_mission_item.loiter_radius = _navigator->get_loiter_radius();
-			_mission_item.nav_cmd = NAV_CMD_WAYPOINT;
-			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
-			_mission_item.time_inside = 0.0f;
-			_mission_item.autocontinue = true;
-			_mission_item.origin = ORIGIN_ONBOARD;
-			_mission_item.deploy_gear = false;
+			/* slow down before climbing */
+			set_brake_item(&_mission_item);
 
 			break;
-
 		}
 
 	case LAND_STATE_LOITER: {

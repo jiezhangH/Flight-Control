@@ -107,6 +107,8 @@ enum ORIGIN {
 struct mission_item_s {
 	double lat;			/**< latitude in degrees				*/
 	double lon;			/**< longitude in degrees				*/
+	float vN; 			/**< velocity going NORD */
+	float vE; 			/**< velocity going EAST */
 	union {
 		struct {
 			union {
@@ -134,8 +136,8 @@ struct mission_item_s {
 			 altitude_is_relative : 1,		/**< true if altitude is relative from start point	*/
 			 autocontinue : 1,				/**< true if next waypoint should follow after this one */
 			 disable_mc_yaw : 1,				/**< weathervane mode */
-			 vtol_back_transition : 1,
-			 deploy_gear: 1;		/**< part of the vtol back transition sequence */
+			 vtol_back_transition : 1,		/**< part of the vtol back transition sequence */
+			 deploy_gear: 1;
 	};
 };
 #pragma pack(pop)

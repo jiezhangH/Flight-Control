@@ -137,8 +137,17 @@ MissionBlock::is_mission_item_reached()
 			return false;
 		}
 
-	case NAV_CMD_DO_CHANGE_SPEED:
-		return true;
+	case NAV_CMD_DO_CHANGE_SPEED: {
+
+			/* we achieved item if velocity is smaller than 0.3 in x and y */
+			if ((fabsf(_navigator->get_global_position()->vel_n - _mission_item.vN) < 0.3f)  &&
+			    (fabsf(_navigator->get_global_position()->vel_e - _mission_item.vE) < 0.3f)) {
+				return true;
+
+			} else {
+				return false;
+			}
+		}
 
 	default:
 		/* do nothing, this is a 3D waypoint */
@@ -505,12 +514,14 @@ MissionBlock::item_contains_position(const struct mission_item_s *item)
 	case NAV_CMD_DO_FOLLOW_REPOSITION:
 	case NAV_CMD_VTOL_TAKEOFF:
 	case NAV_CMD_VTOL_LAND:
+	case NAV_CMD_DO_CHANGE_SPEED:
 		return true;
 
 	default:
 		return false;
 	}
 }
+
 
 void
 MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *item, struct position_setpoint_s *sp)
@@ -522,6 +533,8 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 
 	sp->lat = item->lat;
 	sp->lon = item->lon;
+	sp->vx = NAN;
+	sp->vy = NAN;
 	sp->alt = item->altitude_is_relative ? item->altitude + _navigator->get_home_position()->alt : item->altitude;
 	sp->yaw = item->yaw;
 	sp->loiter_radius = (fabsf(item->loiter_radius) > NAV_EPSILON_POSITION) ? fabsf(item->loiter_radius) :
@@ -578,6 +591,12 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 			sp->disable_mc_yaw_control = true;
 		}
 
+		break;
+
+	case NAV_CMD_DO_CHANGE_SPEED:
+		sp->vx = item->vN;
+		sp->vy = item->vE;
+		sp->type = position_setpoint_s::SETPOINT_TYPE_VELOCITY;
 		break;
 
 	default:
@@ -767,6 +786,19 @@ MissionBlock::set_idle_item(struct mission_item_s *item)
 	item->loiter_radius = _navigator->get_loiter_radius();
 	item->acceptance_radius = _navigator->get_acceptance_radius();
 	item->time_inside = 0.0f;
+	item->autocontinue = true;
+	item->origin = ORIGIN_ONBOARD;
+}
+
+void
+MissionBlock::set_brake_item(struct mission_item_s *item)
+{
+	item->lat = NAN;
+	item->lon = NAN;
+	item->yaw = NAN;
+	item->vE = 0.0f;
+	item->vN = 0.0f;
+	item->nav_cmd = NAV_CMD_DO_CHANGE_SPEED;
 	item->autocontinue = true;
 	item->origin = ORIGIN_ONBOARD;
 }
