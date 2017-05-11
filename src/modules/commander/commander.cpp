@@ -3236,7 +3236,7 @@ int commander_thread_main(int argc, char *argv[])
 		if (!arm_tune_played && armed.armed && (!safety.safety_switch_available || (safety.safety_switch_available
 							&& safety.safety_off))) {
 			/* play tune when armed */
-			set_tune(TONE_ARMING_WARNING_TUNE);
+			// set_tune(TONE_ARMING_WARNING_TUNE); intentionally commented out
 			arm_tune_played = true;
 
 		} else if (!status_flags.usb_connected &&
