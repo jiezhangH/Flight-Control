@@ -249,7 +249,7 @@ void tune_failsafe(bool use_buzzer)
 	rgbled_set_color_and_mode(led_control_s::COLOR_PURPLE, led_control_s::MODE_BLINK_FAST, 3, 2);
 
 	if (use_buzzer) {
-		set_tune(TONE_BATTERY_WARNING_FAST_TUNE);
+		// set_tune(TONE_BATTERY_WARNING_FAST_TUNE); intentionally commented out
 	}
 }
 
