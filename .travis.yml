@@ -47,7 +47,7 @@ virtualenv:
   system_site_packages: true
 
 before_install:
-  - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && pip install empy jinja2; fi
+  - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && pip install empy jinja2 && pip install --user s3cmd; fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then sudo -H easy_install pip && sudo -H pip install empy jinja2; fi
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then pip install pycrypto pyserial; fi
 
@@ -77,6 +77,20 @@ script:
       make tests;
     fi
 
+after_success:
+  - set -e
+  - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" && ! -z "${TRAVIS_TAG}" ]]; then
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/latest/autopilot.yuneec;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/autopilot.yuneec;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/version s3://${S3_BUCKET_NAME}/autopilot/latest/version;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/version s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/version;
+
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-Linux.zip s3://${S3_BUCKET_NAME}/sitl/latest/Yuneec-SITL-Simulation-Linux.zip;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-Linux.zip s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/Yuneec-SITL-Simulation-Linux.zip;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/latest/version;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/version;
+    fi;
+
 deploy:
   - provider: releases
     api_key:
@@ -85,54 +99,6 @@ deploy:
       - build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec
       - s3sitl/Yuneec-SITL-Simulation-Linux.zip
     skip_cleanup: true
-    on:
-      tags: true
-      repo: YUNEEC/Firmware
-      condition: $BUILD_TARGET = qgc_firmware
-  - provider: s3
-    access_key_id: ${AWS_ACCESS_KEY_ID}
-    secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    bucket: "08f61bbd-8958-433e-8e83-5d79160fa0be"
-    skip_cleanup: true
-    local_dir: s3autopilot
-    upload-dir: autopilot/${TRAVIS_TAG}
-    acl: public_read
-    on:
-      tags: true
-      repo: YUNEEC/Firmware
-      condition: $BUILD_TARGET = qgc_firmware
-  - provider: s3
-    access_key_id: ${AWS_ACCESS_KEY_ID}
-    secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    bucket: "08f61bbd-8958-433e-8e83-5d79160fa0be"
-    skip_cleanup: true
-    local_dir: s3autopilot
-    upload-dir: autopilot/latest
-    acl: public_read
-    on:
-      tags: true
-      repo: YUNEEC/Firmware
-      condition: $BUILD_TARGET = qgc_firmware
-  - provider: s3
-    access_key_id: ${AWS_ACCESS_KEY_ID}
-    secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    bucket: "08f61bbd-8958-433e-8e83-5d79160fa0be"
-    skip_cleanup: true
-    local_dir: s3sitl
-    upload-dir: sitl/${TRAVIS_TAG}
-    acl: public_read
-    on:
-      tags: true
-      repo: YUNEEC/Firmware
-      condition: $BUILD_TARGET = qgc_firmware
-  - provider: s3
-    access_key_id: ${AWS_ACCESS_KEY_ID}
-    secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    bucket: "08f61bbd-8958-433e-8e83-5d79160fa0be"
-    skip_cleanup: true
-    local_dir: s3sitl
-    upload-dir: sitl/latest
-    acl: public_read
     on:
       tags: true
       repo: YUNEEC/Firmware
