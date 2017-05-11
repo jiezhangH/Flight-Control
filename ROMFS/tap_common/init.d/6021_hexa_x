@@ -177,8 +177,15 @@ then
 	param set COM_FLTMODE1 5
 	# Position
 	param set COM_FLTMODE4 2
-	# Smart
-	param set COM_FLTMODE6 1
+
+	if param compare RC_TESTPILOT 0
+	then
+		# Altitude hold
+		param set COM_FLTMODE6 1
+	else
+		# Complete manual mode
+		param set COM_FLTMODE6 0
+	fi
 
 	#
 	# ST16 RC settings

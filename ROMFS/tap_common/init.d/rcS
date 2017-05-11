@@ -97,6 +97,20 @@ then
 	# we need to use param import (instead of load), because load will cause a reset
 	if param load
 	then
+	else
+		# Param load failed
+		# wipe the SD card to restore the system
+		if mount -t vfat /dev/mmcsd0 /fs/microsd
+		then
+		fi
+
+		if param reset
+		then
+		fi
+
+		if param save
+		then
+		fi
 	fi
 
 	# load the temperature calibration data from EEPROM.

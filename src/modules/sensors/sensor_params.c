@@ -3374,3 +3374,15 @@ PARAM_DEFINE_FLOAT(RC_FLT_SMP_RATE, 50.0f);
  * @group Radio Calibration
  */
 PARAM_DEFINE_FLOAT(RC_FLT_CUTOFF, 10.0f);
+
+/**
+ * Test configuration enable
+ *
+ * When this configuration is enabled the system is in test pilot mode.
+ *
+ * @value 0 Disabled
+ * @value 1 Test Pilot
+ *
+ * @group Radio Calibration
+ */
+PARAM_DEFINE_INT32(RC_TESTPILOT, 0);

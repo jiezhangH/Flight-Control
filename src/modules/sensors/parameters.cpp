@@ -227,6 +227,8 @@ int initialize_parameter_handles(ParameterHandles &parameter_handles)
 	(void)param_find("SYS_CAL_TMAX");
 	(void)param_find("SYS_CAL_TMIN");
 
+	(void)param_find("RC_TESTPILOT");
+
 	return 0;
 }
 
