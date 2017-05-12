@@ -458,6 +458,30 @@ PARAM_DEFINE_INT32(EKF2_DECL_TYPE, 7);
 PARAM_DEFINE_INT32(EKF2_MAG_TYPE, 0);
 
 /**
+ * Horizontal acceleration threshold used by automatic selection of magnetometer fusion method.
+ * This parameter is used when the magnetometer fusion method is set automatically (EKF2_MAG_TYPE = 0). If the filtered horizontal acceleration is greater than this parameter value, then the EKF will use 3-axis magnetomer fusion.
+ *
+ * @group EKF2
+ * @min 0.0
+ * @max 5.0
+ * @unit m/s**2
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(EKF2_MAG_ACCLIM, 0.5f);
+
+/**
+ * Yaw rate threshold used by automatic selection of magnetometer fusion method.
+ * This parameter is used when the magnetometer fusion method is set automatically (EKF2_MAG_TYPE = 0). If the filtered yaw rate is greater than this parameter value, then the EKF will use 3-axis magnetomer fusion.
+ *
+ * @group EKF2
+ * @min 0.0
+ * @max 0.5
+ * @unit rad/s
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(EKF2_MAG_YAWLIM, 0.25f);
+
+/**
  * Gate size for barometric height fusion
  *
  * @group EKF2

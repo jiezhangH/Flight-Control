@@ -164,7 +164,8 @@ private:
 	float _acc_hor_filt = 0.0f; 	// low-pass filtered horizontal acceleration
 
 	// Used to check, save and use learned magnetometer biases
-	uint64_t _last_invalid_magcal_us = 0;	// last time the conditions for a valid ekf magnetometer cal were not met (usec)
+	hrt_abstime _last_magcal_us = 0;	// last time the EKF was operating a mode that estimates magnetomer biases (usec)
+	hrt_abstime _total_cal_time_us = 0;	// accumulated calibration time since the last save
 	float _last_valid_mag_cal[3] = {};	// last valid XYZ magnetometer bias estimates (mGauss)
 	bool _valid_cal_available[3] = {};	// true when an unsaved valid calibration for the XYZ magnetometer bias is available
 	float _last_valid_variance[3] = {};	// variances for the last valid magnetometer XYZ bias estimates (mGauss**2)
@@ -232,6 +233,7 @@ private:
 	control::BlockParamExtFloat _vel_innov_gate;	// innovation gate for GPS velocity innovation test (std dev)
 	control::BlockParamExtFloat _tas_innov_gate;	// innovation gate for tas innovation test (std dev)
 
+	// control of magnetometer fusion
 	control::BlockParamExtFloat _mag_heading_noise;	// measurement noise used for simple heading fusion
 	control::BlockParamExtFloat _mag_noise;		// measurement noise used for 3-axis magnetoemter fusion (Gauss)
 	control::BlockParamExtFloat _eas_noise;		// measurement noise used for airspeed fusion (std m/s)
@@ -241,7 +243,9 @@ private:
 	control::BlockParamExtFloat _mag_innov_gate;	// innovation gate for magnetometer innovation test
 	control::BlockParamExtInt
 	_mag_decl_source;       // bitmasked integer used to control the handling of magnetic declination
-	control::BlockParamExtInt _mag_fuse_type;         // integer ued to control the type of magnetometer fusion used
+	control::BlockParamExtInt _mag_fuse_type;	// integer ued to control the type of magnetometer fusion used
+	control::BlockParamExtFloat _mag_acc_gate;	// manoeuvre threshold for use of 3-axis fusion (m/s**2)
+	control::BlockParamExtFloat _mag_yaw_rate_gate;	// yaw rate threshold for use of 3-axis fusion (rad/s)
 
 	control::BlockParamExtInt _gps_check_mask;	// bitmasked integer used to activate the different GPS quality checks
 	control::BlockParamExtFloat _requiredEph;	// maximum acceptable horiz position error (m)
@@ -396,6 +400,8 @@ Ekf2::Ekf2():
 	_mag_innov_gate(this, "EKF2_MAG_GATE", false, _params->mag_innov_gate),
 	_mag_decl_source(this, "EKF2_DECL_TYPE", false, _params->mag_declination_source),
 	_mag_fuse_type(this, "EKF2_MAG_TYPE", false, _params->mag_fusion_type),
+	_mag_acc_gate(this, "EKF2_MAG_ACCLIM", false, _params->mag_acc_gate),
+	_mag_yaw_rate_gate(this, "EKF2_MAG_YAWLIM", false, _params->mag_yaw_rate_gate),
 	_gps_check_mask(this, "EKF2_GPS_CHECK", false, _params->gps_check_mask),
 	_requiredEph(this, "EKF2_REQ_EPH", false, _params->req_hacc),
 	_requiredEpv(this, "EKF2_REQ_EPV", false, _params->req_vacc),
@@ -1132,20 +1138,24 @@ void Ekf2::task_main()
 
 		/* Check and save learned magnetometer bias estimates */
 		{
-			// Check if conditions are OK to save learned magnetometer bias values
-			// after 3min of the following:
-			// Armed, In air, using 3-axis mag fusion, no filter faults
-			bool mag_cal_active = status.control_mode_flags & 1 << 5;
+			// Check if conditions are OK to for learning of magnetometer bias values
+			if (!vehicle_land_detected.landed && // not on ground
+			    (vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED) && // vehicle is armed
+			    (status.filter_fault_flags == 0) && // there are no filter faults
+			    (status.control_mode_flags & (1 << 5))) { // the EKF is operating in the correct mode
+				if (_last_magcal_us == 0) {
+					_last_magcal_us = now;
+				} else {
+					_total_cal_time_us += now - _last_magcal_us;
+					_last_magcal_us = now;
+				}
+			} else if (status.filter_fault_flags != 0) {
+				_total_cal_time_us = 0;
+			}
 
-			if (vehicle_land_detected.landed
-			    || (vehicle_status.arming_state != vehicle_status_s::ARMING_STATE_ARMED)
-			    || (status.filter_fault_flags != 0)
-			    || !mag_cal_active) {
-				_last_invalid_magcal_us = now;
-
-			} else if ((now - _last_invalid_magcal_us) > 180E6) {
-				// we have sufficient continuous valid flight time to form a reliable bias estimate
-				// check that the state variance for each axis is low enough indicating filter convergence
+			if (_total_cal_time_us > 120*1000*1000) {
+				// we have sufficient accumulated valid flight time to form a reliable bias estimate
+				// check that the state variance for each axis is within a range indicating filter convergence
 				float max_var_allowed = 100.0f * _mag_bias_saved_variance.get();
 				float min_var_allowed = 0.01f * _mag_bias_saved_variance.get();
 
@@ -1189,8 +1199,8 @@ void Ekf2::task_main()
 					}
 				}
 
-				// reset the timer to prevent possible race condition causing data to be saved too frequently
-				_last_invalid_magcal_us = now;
+				// reset to prevent data being saved too frequently
+				_total_cal_time_us = 0;
 			}
 		}
 
