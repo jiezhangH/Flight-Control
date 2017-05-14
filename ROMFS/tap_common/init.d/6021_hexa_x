@@ -53,14 +53,14 @@ then
 	else
 		# TAP v2
 		# pitch angle & rate setting
-		param set MC_PITCHRATE_P 0.125
+		param set MC_PITCHRATE_P 0.09
 		param set MC_PITCHRATE_I 0.09
 		param set MC_PITCHRATE_D 0.001
 		param set MC_PITCHRATE_MAX 360.0
 		param set MC_PITCH_P 5.5
 
 		# roll angle & rate setting
-		param set MC_ROLLRATE_P 0.125
+		param set MC_ROLLRATE_P 0.09
 		param set MC_ROLLRATE_I 0.09
 		param set MC_ROLLRATE_D 0.001
 		param set MC_ROLLRATE_MAX 360.0
