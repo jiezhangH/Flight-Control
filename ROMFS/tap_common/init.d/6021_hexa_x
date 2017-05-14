@@ -74,7 +74,7 @@ then
 		param set MC_YAW_P 6
 
 		# hover thrust
-		param set MPC_THR_HOVER 0.38
+		param set MPC_THR_HOVER 0.49
 
 		# Position control parameters
 		param set MPC_XY_P 1.3
