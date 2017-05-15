@@ -1785,7 +1785,7 @@ int commander_thread_main(int argc, char *argv[])
 
 		arming_ret = TRANSITION_NOT_CHANGED;
 
-		if (armed.armed) {
+		if (armed.armed && !armed.manual_lockdown) {
 			prevent_poweroff_flag = true;
 		} else {
 			prevent_poweroff_flag = false;

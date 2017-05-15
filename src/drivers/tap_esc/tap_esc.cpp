@@ -930,7 +930,7 @@ TAP_ESC::cycle()
 				_play_tone = true;
 			}
 
-			if (!_is_armed) {
+			if (!_is_armed || _armed.manual_lockdown) {
 				send_tune_packet(esc_tune_packet);
 			}
 		}
