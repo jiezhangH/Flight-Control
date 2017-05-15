@@ -111,6 +111,7 @@ MissionBlock::is_mission_item_reached()
 	case NAV_CMD_DO_LAND_START:
 	case NAV_CMD_RETURN_TO_LAUNCH:
 	case NAV_CMD_DO_DIGICAM_CONTROL:
+	case NAV_CMD_SET_CAMERA_MODE:
 	case NAV_CMD_IMAGE_START_CAPTURE:
 	case NAV_CMD_IMAGE_STOP_CAPTURE:
 	case NAV_CMD_VIDEO_START_CAPTURE:
@@ -443,6 +444,7 @@ MissionBlock::mission_item_to_vehicle_command(const struct mission_item_s *item,
 	case NAV_CMD_IMAGE_STOP_CAPTURE:
 	case NAV_CMD_VIDEO_START_CAPTURE:
 	case NAV_CMD_VIDEO_STOP_CAPTURE:
+	case vehicle_command_s::VEHICLE_CMD_SET_CAMERA_MODE:
 		cmd->target_component = 100; // MAV_COMP_ID_CAMERA
 		break;
 

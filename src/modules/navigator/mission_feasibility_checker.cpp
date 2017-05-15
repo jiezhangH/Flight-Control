@@ -266,6 +266,7 @@ bool MissionFeasibilityChecker::checkMissionItemValidity(dm_item_t dm_current, s
 		    missionitem.nav_cmd != NAV_CMD_DO_SET_SERVO &&
 		    missionitem.nav_cmd != NAV_CMD_DO_LAND_START &&
 		    missionitem.nav_cmd != NAV_CMD_DO_DIGICAM_CONTROL &&
+		    missionitem.nav_cmd != NAV_CMD_SET_CAMERA_MODE &&
 		    missionitem.nav_cmd != NAV_CMD_IMAGE_START_CAPTURE &&
 		    missionitem.nav_cmd != NAV_CMD_IMAGE_STOP_CAPTURE &&
 		    missionitem.nav_cmd != NAV_CMD_VIDEO_START_CAPTURE &&
