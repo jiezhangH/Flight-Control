@@ -359,7 +359,6 @@ private:
 	void		poll_subscriptions();
 
 	static float    throttle_curve(float ctl, float ctr);
-	void _slow_land_gradual_velocity_limit();
 
 	/**
 	 * Update reference for local position projection
@@ -1364,21 +1363,6 @@ MulticopterPositionControl::set_manual_acceleration_xy(matrix::Vector2f &stick_x
 }
 
 void
-MulticopterPositionControl::_slow_land_gradual_velocity_limit()
-{
-	/*
-	 * Make sure downward velocity (positive Z) is limited close to ground.
-	 * for now we use the home altitude and assume that we want to land on a similar absolute altitude.
-	 */
-	float altitude_above_home = -_pos(2) + _home_pos.z;
-	float vel_limit = math::gradual(altitude_above_home,
-					_params.slow_land_alt2, _params.slow_land_alt1,
-					_params.land_speed, _params.vel_max_down);
-
-	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
-}
-
-void
 MulticopterPositionControl::control_manual(float dt)
 {
 	/* Entering manual control from non-manual control mode, reset alt/pos setpoints */
@@ -1771,6 +1755,8 @@ MulticopterPositionControl::vel_sp_slewrate(float dt)
 	if (fabsf(acc_z) > fabsf(max_acc_z)) {
 		_vel_sp(2) = max_acc_z * dt + _vel_sp_prev(2);
 	}
+
+	_vel_sp_prev = _vel_sp;
 }
 
 bool
@@ -2380,13 +2366,6 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 
 	}
 
-	_slow_land_gradual_velocity_limit();
-
-	/* Do not allow the drone to fly up when interrupting an auto mode */
-	if (_control_mode.flag_control_updated) {
-		_vel_sp(2) = math::max(_vel_sp(2), 0.f);
-	}
-
 	if (!_control_mode.flag_control_position_enabled) {
 		_reset_pos_sp = true;
 	}
@@ -2406,6 +2385,10 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		_vel_sp(2) = 0.0f;
 	}
 
+	/* Do not allow the drone to fly up when interrupting an auto mode */
+	if (_control_mode.flag_control_updated) {
+		_vel_sp(2) = math::max(_vel_sp(2), 0.f);
+	}
 
 	/* limit vertical takeoff speed if we are in auto takeoff */
 	if (_pos_sp_triplet.current.valid
@@ -2414,11 +2397,19 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		_vel_sp(2) = math::max(_vel_sp(2), -_params.tko_speed);
 	}
 
+	/* limit vertical downwards speed (positive z) close to ground
+	 * for now we use the altitude above home and assume that we want to land at same hight as we took off */
+	float altitude_above_home = -_pos(2) + _home_pos.z;
+	float vel_limit = math::gradual(altitude_above_home,
+					_params.slow_land_alt2, _params.slow_land_alt1,
+					_params.land_speed, _params.vel_max_down);
+
+	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
+
 	/* apply slewrate (aka acceleration limit) for smooth flying */
 	vel_sp_slewrate(dt);
-	_vel_sp_prev = _vel_sp;
 
-	/* special velocity setpoint limitation for smooth takeoff */
+	/* special velocity setpoint limitation for smooth takeoff (after slewrate!) */
 	if (_in_takeoff) {
 		_in_takeoff = _takeoff_vel_limit < -_vel_sp(2);
 		/* ramp vertical velocity limit up to takeoff speed */
