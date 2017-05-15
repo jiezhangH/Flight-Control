@@ -1927,45 +1927,6 @@ void MulticopterPositionControl::control_auto(float dt)
 		}
 	}
 
-	/* only if distance data come from forward facing sensor */
-	if (_sonar_measurament.orientation == 24) {
-		const bool got_takeoff_setpoint = (_pos_sp_triplet.current.valid &&
-						   _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF) ||
-						  _control_mode.flag_control_offboard_enabled;
-
-		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
-			if (!_vehicle_land_detected.landed && !got_takeoff_setpoint) {
-				if (_obstacle_ahead_sp == false) {
-					_stop_sp = _pos;
-					_obstacle_ahead_sp = true;
-					PX4_WARN("stop sp %f %f dist %f", (double)_stop_sp(0), (double)_stop_sp(1),
-						 (double)_sonar_measurament.current_distance);
-				}
-
-
-				if (_obstacle_ahead_sp == true && _sonar_measurament.current_distance < 0.6f) {
-					matrix::Vector2f unit_pos_to_home((_home_pos.x - _pos(0)), (_home_pos.y - _pos(1)));
-					unit_pos_to_home = unit_pos_to_home.normalized();
-					_stop_sp(0) = _pos(0) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(
-							      0);  //prev_sp(0);
-					_stop_sp(1) = _pos(1) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(1);
-					PX4_WARN("obstacle within 0.6m");
-				}
-
-				_curr_pos_sp(0) = _stop_sp(0);
-				_curr_pos_sp(1) = _stop_sp(1);
-				_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
-			}
-
-		} else {
-			if (_obstacle_ahead_sp == true) {
-				_curr_pos_sp(0) = _stop_sp(0);
-				_curr_pos_sp(1) = _stop_sp(1);
-				_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
-			}
-		}
-	}
-
 
 	if (current_setpoint_valid &&
 	    (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_IDLE)) {
@@ -2401,6 +2362,52 @@ MulticopterPositionControl::do_control(float dt)
 void
 MulticopterPositionControl::control_position(float dt)
 {
+
+	/* only if distance data come from forward facing sensor */
+	if (_sonar_measurament.orientation == 24) {
+		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
+			_run_pos_control = 1;
+
+			if (fabsf(_pos(2)) > 1.5f) {
+
+				if (_obstacle_ahead_sp == false) {
+					//_stop_sp = _pos;
+					matrix::Vector2f unit_pos_to_home((_home_pos.x - _pos(0)), (_home_pos.y - _pos(1)));
+					unit_pos_to_home = unit_pos_to_home.normalized();
+					_stop_sp(0) = _pos(0) + 50.0f * unit_pos_to_home(0);  //prev_sp(0);
+					_stop_sp(1) = _pos(1) + 50.0f * unit_pos_to_home(1);
+					_obstacle_ahead_sp = true;
+					PX4_WARN("stop sp %f %f dist %f", (double)_stop_sp(0), (double)_stop_sp(1),
+						 (double)_sonar_measurament.current_distance);
+				}
+
+
+				if (_obstacle_ahead_sp == true && _sonar_measurament.current_distance < 0.6f) {
+					matrix::Vector2f unit_pos_to_home((_home_pos.x - _pos(0)), (_home_pos.y - _pos(1)));
+					unit_pos_to_home = unit_pos_to_home.normalized();
+					_stop_sp(0) = _pos(0) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(
+							      0);  //prev_sp(0);
+					_stop_sp(1) = _pos(1) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(1);
+					//	PX4_WARN("obstacle within 0.6m");
+				}
+
+				_pos_sp(0) = _stop_sp(0);
+				_pos_sp(1) = _stop_sp(1);
+				PX4_INFO("current dist %f  pos %f %f way %f %f", (double)_sonar_measurament.current_distance, (double)_pos(0),
+					 (double)_pos(1), (double)_stop_sp(0), (double)_pos_sp(1));
+				//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
+			}
+
+		} else {
+			if (_obstacle_ahead_sp == true) {
+				_pos_sp(0) = _stop_sp(0);
+				_pos_sp(1) = _stop_sp(1);
+				//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
+			}
+		}
+	}
+
+
 	calculate_velocity_setpoint(dt);
 
 	if (_control_mode.flag_control_climb_rate_enabled || _control_mode.flag_control_velocity_enabled ||
