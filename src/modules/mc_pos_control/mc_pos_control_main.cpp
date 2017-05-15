@@ -2390,16 +2390,20 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		_vel_sp(2) = math::max(_vel_sp(2), 0.f);
 	}
 
-	/* limit vertical takeoff speed if we are in auto takeoff */
+	/* limit vertical upwards speed in auto takeoff and close to ground */
+	float altitude_above_home = -_pos(2) + _home_pos.z;
+
 	if (_pos_sp_triplet.current.valid
 	    && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF
 	    && !_control_mode.flag_control_manual_enabled) {
-		_vel_sp(2) = math::max(_vel_sp(2), -_params.tko_speed);
+		float vel_limit = math::gradual(altitude_above_home,
+						_params.slow_land_alt2, _params.slow_land_alt1,
+						_params.tko_speed, _params.vel_max_up);
+		_vel_sp(2) = math::max(_vel_sp(2), -vel_limit);
 	}
 
 	/* limit vertical downwards speed (positive z) close to ground
 	 * for now we use the altitude above home and assume that we want to land at same hight as we took off */
-	float altitude_above_home = -_pos(2) + _home_pos.z;
 	float vel_limit = math::gradual(altitude_above_home,
 					_params.slow_land_alt2, _params.slow_land_alt1,
 					_params.land_speed, _params.vel_max_down);
