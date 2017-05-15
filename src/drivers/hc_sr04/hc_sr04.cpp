@@ -79,6 +79,7 @@
 #include <board_config.h>
 #include <drivers/drv_input_capture.h>
 #include <drivers/drv_gpio.h>
+#include <drivers/drv_pwm_output.h>
 
 #include <DevMgr.hpp>
 
@@ -165,6 +166,7 @@ private:
 	static const GPIOConfig _gpio_tab[];
 
 	DevHandle _h_fmu;
+	DevHandle _h_pwm;
 
 
 	/**
@@ -319,21 +321,82 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
+	DevMgr::getHandle(PWM_OUTPUT0_DEVICE_PATH, _h_pwm);
 
-
-	/* init trig echo port : */
-	for (unsigned i = 0; i < _sonars; i++) {
-		// px4_arch_configgpio(_gpio_tab[i].trig_port);
-		_h_fmu.ioctl(GPIO_SET_OUTPUT, 1 << 4);
-		PX4_INFO("pin %x", _gpio_tab[i].trig_port);
-		px4_arch_gpiowrite(_gpio_tab[i].trig_port, false);
-		px4_arch_configgpio(_gpio_tab[i].echo_port);
-		PX4_INFO("echo %x", _gpio_tab[i].echo_port);
-		_latest_sonar_measurements.push_back(0);
+	if (!_h_pwm.isValid()) {
+		PX4_WARN("PMW: px4_open fail\n");
+		return PX4_ERROR;
 	}
 
-	/*TIM2-CH4*/
-	up_input_capture_set(2, Both, 0, capture_trampoline, this);
+	unsigned capture_count = 0;
+
+
+	_h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 20);
+
+	unsigned group = 1;
+	uint32_t alt_channel_groups = 0;
+	alt_channel_groups |= (1 << group);
+	uint32_t group_mask;
+
+	if (_h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
+		PX4_ERR("pwm servo get rategroup fail");
+		exit(1);
+	}
+
+	if (_h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, mask) != OK) {
+		PX4_ERR("pwm servo set select update rate fail");
+		exit(1);
+	}
+
+	if (_h_pwm.ioctl(PWM_SERVO_SET_ARM_OK, 0) != OK) {
+		PX4_ERR("pmw servo set arm ok fail");
+		exit(1);
+	}
+
+	if (_h_pwm.ioctl(PWM_SERVO_ARM, 0) != OK) {
+		PX4_ERR("pmw servo set arm fail");
+		exit(1);
+	}
+
+	if (_h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK){
+		PX4_ERR("pwm servo set group 1 fail");
+		exit(1);
+	}
+
+	input_capture_config_t cap_config;
+	cap_config.channel = 2;
+	cap_config.filter = 0;
+	cap_config.edge = Both;
+	cap_config.callback = &HC_SR04::capture_trampoline;
+	cap_config.context = this;
+
+	if (_h_fmu.ioctl(INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
+		fprintf(stdout, "Not in a capture mode\n");
+	}
+
+	if (!_h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) == 0) {
+		err(1, "Unable to set capture callback for chan %u\n", cap_config.channel);
+	}
+
+	if (!_h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0 ){
+		err(1, "Unable to set capture \n");
+	}
+
+
+
+	// /* init trig echo port : */
+	// for (unsigned i = 0; i < _sonars; i++) {
+	// 	// px4_arch_configgpio(_gpio_tab[i].trig_port);
+	// 	_h_fmu.ioctl(GPIO_SET_OUTPUT, 1 << 4);
+	// 	PX4_INFO("pin %x", _gpio_tab[i].trig_port);
+	// 	px4_arch_gpiowrite(_gpio_tab[i].trig_port, false);
+	// 	px4_arch_configgpio(_gpio_tab[i].echo_port);
+	// 	PX4_INFO("echo %x", _gpio_tab[i].echo_port);
+	// 	_latest_sonar_measurements.push_back(0);
+	// }
+
+	// /*TIM2-CH4*/
+	// up_input_capture_set(2, Both, 0, capture_trampoline, this);
 
 	usleep(35000); /* wait for 35ms; */
 
@@ -580,7 +643,7 @@ HC_SR04::collect()
 	report.timestamp = hrt_absolute_time();
 	report.min_distance = get_minimum_distance();
 	report.max_distance = get_maximum_distance();
-	report.current_distance = median_filter(si_units);
+	report.current_distance = si_units;
 	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
 	report.orientation = _rotation;
 	_mf_cycle_counter++;
@@ -633,7 +696,7 @@ HC_SR04::start()
 	_collect_phase = false;
 	_reports->flush();
 
-	measure();  /* begin measure */
+	//measure();  /* begin measure */
 
 	/* schedule a cycle to start things */
 	work_queue(HPWORK,
@@ -694,9 +757,9 @@ HC_SR04::cycle()
 	}
 
 	/* measure next sonar */
-	if (OK != measure()) {
-		DEVICE_DEBUG("measure error sonar adress %d", _cycle_counter);
-	}
+	// if (OK != measure()) {
+	// 	DEVICE_DEBUG("measure error sonar adress %d", _cycle_counter);
+	// }
 
 
 	work_queue(HPWORK,
