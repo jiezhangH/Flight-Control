@@ -3404,7 +3404,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 			led_color = led_control_s::COLOR_PURPLE;
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED) {
-			led_color = led_control_s::MODE_ON;
+			led_mode = led_control_s::MODE_ON;
 			set_normal_color = true;
 
 		} else if (status_local->arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR ||
