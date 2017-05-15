@@ -109,6 +109,7 @@ MissionBlock::is_mission_item_reached()
 		return false;
 
 	case NAV_CMD_DO_LAND_START:
+	case NAV_CMD_RETURN_TO_LAUNCH:
 	case NAV_CMD_DO_DIGICAM_CONTROL:
 	case NAV_CMD_IMAGE_START_CAPTURE:
 	case NAV_CMD_IMAGE_STOP_CAPTURE:
