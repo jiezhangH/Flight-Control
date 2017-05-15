@@ -33,7 +33,7 @@ sercon
 # calibration but will reset the system tuning and gains
 # to reflect the new defaults
 #
-set DEFAULTS_VER 58
+set DEFAULTS_VER 59
 
 # Log file location
 set LOG_FILE /fs/microsd/bootlog.txt
@@ -175,8 +175,6 @@ if param compare SYS_PARAM_VER ${DEFAULTS_VER}
 then
 	set NEW_DEFAULTS no
 else
-	param set SYS_PARAM_VER ${DEFAULTS_VER}
-
 	set NEW_DEFAULTS yes
 fi
 
@@ -316,11 +314,7 @@ mavlink_dup start -d /dev/mavlink_dup
 mavlink_dup add -d /dev/mavlink -b $BAUDRATE
 mavlink_dup add -d /dev/ttyACM0 -p
 # mavlink rate depends on baudrate
-set MAV_RATE 8000
-if [ $BAUDRATE -lt 500000 ]
-then
-	set MAV_RATE 8000
-fi
+set MAV_RATE 4000
 mavlink start -r $MAV_RATE -d /dev/mavlink_dup -m config -b $BAUDRATE
 mavlink stream -d /dev/mavlink_dup -s SYSTEM_TIME -r 0.5
 unset MAV_RATE
