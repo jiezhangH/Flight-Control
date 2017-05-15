@@ -277,7 +277,7 @@ fi
 #
 # Start the RC input driver
 #
-if fmu mode_pwm1
+if fmu mode_pwm2cap2
 then
 fi
 

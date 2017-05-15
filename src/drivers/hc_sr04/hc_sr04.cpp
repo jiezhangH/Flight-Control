@@ -343,7 +343,7 @@ HC_SR04::init()
 		exit(1);
 	}
 
-	if (_h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, mask) != OK) {
+	if (_h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
 		PX4_ERR("pwm servo set select update rate fail");
 		exit(1);
 	}
