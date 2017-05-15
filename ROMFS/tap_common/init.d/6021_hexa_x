@@ -136,7 +136,7 @@ then
 	#
 	# Throttle max/min setting
 	#
-	param set MPC_THR_MAX 0.94
+	param set MPC_THR_MAX 0.9
 	param set MPC_THR_MIN 0.1
 
 	#
