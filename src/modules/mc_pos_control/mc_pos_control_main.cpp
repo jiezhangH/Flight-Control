@@ -2380,10 +2380,6 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 
 	}
 
-	/* make sure velocity setpoint is saturated in xy*/
-	float vel_norm_xy = sqrtf(_vel_sp(0) * _vel_sp(0) +
-				  _vel_sp(1) * _vel_sp(1));
-
 	_slow_land_gradual_velocity_limit();
 
 	/* Do not allow the drone to fly up when interrupting an auto mode */
@@ -2422,15 +2418,6 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	vel_sp_slewrate(dt);
 	_vel_sp_prev = _vel_sp;
 
-	/* make sure velocity setpoint is constrained in all directions*/
-	if (vel_norm_xy > _vel_max_xy) {
-		_vel_sp(0) = _vel_sp(0) * _vel_max_xy / vel_norm_xy;
-		_vel_sp(1) = _vel_sp(1) * _vel_max_xy / vel_norm_xy;
-	}
-
-	/* limit z-axis velocity setpoint */
-	_vel_sp(2) = math::constrain(_vel_sp(2), -_params.vel_max_up, _params.vel_max_down);
-
 	/* special velocity setpoint limitation for smooth takeoff */
 	if (_in_takeoff) {
 		_in_takeoff = _takeoff_vel_limit < -_vel_sp(2);
@@ -2439,6 +2426,16 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		/* limit vertical velocity to the current ramp value */
 		_vel_sp(2) = math::max(_vel_sp(2), -_takeoff_vel_limit);
 	}
+
+	/* make sure velocity setpoint is constrained in all directions (xyz) */
+	float vel_norm_xy = sqrtf(_vel_sp(0) * _vel_sp(0) + _vel_sp(1) * _vel_sp(1));
+
+	if (vel_norm_xy > _vel_max_xy) {
+		_vel_sp(0) = _vel_sp(0) * _vel_max_xy / vel_norm_xy;
+		_vel_sp(1) = _vel_sp(1) * _vel_max_xy / vel_norm_xy;
+	}
+
+	_vel_sp(2) = math::constrain(_vel_sp(2), -_params.vel_max_up, _params.vel_max_down);
 
 	/* publish velocity setpoint */
 	_global_vel_sp.timestamp = hrt_absolute_time();
