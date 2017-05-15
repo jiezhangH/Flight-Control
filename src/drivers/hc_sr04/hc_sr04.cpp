@@ -358,7 +358,7 @@ HC_SR04::init()
 		exit(1);
 	}
 
-	if (_h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK){
+	if (_h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK) {
 		PX4_ERR("pwm servo set group 1 fail");
 		exit(1);
 	}
@@ -378,7 +378,7 @@ HC_SR04::init()
 		err(1, "Unable to set capture callback for chan %u\n", cap_config.channel);
 	}
 
-	if (!_h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0 ){
+	if (!_h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0) {
 		err(1, "Unable to set capture \n");
 	}
 
