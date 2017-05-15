@@ -1145,15 +1145,17 @@ void Ekf2::task_main()
 			    (status.control_mode_flags & (1 << 5))) { // the EKF is operating in the correct mode
 				if (_last_magcal_us == 0) {
 					_last_magcal_us = now;
+
 				} else {
 					_total_cal_time_us += now - _last_magcal_us;
 					_last_magcal_us = now;
 				}
+
 			} else if (status.filter_fault_flags != 0) {
 				_total_cal_time_us = 0;
 			}
 
-			if (_total_cal_time_us > 120*1000*1000) {
+			if (_total_cal_time_us > 120 * 1000 * 1000) {
 				// we have sufficient accumulated valid flight time to form a reliable bias estimate
 				// check that the state variance for each axis is within a range indicating filter convergence
 				float max_var_allowed = 100.0f * _mag_bias_saved_variance.get();
