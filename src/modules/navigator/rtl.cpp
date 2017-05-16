@@ -183,6 +183,7 @@ RTL::set_rtl_item()
 			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
 			_mission_item.deploy_gear = home_close && home_altitude_close;
+			_mission_item.force_velocity = false;
 
 			break;
 		}
