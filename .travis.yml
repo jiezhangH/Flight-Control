@@ -47,9 +47,9 @@ virtualenv:
   system_site_packages: true
 
 before_install:
-  - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && sudo apt-get install s3cmd && pip install empy jinja2; fi
+  - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && pip install empy jinja2; fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then sudo -H easy_install pip && sudo -H pip install empy jinja2; brew tap osrf/simulation; brew update; brew install homebrew/science/opencv; brew install gazebo7; brew install s3cmd; fi
-  - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then pip install pycrypto pyserial; fi
+  - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then sudo apt-get install s3cmd && pip install pycrypto pyserial; fi
 
 script:
     # Exit if one of the scripts fails.
