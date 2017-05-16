@@ -158,12 +158,6 @@ private:
 	std::vector<float>
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
 	unsigned 		_sonars;
-	struct GPIOConfig {
-		uint32_t        trig_port;
-		uint32_t        echo_port;
-		uint32_t        alt;
-	};
-	static const GPIOConfig _gpio_tab[];
 
 	DevHandle _h_fmu;
 	DevHandle _h_pwm;
@@ -226,8 +220,6 @@ private:
 
 
 };
-
-const HC_SR04::GPIOConfig HC_SR04::_gpio_tab[] = {GPIO_GPIO4_OUTPUT, GPIO_TIM2_CH4IN, 0};
 
 
 /*
@@ -381,19 +373,6 @@ HC_SR04::init()
 	if (!_h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0) {
 		err(1, "Unable to set capture \n");
 	}
-
-
-
-	// /* init trig echo port : */
-	// for (unsigned i = 0; i < _sonars; i++) {
-	// 	// px4_arch_configgpio(_gpio_tab[i].trig_port);
-	// 	_h_fmu.ioctl(GPIO_SET_OUTPUT, 1 << 4);
-	// 	PX4_INFO("pin %x", _gpio_tab[i].trig_port);
-	// 	px4_arch_gpiowrite(_gpio_tab[i].trig_port, false);
-	// 	px4_arch_configgpio(_gpio_tab[i].echo_port);
-	// 	PX4_INFO("echo %x", _gpio_tab[i].echo_port);
-	// 	_latest_sonar_measurements.push_back(0);
-	// }
 
 	// /*TIM2-CH4*/
 	// up_input_capture_set(2, Both, 0, capture_trampoline, this);
@@ -623,7 +602,6 @@ HC_SR04::measure()
 	/*
 	 * Send a plus begin a measurement.
 	 */
-	px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, true);
 
 	ret = OK;
 
@@ -796,7 +774,6 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 
 	if (edge_state == 1) {
 		raising_time = edge_time;
-		px4_arch_gpiowrite(_gpio_tab[_cycle_counter].trig_port, false);
 
 	} else {
 		falling_time = edge_time;
