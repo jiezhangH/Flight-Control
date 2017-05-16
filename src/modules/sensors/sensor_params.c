@@ -3383,6 +3383,8 @@ PARAM_DEFINE_FLOAT(RC_FLT_CUTOFF, 10.0f);
  * @value 0 Disabled
  * @value 1 Test Pilot
  *
+ * @reboot_required true
+ *
  * @group Radio Calibration
  */
 PARAM_DEFINE_INT32(RC_TESTPILOT, 0);
