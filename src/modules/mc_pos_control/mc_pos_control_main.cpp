@@ -907,12 +907,7 @@ MulticopterPositionControl::poll_subscriptions()
 		_pos_sp_triplet.current.valid = false;
 
 		if (PX4_ISFINITE(_pos_sp_triplet.current.lat) && PX4_ISFINITE(_pos_sp_triplet.current.lon)
-		    && PX4_ISFINITE(_pos_sp_triplet.current.alt) &&
-		    (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_VELOCITY)) {
-			_pos_sp_triplet.current.valid = true;
-
-		} else if ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_VELOCITY)
-			   && PX4_ISFINITE(_pos_sp_triplet.current.vx) && PX4_ISFINITE(_pos_sp_triplet.current.vy)) {
+		    && PX4_ISFINITE(_pos_sp_triplet.current.alt)) {
 			_pos_sp_triplet.current.valid = true;
 		}
 	}
@@ -1833,7 +1828,7 @@ void MulticopterPositionControl::control_auto(float dt)
 	math::Vector<3> prev_sp;
 	math::Vector<3> next_sp;
 
-	if (_pos_sp_triplet.current.valid && (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_VELOCITY)) {
+	if (_pos_sp_triplet.current.valid) {
 
 		math::Vector<3> curr_pos_sp;
 
@@ -1895,18 +1890,8 @@ void MulticopterPositionControl::control_auto(float dt)
 		}
 	}
 
-
-	/* we want to achieve the velocity given by the navigator */
-	if ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_VELOCITY) && _pos_sp_triplet.current.valid) {
-		_run_alt_control = true;
-		_run_pos_control = false;
-
-		_vel_sp(0) = _pos_sp_triplet.current.vx;
-		_vel_sp(1) = _pos_sp_triplet.current.vy;
-
-
-	} else if (current_setpoint_valid &&
-		   (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_IDLE)) {
+	if (current_setpoint_valid &&
+	    (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_IDLE)) {
 		/* Auto logic:
 		 * The vehicle should follow the line previous-current.
 		 * - if there is no next setpoint or the current is a loiter point, then slowly approach the current along the line

@@ -71,6 +71,7 @@ MissionBlock::MissionBlock(Navigator *navigator, const char *name) :
 	_mission_item{},
 	_waypoint_position_reached(false),
 	_waypoint_yaw_reached(false),
+	_waypoint_velocity_reached(false),
 	_time_first_inside_orbit(0),
 	_action_start(0),
 	_time_wp_reached(0),
@@ -139,17 +140,8 @@ MissionBlock::is_mission_item_reached()
 			return false;
 		}
 
-	case NAV_CMD_DO_CHANGE_SPEED: {
-
-			/* we achieved item if velocity is smaller than 0.3 in x and y */
-			if ((fabsf(_navigator->get_global_position()->vel_n - _mission_item.vN) < 0.3f)  &&
-			    (fabsf(_navigator->get_global_position()->vel_e - _mission_item.vE) < 0.3f)) {
-				return true;
-
-			} else {
-				return false;
-			}
-		}
+	case NAV_CMD_DO_CHANGE_SPEED:
+		return true;
 
 	default:
 		/* do nothing, this is a 3D waypoint */
@@ -380,8 +372,24 @@ MissionBlock::is_mission_item_reached()
 		}
 	}
 
-	/* Once the waypoint and yaw setpoint have been reached we can start the loiter time countdown */
-	if (_waypoint_position_reached && _waypoint_yaw_reached) {
+	/* check if velocity needs to be reached */
+	if (_mission_item.force_velocity) {
+
+		float ground_speed = sqrtf(_navigator->get_global_position()->vel_n * _navigator->get_global_position()->vel_n +
+					   _navigator->get_global_position()->vel_e + _navigator->get_global_position()->vel_e);
+
+		if ((ground_speed - _mission_item.requested_speed) < 0.01f) {
+			_waypoint_velocity_reached = true;
+
+		}
+
+	} else {
+		_waypoint_velocity_reached = true;
+	}
+
+
+	/* Once the waypoint, yaw setpoint, velocity setpoint have been reached we can start the loiter time countdown */
+	if (_waypoint_position_reached && _waypoint_yaw_reached && _waypoint_velocity_reached) {
 
 		if (_time_first_inside_orbit == 0) {
 			_time_first_inside_orbit = now;
@@ -409,6 +417,7 @@ MissionBlock::is_mission_item_reached()
 	// all acceptance criteria must be met in the same iteration
 	_waypoint_position_reached = false;
 	_waypoint_yaw_reached = false;
+	_waypoint_velocity_reached = false;
 	return false;
 }
 
@@ -535,8 +544,6 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 
 	sp->lat = item->lat;
 	sp->lon = item->lon;
-	sp->vx = NAN;
-	sp->vy = NAN;
 	sp->alt = item->altitude_is_relative ? item->altitude + _navigator->get_home_position()->alt : item->altitude;
 	sp->yaw = item->yaw;
 	sp->loiter_radius = (fabsf(item->loiter_radius) > NAV_EPSILON_POSITION) ? fabsf(item->loiter_radius) :
@@ -546,8 +553,9 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 	sp->disable_mc_yaw_control = item->disable_mc_yaw;
 	sp->deploy_gear = item->deploy_gear;
 
-	sp->cruising_speed = _navigator->get_cruising_speed();
+	sp->cruising_speed = (item->force_velocity) ? item->requested_speed : _navigator->get_cruising_speed();
 	sp->cruising_throttle = _navigator->get_cruising_throttle();
+
 
 	switch (item->nav_cmd) {
 	case NAV_CMD_IDLE:
@@ -593,12 +601,6 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 			sp->disable_mc_yaw_control = true;
 		}
 
-		break;
-
-	case NAV_CMD_DO_CHANGE_SPEED:
-		sp->vx = item->vN;
-		sp->vy = item->vE;
-		sp->type = position_setpoint_s::SETPOINT_TYPE_VELOCITY;
 		break;
 
 	default:
@@ -795,12 +797,13 @@ MissionBlock::set_idle_item(struct mission_item_s *item)
 void
 MissionBlock::set_brake_item(struct mission_item_s *item)
 {
-	item->lat = NAN;
-	item->lon = NAN;
+	item->lat = _navigator->get_global_position()->lat;
+	item->lon = _navigator->get_global_position()->lon;
 	item->yaw = NAN;
-	item->vE = 0.0f;
-	item->vN = 0.0f;
-	item->nav_cmd = NAV_CMD_DO_CHANGE_SPEED;
+	item->acceptance_radius = 10.f; // set it large since we don't care about waypoint
+	item->requested_speed = 0.0f; // set speed to zero since we want to brake
+	item->force_velocity = 1;
+	item->nav_cmd = NAV_CMD_WAYPOINT;
 	item->autocontinue = true;
 	item->origin = ORIGIN_ONBOARD;
 }

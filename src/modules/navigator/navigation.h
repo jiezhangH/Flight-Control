@@ -108,8 +108,6 @@ enum ORIGIN {
 struct mission_item_s {
 	double lat;			/**< latitude in degrees				*/
 	double lon;			/**< longitude in degrees				*/
-	float vN; 			/**< velocity going NORD */
-	float vE; 			/**< velocity going EAST */
 	union {
 		struct {
 			union {
@@ -122,6 +120,7 @@ struct mission_item_s {
 			float ___lat_float;			/**< padding */
 			float ___lon_float;			/**< padding */
 			float altitude;				/**< altitude in meters	(AMSL)			*/
+			float requested_speed;     /**< requested speed: only considered if force_velocity is set */
 		};
 		float params[7];				/**< array to store mission command values for MAV_FRAME_MISSION ***/
 	};
@@ -138,7 +137,8 @@ struct mission_item_s {
 			 autocontinue : 1,				/**< true if next waypoint should follow after this one */
 			 disable_mc_yaw : 1,				/**< weathervane mode */
 			 vtol_back_transition : 1,		/**< part of the vtol back transition sequence */
-			 deploy_gear: 1;
+			 deploy_gear: 1,
+			 force_velocity: 1;				/**< velocity needs to be reached */
 	};
 };
 #pragma pack(pop)

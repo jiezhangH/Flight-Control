@@ -142,6 +142,7 @@ protected:
 	mission_item_s _mission_item;
 	bool _waypoint_position_reached;
 	bool _waypoint_yaw_reached;
+	bool _waypoint_velocity_reached;
 	hrt_abstime _time_first_inside_orbit;
 	hrt_abstime _action_start;
 	hrt_abstime _time_wp_reached;

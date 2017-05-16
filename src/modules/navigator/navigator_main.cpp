@@ -828,6 +828,7 @@ Navigator::get_cruising_speed()
 			return _param_cruising_speed_hover.get();
 		}
 
+
 	} else {
 		if (_mission_cruising_speed_fw > 0.0f
 		    && _vstatus.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_MISSION) {
