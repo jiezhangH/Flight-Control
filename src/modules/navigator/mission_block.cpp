@@ -517,7 +517,6 @@ MissionBlock::item_contains_position(const struct mission_item_s *item)
 	case NAV_CMD_DO_FOLLOW_REPOSITION:
 	case NAV_CMD_VTOL_TAKEOFF:
 	case NAV_CMD_VTOL_LAND:
-	case NAV_CMD_DO_CHANGE_SPEED:
 		return true;
 
 	default:
