@@ -3020,7 +3020,7 @@ MulticopterPositionControl::task_main()
 		/* switch to smooth takeoff if we got out of landed state */
 		if (!_vehicle_land_detected.landed && was_landed) {
 			_in_takeoff = true;
-			_takeoff_vel_limit = -0.5f;
+			_takeoff_vel_limit = -2.0f;
 		}
 
 		/* set triplets to invalid if we just landed */
