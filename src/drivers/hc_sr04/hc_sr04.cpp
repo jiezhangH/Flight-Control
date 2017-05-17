@@ -64,6 +64,7 @@
 #include <nuttx/clock.h>
 
 #include <systemlib/perf_counter.h>
+#include <systemlib/px4_macros.h>
 #include <systemlib/err.h>
 
 #include <drivers/drv_hrt.h>
@@ -90,6 +91,7 @@
 /* Device limits */
 #define SR04_MIN_DISTANCE 	(0.40f)
 #define SR04_MAX_DISTANCE 	(5.00f)
+#define SR04_TIME_2_DISTANCE_M (0.000170f)
 
 #define SR04_CONVERSION_INTERVAL 	50000 /* 50ms for one sonar */
 
@@ -102,8 +104,6 @@
 
 using namespace DriverFramework;
 
-static float si_units = 0;
-
 int static cmp(const void *a, const void *b)
 {
 	return (*(float *)a - * (float *)b);
@@ -112,7 +112,7 @@ int static cmp(const void *a, const void *b)
 class HC_SR04 : public device::CDev
 {
 public:
-	HC_SR04(enum Rotation rotation, unsigned sonars = 1);
+	HC_SR04(enum Rotation rotation);
 	virtual ~HC_SR04();
 
 	virtual int 		init();
@@ -129,6 +129,26 @@ protected:
 	virtual int			probe();
 
 private:
+
+#if defined(HC_SR04_CAPTURE_DEBUG)
+
+	typedef struct timer_inf_t {
+		uint32_t chan_index;
+		hrt_abstime edge_time;
+		uint32_t edge_state;
+		uint32_t overflow;
+	} timer_inf_t;
+
+	volatile timer_inf_t _edges[16] = {{0, 0, 0, 0}}; // Must be a power of 2
+	volatile int 		 _edge_index = 0;
+#endif
+
+	volatile hrt_abstime _distance_time[16] = {0}; // Must be a power of 2
+	volatile int 		 _distance_time_index_on = 0;
+	volatile int 		 _distance_time_index_off = 0;
+
+	bool				_should_exit = false;
+
 	float				_min_distance;
 	float				_max_distance;
 	float 				_mf_window[_MF_WINDOW_SIZE] = {0.0f};
@@ -137,7 +157,13 @@ private:
 	int 				_mf_cycle_counter;
 	work_s				_work;
 	ringbuffer::RingBuffer	*_reports;
-	bool				_sensor_ok;
+	volatile enum {
+		Uninitialized = 0,
+		Initialized,
+		WatingRising,
+		WatingFalling,
+	} _sensor_state;
+
 	int					_measure_ticks;
 	bool				_collect_phase;
 	int					_class_instance;
@@ -151,17 +177,10 @@ private:
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
 
-	uint8_t				_cycle_counter;	/* counter in cycle to change i2c adresses */
 	int					_cycling_rate;	/* */
-	uint8_t				_index_counter;	/* temporary sonar i2c address */
 
 	std::vector<float>
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
-	unsigned 		_sonars;
-
-	DevHandle _h_fmu;
-	DevHandle _h_pwm;
-
 
 	/**
 	* Test whether the device supported by the driver is present at a
@@ -227,14 +246,14 @@ private:
  */
 extern "C"  __EXPORT int hc_sr04_main(int argc, char *argv[]);
 
-HC_SR04::HC_SR04(enum Rotation rotation, unsigned sonars) :
+HC_SR04::HC_SR04(enum Rotation rotation) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
 	_min_distance(SR04_MIN_DISTANCE),
 	_max_distance(SR04_MAX_DISTANCE),
 	_mf_prev_value(0.0f),
 	_mf_cycle_counter(0),
 	_reports(nullptr),
-	_sensor_ok(false),
+	_sensor_state(Uninitialized),
 	_measure_ticks(0),
 	_collect_phase(false),
 	_class_instance(-1),
@@ -244,10 +263,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, unsigned sonars) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
-	_cycle_counter(0),	/* initialising counter for cycling function to zero */
-	_cycling_rate(0),	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
-	_index_counter(0), 	/* initialising temp sonar i2c address to zero */
-	_sonars(sonars)
+	_cycling_rate(0)	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
 
 {
 	/* enable debug() calls */
@@ -305,17 +321,19 @@ HC_SR04::init()
 	// if (_distance_sensor_topic == nullptr) {
 	// 	DEVICE_LOG("failed to create distance_sensor object. Did you start uOrb?");
 	// }
+	DevHandle h_fmu;
+	DevHandle h_pwm;
 
-	DevMgr::getHandle(PX4FMU_DEVICE_PATH, _h_fmu);
+	DevMgr::getHandle(PX4FMU_DEVICE_PATH, h_fmu);
 
-	if (!_h_fmu.isValid()) {
+	if (!h_fmu.isValid()) {
 		PX4_WARN("FMU: px4_open fail\n");
 		return PX4_ERROR;
 	}
 
-	DevMgr::getHandle(PWM_OUTPUT0_DEVICE_PATH, _h_pwm);
+	DevMgr::getHandle(PWM_OUTPUT0_DEVICE_PATH, h_pwm);
 
-	if (!_h_pwm.isValid()) {
+	if (!h_pwm.isValid()) {
 		PX4_WARN("PMW: px4_open fail\n");
 		return PX4_ERROR;
 	}
@@ -323,70 +341,62 @@ HC_SR04::init()
 	unsigned capture_count = 0;
 
 
-	_h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 20);
+	h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 20);
 
 	unsigned group = 1;
 	uint32_t alt_channel_groups = 0;
 	alt_channel_groups |= (1 << group);
 	uint32_t group_mask;
 
-	if (_h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
+	if (h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
 		PX4_ERR("pwm servo get rategroup fail");
 		exit(1);
 	}
 
-	if (_h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
+	if (h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
 		PX4_ERR("pwm servo set select update rate fail");
 		exit(1);
 	}
 
-	if (_h_pwm.ioctl(PWM_SERVO_SET_ARM_OK, 0) != OK) {
+	if (h_pwm.ioctl(PWM_SERVO_SET_ARM_OK, 0) != OK) {
 		PX4_ERR("pmw servo set arm ok fail");
 		exit(1);
 	}
 
-	if (_h_pwm.ioctl(PWM_SERVO_ARM, 0) != OK) {
+	if (h_pwm.ioctl(PWM_SERVO_ARM, 0) != OK) {
 		PX4_ERR("pmw servo set arm fail");
 		exit(1);
 	}
 
-	if (_h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK) {
+	if (h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK) {
 		PX4_ERR("pwm servo set group 1 fail");
 		exit(1);
 	}
 
 	input_capture_config_t cap_config;
 	cap_config.channel = 2;
-	cap_config.filter = 0;
+	cap_config.filter = 0xf;
 	cap_config.edge = Both;
 	cap_config.callback = &HC_SR04::capture_trampoline;
 	cap_config.context = this;
 
-	if (_h_fmu.ioctl(INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
+	if (h_fmu.ioctl(INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
 		fprintf(stdout, "Not in a capture mode\n");
 	}
 
-	if (!_h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) == 0) {
+	if (!h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) == 0) {
 		err(1, "Unable to set capture callback for chan %u\n", cap_config.channel);
 	}
 
-	if (!_h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0) {
+	if (!h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0) {
 		err(1, "Unable to set capture \n");
 	}
 
-	// /*TIM2-CH4*/
-	// up_input_capture_set(2, Both, 0, capture_trampoline, this);
-
-	usleep(35000); /* wait for 35ms; */
-
 	_cycling_rate = SR04_CONVERSION_INTERVAL;
-
-	/* show the connected sonars in terminal */
-	DEVICE_DEBUG("Number of sonars set: %d", _sonars);
 
 	ret = OK;
 	/* sensor is ok, but we don't really know if it is within range */
-	_sensor_ok = true;
+	_sensor_state = Initialized;
 
 	return ret;
 }
@@ -598,12 +608,24 @@ HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
 int
 HC_SR04::measure()
 {
-	int ret;
-	/*
-	 * Send a plus begin a measurement.
-	 */
+	int ret = -EAGAIN;
 
-	ret = OK;
+	if (_sensor_state != Uninitialized) {
+
+		hrt_abstime wait = hrt_absolute_time() + (2 * SR04_CONVERSION_INTERVAL);
+
+		while (ret == -EAGAIN) {
+			if (wait < hrt_absolute_time()) {
+				ret = -ENXIO;
+
+			} else if (_sensor_state == Initialized) {
+				usleep(SR04_CONVERSION_INTERVAL / 2);
+
+			} else {
+				ret = PX4_OK;
+			}
+		}
+	}
 
 	return ret;
 }
@@ -618,15 +640,16 @@ HC_SR04::collect()
 
 	struct distance_sensor_s report = {};
 
+	hrt_abstime current_distance = _distance_time[_distance_time_index_off++];
+	_distance_time_index_off &= arraySize(_distance_time) - 1;
+
 	report.timestamp = hrt_absolute_time();
 	report.min_distance = get_minimum_distance();
 	report.max_distance = get_maximum_distance();
-	report.current_distance = si_units;
+	report.current_distance = median_filter(current_distance * SR04_TIME_2_DISTANCE_M);
 	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
 	report.orientation = _rotation;
 	_mf_cycle_counter++;
-
-	PX4_INFO("collect pusblish msg");
 
 	/* publish it, if we are the primary */
 	if (_distance_sensor_topic != nullptr) {
@@ -674,15 +697,9 @@ HC_SR04::start()
 	_collect_phase = false;
 	_reports->flush();
 
-	//measure();  /* begin measure */
+	_should_exit = false;
 
-	/* schedule a cycle to start things */
-	work_queue(HPWORK,
-		   &_work,
-		   (worker_t)&HC_SR04::cycle_trampoline,
-		   this,
-		   USEC2TICK(_cycling_rate));
-
+	measure();  /* Wait on measurement */
 
 	/* notify about state change */
 	struct subsystem_info_s info = {};
@@ -706,7 +723,49 @@ HC_SR04::start()
 void
 HC_SR04::stop()
 {
+
+
+	orb_unadvertise(_distance_sensor_topic);
+
+	DevHandle h_fmu;
+	DevHandle h_pwm;
+
+	DevMgr::getHandle(PX4FMU_DEVICE_PATH, h_fmu);
+
+	if (!h_fmu.isValid()) {
+		PX4_WARN("FMU: px4_open fail\n");
+	}
+
+	DevMgr::getHandle(PWM_OUTPUT0_DEVICE_PATH, h_pwm);
+
+	if (!h_pwm.isValid()) {
+		PX4_WARN("PMW: px4_open fail\n");
+	}
+
+	h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 50);
+	unsigned group = 1;
+	uint32_t alt_channel_groups = 0;
+	alt_channel_groups |= (1 << group);
+	uint32_t group_mask;
+
+	if (h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
+		PX4_ERR("pwm servo get rategroup fail");
+	}
+
+	if (h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
+		PX4_ERR("pwm servo set select update rate fail");
+	}
+
+	input_capture_config_t cap_config;
+	cap_config.channel = 2;
+	cap_config.filter = 0;
+	cap_config.edge = Disabled;
+	cap_config.callback = nullptr;
+	cap_config.context = nullptr;;
+	h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
+	_should_exit = true;
 	work_cancel(HPWORK, &_work);
+	usleep(SR04_CONVERSION_INTERVAL + SR04_CONVERSION_INTERVAL / 2);
 }
 
 void
@@ -726,26 +785,6 @@ HC_SR04::cycle()
 	if (OK != collect()) {
 		DEVICE_DEBUG("collection error");
 	}
-
-	/* change to next sonar */
-	_cycle_counter = _cycle_counter + 1;
-
-	if (_cycle_counter >= _sonars) {
-		_cycle_counter = 0;
-	}
-
-	/* measure next sonar */
-	// if (OK != measure()) {
-	// 	DEVICE_DEBUG("measure error sonar adress %d", _cycle_counter);
-	// }
-
-
-	work_queue(HPWORK,
-		   &_work,
-		   (worker_t)&HC_SR04::cycle_trampoline,
-		   this,
-		   USEC2TICK(_cycling_rate));
-
 }
 
 void
@@ -768,19 +807,29 @@ void HC_SR04::capture_trampoline(void *context, uint32_t chan_index,
 void HC_SR04::capture_callback(uint32_t chan_index,
 			       hrt_abstime edge_time, uint32_t edge_state, uint32_t overflow)
 {
-	static hrt_abstime distance_time = 0;
 	static hrt_abstime raising_time = 0;
 	static hrt_abstime falling_time = 0;
+#if defined(HC_SR04_CAPTURE_DEBUG)
+	_edges[_edge_index].chan_index = chan_index;
+	_edges[_edge_index].edge_time  = edge_time;
+	_edges[_edge_index].edge_state =  edge_state;
+	_edges[_edge_index++].overflow = overflow;
+	_edge_index &= arraySize(_edges) - 1;
+#endif
 
 	if (edge_state == 1) {
+		_sensor_state = WatingFalling;
 		raising_time = edge_time;
 
 	} else {
+		_sensor_state = WatingRising;
 		falling_time = edge_time;
-		/*calculate deltaT*/
-		distance_time = falling_time - raising_time;
-		/*calculate distance*/
-		si_units = distance_time * 0.000170f;        //meter
+		_distance_time[_distance_time_index_on++] = falling_time - raising_time;
+		_distance_time_index_on &= arraySize(_distance_time) - 1;
+
+		if (!_should_exit) {
+			work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
+		}
 	}
 }
 
@@ -803,8 +852,6 @@ void	info();
 void
 start(enum Rotation rotation)
 {
-	int fd;
-
 	if (g_dev != nullptr) {
 		PX4_ERR("already started");
 		exit(1);
@@ -818,17 +865,6 @@ start(enum Rotation rotation)
 	}
 
 	if (OK != g_dev->init()) {
-		goto fail;
-	}
-
-	/* set the poll rate to default, starts automatic data collection */
-	fd = open(SR04_DEVICE_PATH, O_RDONLY);
-
-	if (fd < 0) {
-		goto fail;
-	}
-
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0) {
 		goto fail;
 	}
 
