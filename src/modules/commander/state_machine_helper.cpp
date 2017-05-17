@@ -141,6 +141,12 @@ transition_result_t arming_state_transition(struct vehicle_status_s *status,
 	arming_state_t current_arming_state = status->arming_state;
 	bool feedback_provided = false;
 
+	// system is being operated in a manual mode where the position is controlled by the user
+	bool man_pos_mode = (status->nav_state == vehicle_status_s::NAVIGATION_STATE_MANUAL
+				|| status->nav_state == vehicle_status_s::NAVIGATION_STATE_STAB
+				|| status->nav_state == vehicle_status_s::NAVIGATION_STATE_RATTITUDE
+				|| status->nav_state == vehicle_status_s::NAVIGATION_STATE_ALTCTL);
+
 	/* only check transition if the new state is actually different from the current one */
 	if (new_arming_state == current_arming_state) {
 		ret = TRANSITION_NOT_CHANGED;
@@ -175,7 +181,7 @@ transition_result_t arming_state_transition(struct vehicle_status_s *status,
 		    && status->hil_state == vehicle_status_s::HIL_STATE_OFF) {
 
 			prearm_ret = preflight_check(status, mavlink_log_pub, true /* pre-arm */, true /* force_report */,
-						     status_flags, battery, can_arm_without_gps, time_since_boot);
+						     status_flags, battery, (can_arm_without_gps || man_pos_mode), time_since_boot);
 		}
 
 		/*
@@ -225,11 +231,17 @@ transition_result_t arming_state_transition(struct vehicle_status_s *status,
 						mavlink_log_critical(mavlink_log_pub, "NOT ARMING: Press safety switch first!");
 						feedback_provided = true;
 						valid_transition = false;
+
+					} else if (status->nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_RTL) {
+
+						mavlink_log_critical(mavlink_log_pub, "NOT ARMING: Switch flight mode first");
+						feedback_provided = true;
+						valid_transition = false;
 					}
 
 					// Perform power checks only if circuit breaker is not
 					// engaged for these checks
-					if (!status_flags->circuit_breaker_engaged_power_check) {
+					else if (!status_flags->circuit_breaker_engaged_power_check) {
 						// Fail transition if power is not good
 						if (!status_flags->condition_power_input_valid) {
 
@@ -327,6 +339,11 @@ transition_result_t arming_state_transition(struct vehicle_status_s *status,
 					      || new_arming_state == vehicle_status_s::ARMING_STATE_STANDBY;
 			ret = TRANSITION_CHANGED;
 			status->arming_state = new_arming_state;
+
+			// Report limited modes
+			if (armed->armed && !status_flags->condition_home_position_valid && man_pos_mode) {
+				mavlink_log_critical(mavlink_log_pub, "No home position, Return to Launch not available");
+			}
 		}
 
 		/* reset feedback state */
