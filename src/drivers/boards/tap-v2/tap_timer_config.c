@@ -111,16 +111,6 @@ __EXPORT const struct io_timers_t led_pwm_timers[MAX_LED_TIMERS] = {
 		.first_channel_index = 0,
 		.last_channel_index = 2,
 	},
-	{
-		.base = STM32_TIM2_BASE,
-		.clock_register = STM32_RCC_APB1ENR,
-		.clock_bit = RCC_APB1ENR_TIM2EN,
-		.clock_freq = STM32_APB1_TIM2_CLKIN,
-		.first_channel_index = 1,
-		.last_channel_index = 2,
-		.handler = io_timer_handler1,
-		.vectorno =  STM32_IRQ_TIM2,
-	}
 };
 
 __EXPORT const struct timer_io_channels_t led_pwm_channels[MAX_TIMER_LED_CHANNELS] = {
