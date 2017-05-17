@@ -227,6 +227,7 @@ static struct vehicle_control_mode_s control_mode = {};
 static struct offboard_control_mode_s offboard_control_mode = {};
 static struct home_position_s _home = {};
 static int32_t _flight_mode_slots[manual_control_setpoint_s::MODE_SLOT_MAX];
+static int32_t _desired_flight_mode = commander_state_s::MAIN_STATE_AUTO_LOITER;
 static struct commander_state_s internal_state = {};
 
 struct mission_result_s _mission_result;
@@ -2867,6 +2868,9 @@ int commander_thread_main(int argc, char *argv[])
 								geofence_action == geofence_result_s::GF_ACTION_RTL) {
 						print_reject_arm("NOT ARMING: Geofence RTL requires valid home");
 
+					} else if (internal_state.main_state != _desired_flight_mode) {
+						print_reject_arm("NOT ARMING: Conditions for flight mode not met");
+
 					} else if (status.arming_state == vehicle_status_s::ARMING_STATE_STANDBY) {
 						arming_ret = arming_state_transition(&status,
 										     &battery,
@@ -3605,6 +3609,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 		}
 
 		int new_mode = _flight_mode_slots[sp_man.mode_slot];
+		_desired_flight_mode = _flight_mode_slots[sp_man.mode_slot];
 
 		if (new_mode < 0) {
 			/* slot is unused */
@@ -3764,10 +3769,13 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 			// XXX: put ACRO and STAB on separate switches
 			if (status.is_rotary_wing && !status.is_vtol) {
 				res = main_state_transition(status_local, commander_state_s::MAIN_STATE_ACRO, main_state_prev, &status_flags, &internal_state);
+				_desired_flight_mode = commander_state_s::MAIN_STATE_ACRO;
 			} else if (!status.is_rotary_wing) {
 				res = main_state_transition(status_local, commander_state_s::MAIN_STATE_STAB, main_state_prev, &status_flags, &internal_state);
+				_desired_flight_mode = commander_state_s::MAIN_STATE_STAB;
 			} else {
 				res = main_state_transition(status_local, commander_state_s::MAIN_STATE_MANUAL, main_state_prev, &status_flags, &internal_state);
+				_desired_flight_mode = commander_state_s::MAIN_STATE_MANUAL;
 			}
 
 		}
@@ -3776,11 +3784,14 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 			 * rattitude mode.*/
 			if (status.is_rotary_wing) {
 				res = main_state_transition(status_local, commander_state_s::MAIN_STATE_RATTITUDE, main_state_prev, &status_flags, &internal_state);
+				_desired_flight_mode = commander_state_s::MAIN_STATE_RATTITUDE;
 			} else {
 				res = main_state_transition(status_local, commander_state_s::MAIN_STATE_STAB, main_state_prev, &status_flags, &internal_state);
+				_desired_flight_mode = commander_state_s::MAIN_STATE_STAB;
 			}
 		}else {
 			res = main_state_transition(status_local, commander_state_s::MAIN_STATE_MANUAL, main_state_prev, &status_flags, &internal_state);
+			_desired_flight_mode = commander_state_s::MAIN_STATE_MANUAL;
 		}
 
 		// TRANSITION_DENIED is not possible here
@@ -3789,6 +3800,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 	case manual_control_setpoint_s::SWITCH_POS_MIDDLE:		// ASSIST
 		if (sp_man.posctl_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 			res = main_state_transition(status_local, commander_state_s::MAIN_STATE_POSCTL, main_state_prev, &status_flags, &internal_state);
+			_desired_flight_mode = commander_state_s::MAIN_STATE_POSCTL;
 
 			if (res != TRANSITION_DENIED) {
 				break;	// changed successfully or already in this state
@@ -3816,6 +3828,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 	case manual_control_setpoint_s::SWITCH_POS_ON:			// AUTO
 		if (sp_man.loiter_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 			res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_LOITER, main_state_prev, &status_flags, &internal_state);
+			_desired_flight_mode = commander_state_s::MAIN_STATE_AUTO_LOITER;
 
 			if (res != TRANSITION_DENIED) {
 				break;	// changed successfully or already in this state
@@ -3825,6 +3838,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 
 		} else {
 			res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_MISSION, main_state_prev, &status_flags, &internal_state);
+			_desired_flight_mode = commander_state_s::MAIN_STATE_AUTO_MISSION;
 
 			if (res != TRANSITION_DENIED) {
 				break;	// changed successfully or already in this state
