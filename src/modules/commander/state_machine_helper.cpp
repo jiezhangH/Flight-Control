@@ -1025,6 +1025,9 @@ bool set_nav_state(struct vehicle_status_s *status,
 
 			if (status_flags->condition_local_altitude_valid) {
 				status->nav_state = vehicle_status_s::NAVIGATION_STATE_DESCEND;
+				if (status_flags->condition_global_position_valid) {
+					status->nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LAND;
+				}
 
 			} else {
 				status->nav_state = vehicle_status_s::NAVIGATION_STATE_TERMINATION;
@@ -1186,7 +1189,7 @@ void set_link_loss_nav_state(struct vehicle_status_s *status,
 	{
 		status->nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_RTL;
 	}
-	else if (status_flags->condition_local_position_valid)
+	else if (status_flags->condition_global_position_valid)
 	{
 		status->nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LAND;
 	}
