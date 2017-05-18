@@ -153,7 +153,6 @@ private:
 	bool 		_in_landing = false;				/**<true if landing descent (only used in auto) */
 	bool 		_lnd_reached_ground = false; 		/**<true if controller assumes the vehicle has reached the ground after landing */
 	bool 		_state_updn_revert = false; 		/**<true if vehicle is upside down */
-	bool 		_obstacle_ahead_sp = false;			/**< true if an obstacle is present */
 
 	int		_control_task;			/**< task handle for task */
 	orb_advert_t	_mavlink_log_pub;		/**< mavlink log advert */
@@ -322,7 +321,6 @@ private:
 	math::Vector<3> _curr_pos_sp;  /**< current setpoint of the triplets */
 	math::Vector<3> _prev_pos_sp; /**< previous setpoint of the triples */
 	matrix::Vector2f _stick_input_xy_prev; /*for manual controlled mode to detect direction change in xy*/
-	math::Vector<3> _stop_sp;		/*<setpoint for obstacle avoidance>*/
 
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
@@ -408,7 +406,6 @@ private:
 	void		control_auto(float dt);
 
 	void control_position(float dt);
-	void avoidance_velocity_setpoint(float dt);
 	void calculate_velocity_setpoint(float dt);
 	void calculate_thrust_setpoint(float dt);
 
@@ -538,7 +535,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_manual_jerk_limit_xy(1.0f),
 	_manual_jerk_limit_z(1.0f),
 	_takeoff_vel_limit(0.0f),
-	_avoidance_gain(-50.0f),
+	_avoidance_gain(0.001f),
 	_z_reset_counter(0),
 	_xy_reset_counter(0),
 	_vz_reset_counter(0),
@@ -570,7 +567,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_curr_pos_sp.zero();
 	_prev_pos_sp.zero();
 	_stick_input_xy_prev = matrix::Vector2f(0.0f, 0.0f);
-	_stop_sp.zero();
 
 	_R.identity();
 
@@ -2366,85 +2362,15 @@ MulticopterPositionControl::do_control(float dt)
 void
 MulticopterPositionControl::control_position(float dt)
 {
-
-	/* only if distance data come from forward facing sensor */
-	if (_sonar_measurament.orientation == 24) {
-		/*there is an obstacle in front of the UAV*/
-		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
-			/*exclude measurament from ground*/
-			if (fabsf(_pos(2)) > 1.5f) {
-				_run_pos_control = false;
-				_obstacle_ahead_sp = true;
-				PX4_INFO("_run_pos_control %d", _run_pos_control);
-				avoidance_velocity_setpoint(dt);
-			}
-		}
-	}
-
-
-	// 			if (_obstacle_ahead_sp == false) {
-	// 				//_stop_sp = _pos;
-	// 				matrix::Vector2f unit_pos_to_home((_home_pos.x - _pos(0)), (_home_pos.y - _pos(1)));
-	// 				unit_pos_to_home = unit_pos_to_home.normalized();
-	// 				_stop_sp(0) = _pos(0) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(
-	// 						      0);  //prev_sp(0);
-	// 				_stop_sp(1) = _pos(1) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(1);
-	// 				_obstacle_ahead_sp = true;
-	// 				PX4_WARN("stop sp %f %f dist %f", (double)_stop_sp(0), (double)_stop_sp(1),
-	// 					 (double)_sonar_measurament.current_distance);
-	// 			}
-
-
-	// 			if (_obstacle_ahead_sp == true && _sonar_measurament.current_distance < 0.6f) {
-	// 				matrix::Vector2f unit_pos_to_home((_home_pos.x - _pos(0)), (_home_pos.y - _pos(1)));
-	// 				unit_pos_to_home = unit_pos_to_home.normalized();
-	// 				_stop_sp(0) = _pos(0) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(
-	// 						      0);  //prev_sp(0);
-	// 				_stop_sp(1) = _pos(1) + (_sonar_measurament.max_distance - _sonar_measurament.current_distance) * unit_pos_to_home(1);
-	// 				//	PX4_WARN("obstacle within 0.6m");
-	// 			}
-
-	// 			_pos_sp(0) = _stop_sp(0);
-	// 			_pos_sp(1) = _stop_sp(1);
-	// 			PX4_INFO("current dist %f  pos %f %f way %f %f", (double)_sonar_measurament.current_distance, (double)_pos(0),
-	// 				 (double)_pos(1), (double)_stop_sp(0), (double)_pos_sp(1));
-	// 			//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
-	// 		}
-
-	// 	} else {
-	// 		if (_obstacle_ahead_sp == true) {
-	// 			_pos_sp(0) = _stop_sp(0);
-	// 			_pos_sp(1) = _stop_sp(1);
-	// 			//_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
-	// 		}
-	// 	}
-	// }
-
-	if (_o) {
-		calculate_velocity_setpoint(dt);
-	}
+	calculate_velocity_setpoint(dt);
 
 	if (_control_mode.flag_control_climb_rate_enabled || _control_mode.flag_control_velocity_enabled ||
 	    _control_mode.flag_control_acceleration_enabled) {
 		calculate_thrust_setpoint(dt);
-
+		//PX4_INFO("calculate thrust setpoint");
 
 	} else {
 		_reset_int_z = true;
-	}
-}
-
-void
-MulticopterPositionControl::avoidance_velocity_setpoint(float dt)
-{
-	if (!_run_pos_control && fabsf(_vel_sp(0)) > 0.1f && fabsf(_vel_sp(1)) > 0.1f) {
-		_vel_sp(0) = 0.0f; //_avoidance_gain * _sonar_measurament.current_distance;
-		_vel_sp(1) = 0.0f; //_avoidance_gain * _sonar_measurament.current_distance;
-		PX4_INFO("vel %f %f ", (double)_vel_sp(0), (double)_vel_sp(1));
-
-	} else {
-		_run_pos_control = true;
-		PX4_INFO("alt %f %f", (double)_vel_sp(0), (double)_vel_sp(1));
 	}
 }
 
@@ -2524,6 +2450,24 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 
 	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
 
+	/*brake in front of obstacles only if distance data come from forward facing sensor */
+	if (_sonar_measurament.orientation == 24) {
+		/*there is an obstacle in front of the UAV*/
+		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
+			/*exclude measurament from ground*/
+			if (fabsf(_pos(2)) > 1.5f && (fabsf(_vel_sp(0)) > 0.1f || fabsf(_vel_sp(1)) > 0.1f)) {
+				_vel_sp(0) *= _avoidance_gain * (1 / _sonar_measurament.current_distance);
+				_vel_sp(1) *= _avoidance_gain * (1 / _sonar_measurament.current_distance);
+			}
+		}
+	}
+
+	/* make sure velocity setpoint is constrained in all directions*/
+	if (vel_norm_xy > _vel_max_xy) {
+		_vel_sp(0) = _vel_sp(0) * _vel_max_xy / vel_norm_xy;
+		_vel_sp(1) = _vel_sp(1) * _vel_max_xy / vel_norm_xy;
+	}
+
 	/* apply slewrate (aka acceleration limit) for smooth flying */
 	vel_sp_slewrate(dt);
 
@@ -2551,8 +2495,6 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	_global_vel_sp.vx = _vel_sp(0);
 	_global_vel_sp.vy = _vel_sp(1);
 	_global_vel_sp.vz = _vel_sp(2);
-
-	PX4_INFO("pub setpoint %f %f", (double)_global_vel_sp.vx, (double)_global_vel_sp.vy);
 
 	if (_global_vel_sp_pub != nullptr) {
 		orb_publish(ORB_ID(vehicle_global_velocity_setpoint), _global_vel_sp_pub, &_global_vel_sp);
