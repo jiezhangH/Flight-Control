@@ -379,7 +379,7 @@ MissionBlock::is_mission_item_reached()
 					   _navigator->get_global_position()->vel_e * _navigator->get_global_position()->vel_e);
 
 
-		if (fabsf(ground_speed - _mission_item.requested_speed) < 0.2f) {
+		if (fabsf(ground_speed - _mission_item.requested_speed) < 0.5f) {
 			_waypoint_velocity_reached = true;
 		}
 
@@ -815,7 +815,7 @@ MissionBlock::set_brake_item(struct mission_item_s *item)
 	item->altitude = _navigator->get_global_position()->alt;
 	item->yaw = NAN;
 	item->acceptance_radius = 1000.f; // set it large since we don't care about waypoint
-	item->requested_speed = 0.01f; // set speed to small number since we want to brake
+	item->requested_speed = 0.0f; // set speed to small number since we want to brake
 	item->force_velocity = 1;
 	item->time_inside = 0.0f;
 	item->autocontinue = true;
