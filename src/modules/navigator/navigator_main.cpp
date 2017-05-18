@@ -459,6 +459,7 @@ Navigator::task_main()
 				rep->current.loiter_radius = get_loiter_radius();
 				rep->current.loiter_direction = 1;
 				rep->current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
+				rep->current.cruising_speed = get_cruising_speed();
 
 				// Go on and check which changes had been requested
 				if (PX4_ISFINITE(cmd.param4)) {
@@ -473,7 +474,7 @@ Navigator::task_main()
 					rep->current.lon = (cmd.param6 < 1000) ? cmd.param6 : cmd.param6 / (double)1e7;
 
 				} else {
-					/* predict setpoint forward such that it has 3 seconds time to stop*/
+					/* predict setpoint forward such that it has 1.6 seconds time to stop*/
 					double lat_predict;
 					double lon_predict;
 					float time_to_travel = 1.6f;

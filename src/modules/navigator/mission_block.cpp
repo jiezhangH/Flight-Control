@@ -566,6 +566,8 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 		break;
 
 	case NAV_CMD_WAYPOINT:
+		sp->type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+
 		if (item->force_velocity) {
 			sp->cruising_speed = item->requested_speed;
 			sp->type = position_setpoint_s::SETPOINT_TYPE_VELOCITY;
@@ -815,7 +817,7 @@ MissionBlock::set_brake_item(struct mission_item_s *item)
 	item->altitude = _navigator->get_global_position()->alt;
 	item->yaw = NAN;
 	item->acceptance_radius = 1000.f; // set it large since we don't care about waypoint
-	item->requested_speed = 0.0f; // set speed to small number since we want to brake
+	item->requested_speed = 0.000001f; // set speed to small number since we want to brake
 	item->force_velocity = 1;
 	item->time_inside = 0.0f;
 	item->autocontinue = true;
