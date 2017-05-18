@@ -149,6 +149,8 @@ Land::set_autoland_item()
 			_mission_item.autocontinue = true;
 			_mission_item.origin = ORIGIN_ONBOARD;
 			_mission_item.deploy_gear = true;
+			_mission_item.force_velocity = false;
+
 
 			_navigator->set_can_loiter_at_sp(true);
 
