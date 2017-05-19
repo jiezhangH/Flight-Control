@@ -95,7 +95,7 @@
 
 #define SR04_CONVERSION_INTERVAL 	50000 /* 50ms for one sonar */
 
-#define _MF_WINDOW_SIZE 5 ///< window size for median filter on sonar range
+#define _MF_WINDOW_SIZE 3 ///< window size for median filter on sonar range
 
 
 #ifndef CONFIG_SCHED_WORKQUEUE
@@ -153,7 +153,6 @@ private:
 	float				_max_distance;
 	float 				_mf_window[_MF_WINDOW_SIZE] = {0.0f};
 	float				_mf_window_sorted[_MF_WINDOW_SIZE] = {0.0f};
-	float				_mf_prev_value;
 	int 				_mf_cycle_counter;
 	work_s				_work;
 	ringbuffer::RingBuffer	*_reports;
@@ -250,7 +249,6 @@ HC_SR04::HC_SR04(enum Rotation rotation) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
 	_min_distance(SR04_MIN_DISTANCE),
 	_max_distance(SR04_MAX_DISTANCE),
-	_mf_prev_value(0.0f),
 	_mf_cycle_counter(0),
 	_reports(nullptr),
 	_sensor_state(Uninitialized),
@@ -312,15 +310,6 @@ HC_SR04::init()
 
 	_class_instance = register_class_devname(RANGE_FINDER_BASE_DEVICE_PATH);
 
-	/* get a publish handle on the range finder topic */
-	// struct distance_sensor_s ds_report = {};
-
-	// _distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &ds_report,
-	// 			 &_orb_class_instance, ORB_PRIO_LOW);
-
-	// if (_distance_sensor_topic == nullptr) {
-	// 	DEVICE_LOG("failed to create distance_sensor object. Did you start uOrb?");
-	// }
 	DevHandle h_fmu;
 	DevHandle h_pwm;
 
@@ -349,28 +338,28 @@ HC_SR04::init()
 	uint32_t group_mask;
 
 	if (h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
-		PX4_ERR("pwm servo get rategroup fail");
-		exit(1);
+		PX4_ERR("PWM_SERVO_GET_RATEGROUP fail");
+		return PX4_ERROR;
 	}
 
 	if (h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
-		PX4_ERR("pwm servo set select update rate fail");
-		exit(1);
+		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
+		return PX4_ERROR;
 	}
 
 	if (h_pwm.ioctl(PWM_SERVO_SET_ARM_OK, 0) != OK) {
-		PX4_ERR("pmw servo set arm ok fail");
-		exit(1);
+		PX4_ERR("PWM_SERVO_SET_ARM_OK fail");
+		return PX4_ERROR;
 	}
 
 	if (h_pwm.ioctl(PWM_SERVO_ARM, 0) != OK) {
-		PX4_ERR("pmw servo set arm fail");
-		exit(1);
+		PX4_ERR("PWM_SERVO_ARM fail");
+		return PX4_ERROR;
 	}
 
 	if (h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK) {
-		PX4_ERR("pwm servo set group 1 fail");
-		exit(1);
+		PX4_ERR("PWM_SERVO_SET group 1 fail");
+		return PX4_ERROR;
 	}
 
 	input_capture_config_t cap_config;
@@ -381,15 +370,18 @@ HC_SR04::init()
 	cap_config.context = this;
 
 	if (h_fmu.ioctl(INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
-		fprintf(stdout, "Not in a capture mode\n");
+		PX4_ERR("Not in a capture mode");
+		return PX4_ERROR;
 	}
 
 	if (!h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) == 0) {
-		err(1, "Unable to set capture callback for chan %u\n", cap_config.channel);
+		PX4_ERR("Unable to set capture callback for chan %u", cap_config.channel);
+		return PX4_ERROR;
 	}
 
 	if (!h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0) {
-		err(1, "Unable to set capture \n");
+		PX4_ERR("Unable to set capture");
+		return PX4_ERROR;
 	}
 
 	_cycling_rate = SR04_CONVERSION_INTERVAL;
@@ -673,6 +665,7 @@ HC_SR04::collect()
 float
 HC_SR04::median_filter(float value)
 {
+	/*TO DO: replace with ring buffer*/
 	_mf_window[(_mf_cycle_counter + 1) % _MF_WINDOW_SIZE] = value;
 
 	for (int i = 0; i < _MF_WINDOW_SIZE; ++i) {
@@ -682,11 +675,10 @@ HC_SR04::median_filter(float value)
 	qsort(_mf_window_sorted, _MF_WINDOW_SIZE, sizeof(float), cmp);
 
 	if (_mf_window_sorted[(_MF_WINDOW_SIZE / 2)] < get_maximum_distance()) {
-		_mf_prev_value = _mf_window_sorted[(_MF_WINDOW_SIZE / 2)];
 		return _mf_window_sorted[(_MF_WINDOW_SIZE / 2)];
 
 	} else {
-		return _mf_prev_value;
+		return get_maximum_distance();
 	}
 }
 
