@@ -91,7 +91,6 @@ Takeoff::on_active()
 		_navigator->set_mission_result_updated();
 
 		// set loiter item so position controllers stop doing takeoff logic
-		_navigator->set_can_loiter_at_sp(false);
 		set_loiter_item(&_mission_item);
 		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 		mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
@@ -106,8 +105,7 @@ Takeoff::set_takeoff_position()
 
 	float abs_altitude = 0.0f;
 
-	const float min_abs_altitude = _navigator->get_home_position()->alt + _param_min_alt.get() + 0.5f *
-				       _param_alt_rad.get();
+	const float min_abs_altitude = _navigator->get_home_position()->alt + _param_min_alt.get();
 
 	// Use altitude if it has been set.
 	if (rep->current.valid && PX4_ISFINITE(rep->current.alt)) {
