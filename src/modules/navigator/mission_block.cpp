@@ -557,12 +557,6 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 	sp->deploy_gear = item->deploy_gear;
 
 	sp->cruising_speed = _navigator->get_cruising_speed();
-
-	if (item->force_velocity) {
-		sp->cruising_speed = item->requested_speed;
-		sp->type = position_setpoint_s::SETPOINT_TYPE_VELOCITY;
-	}
-
 	sp->cruising_throttle = _navigator->get_cruising_throttle();
 
 
@@ -607,6 +601,16 @@ MissionBlock::mission_item_to_position_setpoint(const struct mission_item_s *ite
 
 		if (_navigator->get_vstatus()->is_vtol && _param_vtol_wv_loiter.get()) {
 			sp->disable_mc_yaw_control = true;
+		}
+
+		break;
+
+	case NAV_CMD_WAYPOINT:
+		sp->type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+
+		if (item->force_velocity) {
+			sp->cruising_speed = item->requested_speed;
+			sp->type = position_setpoint_s::SETPOINT_TYPE_VELOCITY;
 		}
 
 		break;
