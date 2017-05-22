@@ -104,11 +104,11 @@ then
 		param set MPC_LAND_SPEED 0.8
 
 		# Position control acceleraton
-		param set MPC_ACC_HOR_MAX 9.0
-		param set MPC_ACC_HOR_MAN 9.0
+		param set MPC_ACC_HOR_MAX 10.0
+		param set MPC_ACC_HOR_MAN 6.0
 		param set MPC_DEC_HOR_SLOW 1.0
-		param set MPC_ACC_DOWN_MAX 10.0
-		param set MPC_ACC_UP_MAX 10.0
+		param set MPC_ACC_DOWN_MAX 6.0
+		param set MPC_ACC_UP_MAX 6.0
 		param set MPC_JERK_MAX 15
 		param set MPC_JERK_MIN 0.1
 
