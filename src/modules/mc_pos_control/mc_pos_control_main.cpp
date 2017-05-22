@@ -2462,12 +2462,6 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		}
 	}
 
-	/* make sure velocity setpoint is constrained in all directions*/
-	if (vel_norm_xy > _vel_max_xy) {
-		_vel_sp(0) = _vel_sp(0) * _vel_max_xy / vel_norm_xy;
-		_vel_sp(1) = _vel_sp(1) * _vel_max_xy / vel_norm_xy;
-	}
-
 	/* apply slewrate (aka acceleration limit) for smooth flying */
 	vel_sp_slewrate(dt);
 
