@@ -91,12 +91,13 @@
 #include <controllib/blocks.hpp>
 #include <controllib/block/BlockParam.hpp>
 
+#include <lib/conversion/rotation.h>
+
 #define TILT_COS_MAX	0.7f
 #define SIGMA_SINGLE_OP			0.000001f
 #define SIGMA_NORM				0.001f
 #define MANUAL_THROTTLE_MAX_MULTICOPTER	0.9f
 #define ONE_G	9.8066f
-#define MAV_SENSOR_ROTATION_PITCH_90 24
 
 
 /**
@@ -2457,12 +2458,15 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	/* apply slewrate (aka acceleration limit) for smooth flying */
 	vel_sp_slewrate(dt);
 
+	/* transform into body frame*/
+	math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
+
 	/*brake in front of obstacles only if distance data come from forward facing sensor */
-	if (_sonar_measurament.orientation == MAV_SENSOR_ROTATION_PITCH_90) {
+	if (_sonar_measurament.orientation == ROTATION_PITCH_90) {
 		/*there is an obstacle in front of the UAV*/
 		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
-			/*exclude measurament from ground and exit avoidance if already stopped*/
-			if (altitude_above_home > 1.5f && (fabsf(_vel_sp(0)) > 0.1f || fabsf(_vel_sp(1)) > 0.1f)) {
+			/*exclude measurament from ground and exit avoidance if going back*/
+			if (altitude_above_home > 1.5f && vel_sp_body(0) > 0.0f)  {
 				_vel_sp(0) *= _avoidance_gain * _sonar_measurament.current_distance;
 				_vel_sp(1) *= _avoidance_gain * _sonar_measurament.current_distance;
 			}
