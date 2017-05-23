@@ -96,6 +96,7 @@
 #define SIGMA_NORM				0.001f
 #define MANUAL_THROTTLE_MAX_MULTICOPTER	0.9f
 #define ONE_G	9.8066f
+#define MAV_SENSOR_ROTATION_PITCH_90 24
 
 
 /**
@@ -270,6 +271,7 @@ private:
 		param_t opt_recover;
 		param_t rc_flt_smp_rate;
 		param_t rc_flt_cutoff;
+		param_t avoid_gain;
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
@@ -296,6 +298,7 @@ private:
 		int opt_recover;
 		float rc_flt_smp_rate;
 		float rc_flt_cutoff;
+		float avoid_gain;
 
 		math::Vector<3> pos_p;
 		math::Vector<3> vel_p;
@@ -535,7 +538,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_manual_jerk_limit_xy(1.0f),
 	_manual_jerk_limit_z(1.0f),
 	_takeoff_vel_limit(0.0f),
-	_avoidance_gain(0.001f),
+	_avoidance_gain(0.0f),
 	_z_reset_counter(0),
 	_xy_reset_counter(0),
 	_vz_reset_counter(0),
@@ -607,6 +610,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.opt_recover = param_find("VT_OPT_RECOV_EN");
 	_params_handles.rc_flt_cutoff = param_find("RC_FLT_CUTOFF");
 	_params_handles.rc_flt_smp_rate = param_find("RC_FLT_SMP_RATE");
+	_params_handles.avoid_gain = param_find("AVOID_GAIN");
 
 	/* fetch initial parameter values */
 	parameters_update(true);
@@ -780,6 +784,7 @@ MulticopterPositionControl::parameters_update(bool force)
 		_manual_jerk_limit_z = (_jerk_hor_max.get() > _jerk_hor_min.get()) ? _jerk_hor_max.get() : 1000000.f;
 
 
+		param_get(_params_handles.avoid_gain, &_avoidance_gain);
 	}
 
 	return OK;
@@ -2367,7 +2372,6 @@ MulticopterPositionControl::control_position(float dt)
 	if (_control_mode.flag_control_climb_rate_enabled || _control_mode.flag_control_velocity_enabled ||
 	    _control_mode.flag_control_acceleration_enabled) {
 		calculate_thrust_setpoint(dt);
-		//PX4_INFO("calculate thrust setpoint");
 
 	} else {
 		_reset_int_z = true;
@@ -2450,20 +2454,20 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 
 	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
 
+	/* apply slewrate (aka acceleration limit) for smooth flying */
+	vel_sp_slewrate(dt);
+
 	/*brake in front of obstacles only if distance data come from forward facing sensor */
-	if (_sonar_measurament.orientation == 24) {
+	if (_sonar_measurament.orientation == MAV_SENSOR_ROTATION_PITCH_90) {
 		/*there is an obstacle in front of the UAV*/
 		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
-			/*exclude measurament from ground*/
-			if (fabsf(_pos(2)) > 1.5f && (fabsf(_vel_sp(0)) > 0.1f || fabsf(_vel_sp(1)) > 0.1f)) {
-				_vel_sp(0) *= _avoidance_gain * (1 / _sonar_measurament.current_distance);
-				_vel_sp(1) *= _avoidance_gain * (1 / _sonar_measurament.current_distance);
+			/*exclude measurament from ground and exit avoidance if already stopped*/
+			if (altitude_above_home > 1.5f && (fabsf(_vel_sp(0)) > 0.1f || fabsf(_vel_sp(1)) > 0.1f)) {
+				_vel_sp(0) *= _avoidance_gain * _sonar_measurament.current_distance;
+				_vel_sp(1) *= _avoidance_gain * _sonar_measurament.current_distance;
 			}
 		}
 	}
-
-	/* apply slewrate (aka acceleration limit) for smooth flying */
-	vel_sp_slewrate(dt);
 
 	/* special velocity setpoint limitation for smooth takeoff (after slewrate!) */
 	if (_in_takeoff) {
