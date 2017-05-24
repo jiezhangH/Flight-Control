@@ -74,6 +74,7 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/subsystem_info.h>
 #include <uORB/topics/distance_sensor.h>
+#include <uORB/topics/mc_virtual_attitude_setpoint.h>
 
 #include <lib/conversion/rotation.h>
 
@@ -178,6 +179,10 @@ private:
 
 	int					_cycling_rate;	/* */
 
+	int					_att_sp_sub; /*attitude setpoint subscriber to get gear state*/
+	struct vehicle_attitude_setpoint_s		_att_sp;		/**< vehicle attitude setpoint */
+
+
 	std::vector<float>
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
 
@@ -261,7 +266,10 @@ HC_SR04::HC_SR04(enum Rotation rotation) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
-	_cycling_rate(0)	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
+	_cycling_rate(0),	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
+	_att_sp_sub(-1),
+	_att_sp{}
+
 
 {
 	/* enable debug() calls */
@@ -310,55 +318,57 @@ HC_SR04::init()
 
 	_class_instance = register_class_devname(RANGE_FINDER_BASE_DEVICE_PATH);
 
-	DevHandle h_fmu;
-	DevHandle h_pwm;
+	int fd_fmu;
+	int fd_pwm;
 
-	DevMgr::getHandle(PX4FMU_DEVICE_PATH, h_fmu);
+	fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
 
-	if (!h_fmu.isValid()) {
-		PX4_WARN("FMU: px4_open fail\n");
+	if (fd_fmu == -1) {
+		PX4_WARN("FMU: px4_open fail");
 		return PX4_ERROR;
 	}
 
-	DevMgr::getHandle(PWM_OUTPUT0_DEVICE_PATH, h_pwm);
+	fd_pwm = ::open(PWM_OUTPUT0_DEVICE_PATH, O_RDWR);
 
-	if (!h_pwm.isValid()) {
-		PX4_WARN("PMW: px4_open fail\n");
+	if (fd_pwm == -1) {
+		PX4_WARN("PMW: px4_open fail");
 		return PX4_ERROR;
 	}
 
 	unsigned capture_count = 0;
 
-
-	h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 20);
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
+		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
+		return PX4_ERROR;
+	}
 
 	unsigned group = 1;
 	uint32_t alt_channel_groups = 0;
 	alt_channel_groups |= (1 << group);
 	uint32_t group_mask;
 
-	if (h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
-		PX4_ERR("PWM_SERVO_GET_RATEGROUP fail");
+	if (::ioctl(fd_pwm, PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
+		PX4_ERR("PWM_SERVO_GET_RATEGROUP group %u fail", group);
 		return PX4_ERROR;
 	}
 
-	if (h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
 		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
 		return PX4_ERROR;
 	}
 
-	if (h_pwm.ioctl(PWM_SERVO_SET_ARM_OK, 0) != OK) {
-		PX4_ERR("PWM_SERVO_SET_ARM_OK fail");
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
+		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
 		return PX4_ERROR;
 	}
 
-	if (h_pwm.ioctl(PWM_SERVO_ARM, 0) != OK) {
+	if (::ioctl(fd_pwm, PWM_SERVO_ARM, 0) != OK) {
 		PX4_ERR("PWM_SERVO_ARM fail");
 		return PX4_ERROR;
 	}
 
-	if (h_pwm.ioctl(PWM_SERVO_SET(1), 10) != OK) {
-		PX4_ERR("PWM_SERVO_SET group 1 fail");
+	if (::ioctl(fd_pwm, PWM_SERVO_SET(group), 10) != OK) {
+		PX4_ERR("PWM_SERVO_SET group %u fail", group);
 		return PX4_ERROR;
 	}
 
@@ -369,18 +379,18 @@ HC_SR04::init()
 	cap_config.callback = &HC_SR04::capture_trampoline;
 	cap_config.context = this;
 
-	if (h_fmu.ioctl(INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
+	if (::ioctl(fd_fmu, INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
 		PX4_ERR("Not in a capture mode");
 		return PX4_ERROR;
 	}
 
-	if (!h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) == 0) {
-		PX4_ERR("Unable to set capture callback for chan %u", cap_config.channel);
+	if (::ioctl(fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) != 0) {
+		PX4_ERR("INPUT_CAP_SET_CALLBACK fail for chan %u", cap_config.channel);
 		return PX4_ERROR;
 	}
 
-	if (!h_fmu.ioctl(INPUT_CAP_SET, (unsigned long)&cap_config) == 0) {
-		PX4_ERR("Unable to set capture");
+	if (::ioctl(fd_fmu, INPUT_CAP_SET, (unsigned long)&cap_config) != 0) {
+		PX4_ERR("INPUT_CAP_SET fail");
 		return PX4_ERROR;
 	}
 
@@ -629,18 +639,31 @@ HC_SR04::collect()
 	int ret;
 	ret = OK;
 
+	bool updated;
+	orb_check(_att_sp_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(vehicle_attitude_setpoint), _att_sp_sub, &_att_sp);
+	}
 
 	struct distance_sensor_s report = {};
 
 	hrt_abstime current_distance = _distance_time[_distance_time_index_off++];
+
 	_distance_time_index_off &= arraySize(_distance_time) - 1;
 
 	report.timestamp = hrt_absolute_time();
+
 	report.min_distance = get_minimum_distance();
-	report.max_distance = get_maximum_distance();
+
+	report.max_distance = _att_sp.landing_gear;
+
 	report.current_distance = median_filter(current_distance * SR04_TIME_2_DISTANCE_M);
+
 	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
+
 	report.orientation = _rotation;
+
 	_mf_cycle_counter++;
 
 	/* publish it, if we are the primary */
@@ -922,8 +945,8 @@ test()
 	PX4_INFO("time:        %lld", report.timestamp);
 
 	/* start the sensor polling at 2Hz */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2)) {
-		PX4_ERR("failed to set 2Hz poll rate");
+	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 20)) {
+		PX4_ERR("failed to set 20Hz poll rate");
 		exit(1);
 	}
 
