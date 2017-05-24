@@ -71,7 +71,10 @@
 #include <drivers/drv_range_finder.h>
 #include <drivers/device/ringbuffer.h>
 
+#include <controllib/blocks.hpp>
+
 #include <uORB/uORB.h>
+#include <uORB/Subscription.hpp>
 #include <uORB/topics/subsystem_info.h>
 #include <uORB/topics/distance_sensor.h>
 #include <uORB/topics/mc_virtual_attitude_setpoint.h>
@@ -179,9 +182,6 @@ private:
 
 	int					_cycling_rate;	/* */
 
-	int					_att_sp_sub; /*attitude setpoint subscriber to get gear state*/
-	struct vehicle_attitude_setpoint_s		_att_sp;		/**< vehicle attitude setpoint */
-
 
 	std::vector<float>
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
@@ -266,10 +266,7 @@ HC_SR04::HC_SR04(enum Rotation rotation) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
-	_cycling_rate(0),	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
-	_att_sp_sub(-1),
-	_att_sp{}
-
+	_cycling_rate(0)	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
 
 {
 	/* enable debug() calls */
@@ -639,31 +636,17 @@ HC_SR04::collect()
 	int ret;
 	ret = OK;
 
-	bool updated;
-	orb_check(_att_sp_sub, &updated);
-
-	if (updated) {
-		orb_copy(ORB_ID(vehicle_attitude_setpoint), _att_sp_sub, &_att_sp);
-	}
-
 	struct distance_sensor_s report = {};
 
 	hrt_abstime current_distance = _distance_time[_distance_time_index_off++];
-
 	_distance_time_index_off &= arraySize(_distance_time) - 1;
 
 	report.timestamp = hrt_absolute_time();
-
 	report.min_distance = get_minimum_distance();
-
-	report.max_distance = _att_sp.landing_gear;
-
+	report.max_distance = get_maximum_distance();
 	report.current_distance = median_filter(current_distance * SR04_TIME_2_DISTANCE_M);
-
 	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
-
 	report.orientation = _rotation;
-
 	_mf_cycle_counter++;
 
 	/* publish it, if we are the primary */
