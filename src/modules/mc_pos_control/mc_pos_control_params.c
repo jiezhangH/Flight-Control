@@ -635,4 +635,4 @@ PARAM_DEFINE_FLOAT(MPC_TKO_RAMP_T, 0.4f);
  * @max 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(AVOID_GAIN, 0.001f);
+PARAM_DEFINE_FLOAT(MPC_AVOID_GAIN, 0.0f);
