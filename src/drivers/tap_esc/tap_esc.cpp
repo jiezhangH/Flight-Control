@@ -62,15 +62,13 @@
 #include <systemlib/mixer/mixer.h>
 #include <systemlib/param/param.h>
 #include <systemlib/pwm_limit/pwm_limit.h>
-#include "tap_esc_select_responder.h"
+#include "tap_esc_common.h"
 
 #define NAN_VALUE	(0.0f/0.0f)
 
 #ifndef B250000
 #define B250000 250000
 #endif
-
-#define ESC_HAVE_CURRENT_SENSOR
 
 #include "drv_tap_esc.h"
 #include "tap_esc_uploader.h"
@@ -430,7 +428,7 @@ uint8_t TAP_ESC::crc8_esc(uint8_t *p, uint8_t len)
 	uint8_t crc = 0;
 
 	for (uint8_t i = 0; i < len; i++) {
-		crc = TAP_ESC_UPLOADER::_crc_table[crc^*p++];
+		crc = tap_esc_common::crc_table[crc^*p++];
 	}
 
 	return crc;

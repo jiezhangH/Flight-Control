@@ -62,12 +62,11 @@
 
 #include "drv_tap_esc.h"
 #include "tap_esc_uploader.h"
-#include "tap_esc_select_responder.h"
+#include "tap_esc_common.h"
 
 // define for comms logging
 //#define UDEBUG
 
-const uint8_t TAP_ESC_UPLOADER::_crc_table[256] = TAP_ESC_CRC;
 const uint8_t TAP_ESC_UPLOADER::_device_mux_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_POS;
 
 TAP_ESC_UPLOADER::TAP_ESC_UPLOADER(uint8_t esc_counter) :
@@ -541,7 +540,7 @@ TAP_ESC_UPLOADER::crc8_esc(uint8_t *p, uint8_t len)
 	uint8_t crc = 0;
 
 	for (uint8_t i = 0; i < len; i++) {
-		crc = _crc_table[crc^*p++];
+		crc = tap_esc_common::crc_table[crc^*p++];
 	}
 
 	return crc;
