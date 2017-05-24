@@ -215,6 +215,7 @@ private:
 	control::BlockParamFloat _pos_sp_smoothing;
 	control::BlockParamFloat _takeoff_ramp_time; /**< time contant for smooth takeoff ramp */
 	control::BlockParamFloat _nav_rad; /**< radius that is used by navigator that defines when to update triplets */
+	control::BlockParamFloat _avoidance_gain;
 
 	control::BlockDerivative _vel_x_deriv;
 	control::BlockDerivative _vel_y_deriv;
@@ -272,7 +273,6 @@ private:
 		param_t opt_recover;
 		param_t rc_flt_smp_rate;
 		param_t rc_flt_cutoff;
-		param_t avoid_gain;
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
@@ -299,7 +299,6 @@ private:
 		int opt_recover;
 		float rc_flt_smp_rate;
 		float rc_flt_cutoff;
-		float avoid_gain;
 
 		math::Vector<3> pos_p;
 		math::Vector<3> vel_p;
@@ -339,8 +338,6 @@ private:
 	float _manual_jerk_limit_z; /**< jerk limit in manual mode in z */
 
 	float _takeoff_vel_limit; /**< velocity limit value which gets ramped up */
-
-	float _avoidance_gain;
 
 	// counters for reset events on position and velocity states
 	// they are used to identify a reset event
@@ -518,6 +515,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp_smoothing(this, "POS_SMOOTH", true),
 	_takeoff_ramp_time(this, "TKO_RAMP_T", true),
 	_nav_rad(this, "NAV_ACC_RAD", false),
+	_avoidance_gain(this, "AVOID_GAIN", true),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
@@ -539,7 +537,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_manual_jerk_limit_xy(1.0f),
 	_manual_jerk_limit_z(1.0f),
 	_takeoff_vel_limit(0.0f),
-	_avoidance_gain(0.0f),
 	_z_reset_counter(0),
 	_xy_reset_counter(0),
 	_vz_reset_counter(0),
@@ -611,7 +608,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.opt_recover = param_find("VT_OPT_RECOV_EN");
 	_params_handles.rc_flt_cutoff = param_find("RC_FLT_CUTOFF");
 	_params_handles.rc_flt_smp_rate = param_find("RC_FLT_SMP_RATE");
-	_params_handles.avoid_gain = param_find("AVOID_GAIN");
 
 	/* fetch initial parameter values */
 	parameters_update(true);
@@ -764,6 +760,7 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.tko_speed = fminf(_params.tko_speed, _params.vel_max_up);
 		_params.land_speed = fminf(_params.land_speed, _params.vel_max_down);
 
+
 		/* default limit for acceleration and manual jerk*/
 		_acceleration_state_dependent_xy = _acceleration_hor_max.get();
 		_manual_jerk_limit_xy = _jerk_hor_max.get();
@@ -785,7 +782,6 @@ MulticopterPositionControl::parameters_update(bool force)
 		_manual_jerk_limit_z = (_jerk_hor_max.get() > _jerk_hor_min.get()) ? _jerk_hor_max.get() : 1000000.f;
 
 
-		param_get(_params_handles.avoid_gain, &_avoidance_gain);
 	}
 
 	return OK;
@@ -2461,14 +2457,17 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	/* transform into body frame*/
 	math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
 
-	/*brake in front of obstacles only if distance data come from forward facing sensor */
-	if (_sonar_measurament.orientation == ROTATION_PITCH_90) {
-		/*there is an obstacle in front of the UAV*/
-		if (_sonar_measurament.current_distance < _sonar_measurament.max_distance) {
+	/* if avoidance on limit cruise speed */
+	if (_manual.avoidance_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
+		_vel_max_xy = 4.0f;
+
+		/* if distance data comes from forward facing sensor */
+		if (_sonar_measurament.orientation == ROTATION_PITCH_90
+		    && _sonar_measurament.current_distance < _sonar_measurament.max_distance) {
 			/*exclude measurament from ground and exit avoidance if going back*/
 			if (altitude_above_home > 1.5f && vel_sp_body(0) > 0.0f)  {
-				_vel_sp(0) *= _avoidance_gain * _sonar_measurament.current_distance;
-				_vel_sp(1) *= _avoidance_gain * _sonar_measurament.current_distance;
+				_vel_sp(0) *= _avoidance_gain.get() * _sonar_measurament.current_distance;
+				_vel_sp(1) *= _avoidance_gain.get() * _sonar_measurament.current_distance;
 			}
 		}
 	}
