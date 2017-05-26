@@ -137,7 +137,7 @@ TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
 	 ******************************************/
 	PX4_LOG("uploader esc_id %d...", esc_id);
 
-	/* look for the bootloader, blocking 60 ms */
+	/* look for the bootloader, blocking 320 ms */
 	for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
 		ret = sync(esc_id);
 
@@ -145,10 +145,8 @@ TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
 			break;
 
 		} else {
-			if (i == 1) {
-				/* set wait time for tap esc form app jump reboot(0.311748s measure by Saleae logic Analyzer) */
-				usleep(260 * 1000);
-			}
+			/* send sync interval time: 2ms */
+			usleep(2000);
 		}
 	}
 
@@ -244,6 +242,7 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 {
 	int	ret = -1;
 	int32_t fw_size;
+	uint16_t esc_fail_mask = 0;
 
 	fw_size = initialise_firmware_file(filenames);
 
@@ -263,11 +262,25 @@ TAP_ESC_UPLOADER::upload(const char *filenames[])
 	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
 
 		ret = upload_id(esc_id, fw_size);
+
+		if (ret != OK) {
+			esc_fail_mask = 1 << esc_id;
+		}
 	}
+
+	// check all esc upload success after all esc uploading end,it will upload esc again which esc upload failed
+	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
+
+		if (esc_fail_mask & (1 << esc_id)) {
+			ret = upload_id(esc_id, fw_size);
+		}
+	}
+
+	esc_fail_mask = 0;
 
 	// sleep for enough time for the TAP ESC chip to boot. This makes
 	// update more reliably startup TAP ESC again after upload
-	// set wait time for tap esc form rebbot jump app(0.1269s measure by Saleae logic Analyzer)
+	// set wait time for tap esc form reboot jump app(0.1269s measure by Saleae logic Analyzer)
 	usleep(130 * 1000);
 
 	return ret;
@@ -279,9 +292,10 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 	/*
 	  check tap_esc flash CRC against CRC of a file
 	 */
-
 	int32_t fw_size;
 	int ret = -1;
+	uint16_t esc_fail_mask = 0;
+
 	fw_size = initialise_firmware_file(filenames);
 
 	if (fw_size < 0) {
@@ -298,7 +312,7 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 
 	/* checkcrc esc_id(0,1,2,3,4,5), checkcrc begin esc id0 */
 	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
-		/* look for the bootloader, blocking 60 ms,uploader begin esc id0*/
+		/* look for the bootloader, blocking 320 ms,uploader begin esc id0*/
 		for (int i = 0; i < SYNC_RETRY_TIMES; i++) {
 			ret = sync(esc_id);
 
@@ -306,10 +320,8 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 				break;
 
 			} else {
-				if (i == 1) {
-					/* set wait time for tap esc form app jump reboot(0.311748s measure by Saleae logic Analyzer) */
-					usleep(260 * 1000);
-				}
+				/* send sync interval time: 2ms */
+				usleep(2000);
 			}
 		}
 
@@ -361,11 +373,25 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 						     esc_id);
 			ret = upload_id(esc_id, fw_size);
 
+			if (ret != OK) {
+				esc_fail_mask = 1 << esc_id;
+			}
+
 		} else {
 			/* reboot tap esc_id */
 			reboot(esc_id);
 		}
 	}
+
+	// check all esc upload success after all esc uploading end,it will upload esc again which esc upload failed
+	for (unsigned esc_id = 0; esc_id < _esc_counter; esc_id++) {
+
+		if (esc_fail_mask & (1 << esc_id)) {
+			ret = upload_id(esc_id, fw_size);
+		}
+	}
+
+	esc_fail_mask = 0;
 
 	// sleep for enough time for the TAP ESC chip to boot. This makes
 	// update more reliably startup TAP ESC again after upload
@@ -573,8 +599,9 @@ TAP_ESC_UPLOADER::sync(uint8_t esc_id)
 	sync_packet.d.sync_packet.myID = esc_id;
 	send_packet(sync_packet, esc_id);
 
-	/* read and parse sync feedback packet, blocking 60ms between esc app jump boot */
-	ret = read_and_parse_data(60);
+	/* read and parse sync feedback packet, blocking 320ms between esc app jump boot,but if esc run boot,it waits time less than 2ms */
+	/* set wait time for tap esc form app jump reboot(0.311748s measure by Saleae logic Analyzer) */
+	ret = read_and_parse_data(320);
 
 	if (ret != OK) {
 		return ret;
