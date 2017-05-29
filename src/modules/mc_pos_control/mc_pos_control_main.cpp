@@ -155,6 +155,7 @@ private:
 	bool 		_in_landing = false;				/**<true if landing descent (only used in auto) */
 	bool 		_lnd_reached_ground = false; 		/**<true if controller assumes the vehicle has reached the ground after landing */
 	bool 		_state_updn_revert = false; 		/**<true if vehicle is upside down */
+	bool 		_avoidance_lock_in = false;
 
 	int		_control_task;			/**< task handle for task */
 	orb_advert_t	_mavlink_log_pub;		/**< mavlink log advert */
@@ -328,6 +329,7 @@ private:
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
 	float _yaw_takeoff;	/**< home yaw angle present when vehicle was taking off (euler) */
+	float _yaw_lock_in;
 
 	float _vel_z_lp;
 	float _acc_z_lp;
@@ -529,6 +531,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_last_warn(0),
 	_yaw(0.0f),
 	_yaw_takeoff(0.0f),
+	_yaw_lock_in(0.0f),
 	_vel_z_lp(0),
 	_acc_z_lp(0),
 	_vel_max_xy(0.0f),
@@ -2454,23 +2457,38 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	/* apply slewrate (aka acceleration limit) for smooth flying */
 	vel_sp_slewrate(dt);
 
-	/* transform into body frame*/
-	math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
+	bool avoidance_on = _manual.avoidance_switch == manual_control_setpoint_s::SWITCH_POS_ON ? true : false;
 
-	/* if avoidance on limit cruise speed */
-	if (_manual.avoidance_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
-		_vel_max_xy = 4.0f;
+	if (avoidance_on) {
+		bool obstacle_ahead = (_sonar_measurament.orientation == ROTATION_PITCH_90
+				       && _sonar_measurament.current_distance < _sonar_measurament.max_distance &&
+				       altitude_above_home > 1.5f);
 
-		/* if distance data comes from forward facing sensor */
-		if (_sonar_measurament.orientation == ROTATION_PITCH_90
-		    && _sonar_measurament.current_distance < _sonar_measurament.max_distance) {
-			/*exclude measurament from ground and exit avoidance if going back*/
-			if (altitude_above_home > 1.5f && vel_sp_body(0) > 0.0f)  {
-				_vel_sp(0) *= _avoidance_gain.get() * _sonar_measurament.current_distance;
-				_vel_sp(1) *= _avoidance_gain.get() * _sonar_measurament.current_distance;
+		_vel_max_xy = 4.0f; // must be tested??
+		math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
+
+		/* if there is an obstacle ahead and UAV is moving forwards enter obstacle avoidance mode*/
+		if (obstacle_ahead && !_avoidance_lock_in && vel_sp_body(0) > 0.0f) {
+			_avoidance_lock_in = true;
+			_yaw_lock_in = _yaw;
+		}
+
+		if (_avoidance_lock_in) {
+			bool no_obstacle_ahead = _sonar_measurament.current_distance >= _sonar_measurament.max_distance;
+
+			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead OR move only sideways (no forward, same yaw) with no obstacle ahead*/
+			if (((vel_sp_body(0) < 0.0f && fabsf(vel_sp_body(0)) > 0.1f) || (fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f)
+					&& no_obstacle_ahead)) || (fabsf(vel_sp_body(1)) > 0.1f && fabsf(vel_sp_body(0)) < 0.1f && no_obstacle_ahead)) {
+				_avoidance_lock_in = false;
+
+			} else {
+				/* set x velocity in body frame to 0 in order to stop in front of an obstacle*/
+				vel_sp_body(0) = 0.0f;
+				_vel_sp = _R * vel_sp_body;
 			}
 		}
 	}
+
 
 	/* special velocity setpoint limitation for smooth takeoff (after slewrate!) */
 	if (_in_takeoff) {
