@@ -2476,15 +2476,15 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		if (_avoidance_lock_in) {
 			bool no_obstacle_ahead = _sonar_measurament.current_distance >= _sonar_measurament.max_distance;
 
-			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead OR move only sideways (no forward, same yaw) with no obstacle ahead*/
-			if (((vel_sp_body(0) < 0.0f && fabsf(vel_sp_body(0)) > 0.1f) || (fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f)
-					&& no_obstacle_ahead)) || (fabsf(vel_sp_body(1)) > 0.1f && fabsf(vel_sp_body(0)) < 0.1f && no_obstacle_ahead)) {
+			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead*/
+			if ((vel_sp_body(0) < 0.0f && fabsf(vel_sp_body(0)) > 0.1f) || (fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f)
+					&& no_obstacle_ahead)) {
 				_avoidance_lock_in = false;
 
 			} else {
-				/* set x velocity in body frame to 0 in order to stop in front of an obstacle*/
-				vel_sp_body(0) = 0.0f;
-				_vel_sp = _R * vel_sp_body;
+				/* set velocity to 0 in order to stop in front of an obstacle*/
+				_vel_sp(0) = 0.0f;
+				_vel_sp(1) = 0.0f;
 			}
 		}
 	}
