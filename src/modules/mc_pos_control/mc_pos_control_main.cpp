@@ -216,7 +216,6 @@ private:
 	control::BlockParamFloat _pos_sp_smoothing;
 	control::BlockParamFloat _takeoff_ramp_time; /**< time contant for smooth takeoff ramp */
 	control::BlockParamFloat _nav_rad; /**< radius that is used by navigator that defines when to update triplets */
-	control::BlockParamFloat _avoidance_gain;
 
 	control::BlockDerivative _vel_x_deriv;
 	control::BlockDerivative _vel_y_deriv;
@@ -517,7 +516,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp_smoothing(this, "POS_SMOOTH", true),
 	_takeoff_ramp_time(this, "TKO_RAMP_T", true),
 	_nav_rad(this, "NAV_ACC_RAD", false),
-	_avoidance_gain(this, "AVOID_GAIN", true),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
