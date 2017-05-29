@@ -624,15 +624,3 @@ PARAM_DEFINE_FLOAT(MPC_POS_SMOOTH, 20.0f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_TKO_RAMP_T, 0.4f);
-
-/**
- * Avoidance gain to stop in front of obstacles
- *
- * Decreasing this value will make the decelleration in front
- * of an obstacle greater
- *
- * @min 0
- * @max 1
- * @group Multicopter Position Control
- */
-PARAM_DEFINE_FLOAT(MPC_AVOID_GAIN, 0.0f);
