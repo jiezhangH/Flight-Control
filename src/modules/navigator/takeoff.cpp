@@ -55,7 +55,6 @@
 
 Takeoff::Takeoff(Navigator *navigator, const char *name) :
 	MissionBlock(navigator, name),
-	_param_alt_rad(this, "NAV_MC_ALT_RAD", false),
 	_param_min_alt(this, "MIS_TAKEOFF_ALT", false)
 {
 	// load initial params

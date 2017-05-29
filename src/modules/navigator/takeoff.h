@@ -61,7 +61,6 @@ public:
 	virtual void on_active();
 
 private:
-	control::BlockParamFloat _param_alt_rad;
 	control::BlockParamFloat _param_min_alt;
 
 	void set_takeoff_position();
