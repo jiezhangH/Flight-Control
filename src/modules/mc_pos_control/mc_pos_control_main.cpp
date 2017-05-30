@@ -2460,22 +2460,22 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	if (avoidance_on) {
 		bool obstacle_ahead = (_sonar_measurament.orientation == ROTATION_PITCH_90
 				       && _sonar_measurament.current_distance < _sonar_measurament.max_distance &&
-				       altitude_above_home > 1.5f);
+				       (altitude_above_home > 1.5f));
 
-		_vel_max_xy = 4.0f; // must be tested??
+		_vel_max_xy = 4.0f;
 		math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
 
 		/* if there is an obstacle ahead and UAV is moving forwards enter obstacle avoidance mode*/
-		if (obstacle_ahead && !_avoidance_lock_in && vel_sp_body(0) > 0.0f) {
+		if (obstacle_ahead && !_avoidance_lock_in && (vel_sp_body(0) > 0.0f)) {
 			_avoidance_lock_in = true;
 			_yaw_lock_in = _yaw;
 		}
 
 		if (_avoidance_lock_in) {
-			bool no_obstacle_ahead = _sonar_measurament.current_distance >= _sonar_measurament.max_distance;
+			bool no_obstacle_ahead = (_sonar_measurament.current_distance >= _sonar_measurament.max_distance);
 
 			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead*/
-			if ((vel_sp_body(0) < 0.0f && fabsf(vel_sp_body(0)) > 0.1f) || (fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f)
+			if (((vel_sp_body(0) < 0.0f) && (fabsf(vel_sp_body(0)) > 0.1f)) || ((fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f))
 					&& no_obstacle_ahead)) {
 				_avoidance_lock_in = false;
 
