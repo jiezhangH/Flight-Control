@@ -36,6 +36,9 @@
 #include "build_git_version.h" //generated from build_git_version.h.in
 
 #include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #if !defined(CONFIG_CDCACM_PRODUCTID)
 # define CONFIG_CDCACM_PRODUCTID 0
@@ -69,83 +72,66 @@ enum FIRMWARE_TYPE {
  */
 static uint32_t version_tag_to_number(const char *tag)
 {
-	uint32_t ver = 0;
-	unsigned len = strlen(tag);
-	unsigned mag = 0;
-	int32_t type = -1;
-	unsigned dashcount = 0;
+	uint32_t version_number = 0;
 
-	for (int i = len - 1; i >= 0; i--) {
+	// extract version numbers
+	int16_t buffer = -1;
+	size_t buffer_counter = 0;
+	char version[3] = {0, 0, 0};
+	int firmware_type = FIRMWARE_TYPE_RELEASE;
 
-		if (tag[i] == '-') {
-			dashcount++;
-			ver = 0;
-			mag = 0;
+	for (size_t i = 0; i < strlen(tag); i++) {
+		if (tag[i] == 'r' && i < strlen(tag) - 1 && tag[i + 1] == 'c') {
+			firmware_type = FIRMWARE_TYPE_RC;
+
+		} else if (tag[i] == 'p') {
+			firmware_type = FIRMWARE_TYPE_ALPHA;
+
+		} else if (tag[i] == 't') {
+			firmware_type = FIRMWARE_TYPE_BETA;
+
+		} else if (tag[i] == 'v' && i > 0) {
+			firmware_type = FIRMWARE_TYPE_DEV;
+		}
+
+		if (buffer_counter > 2) {
+			continue;
 		}
 
 		if (tag[i] >= '0' && tag[i] <= '9') {
-			if (mag < 32) {
-				unsigned number = tag[i] - '0';
+			buffer = (buffer == -1) ? 0 : buffer;
+			buffer = buffer * 10 + (tag[i] - '0');
 
-				ver += (number << mag);
-				mag += 8;
+		} else {
+			if (buffer >= 0) {
+				version[buffer_counter] = buffer;
+
+				buffer_counter++;
 			}
 
-		} else if (tag[i] == '.') {
-			continue;
-
-		} else if (i > 3 && type == -1) {
-			/* scan and look for signature characters for each type */
-			const char *curr = &tag[i - 1];
-
-			while (curr > &tag[0]) {
-				if (*curr == 'v') {
-					type = FIRMWARE_TYPE_DEV;
-					break;
-
-				} else if (*curr == 'p') {
-					type = FIRMWARE_TYPE_ALPHA;
-					break;
-
-				} else if (*curr == 't') {
-					type = FIRMWARE_TYPE_BETA;
-					break;
-
-				} else if (*curr == 'r') {
-					type = FIRMWARE_TYPE_RC;
-					break;
-				}
-
-				curr--;
-			}
-
-			/* looks like a release */
-			if (type == -1) {
-				type = FIRMWARE_TYPE_RELEASE;
-			}
-
-		} else if (tag[i] != 'v') {
-			/* reset, because we don't have a full tag but
-			 * are seeing non-numeric characters (eg. '-')
-			 */
-			ver = 0;
-			mag = 0;
+			buffer = -1;
 		}
 	}
 
-	/* if git describe contains more than one dash this is not a real tag */
-	if (dashcount > 1) {
-		type = FIRMWARE_TYPE_DEV;
+	if (buffer >= 0) {
+		version[buffer_counter] = buffer;
+		buffer_counter++;
 	}
 
-	/* looks like a release */
-	if (type == -1) {
-		type = FIRMWARE_TYPE_RELEASE;
-	}
+	// store version number in uint32_t
+	char v_major[2];
+	char v_minor[2];
+	char v_patch[2];
 
-	ver = (ver << 8);
+	sprintf(v_major, "%d", version[0]);
+	sprintf(v_minor, "%d", version[1]);
+	sprintf(v_patch, "%d", version[2]);
 
-	return ver | type;
+	version_number = ((int)strtol(v_major, NULL, 16) << 8 * 3) |
+			 ((int)strtol(v_minor, NULL, 16) << 8 * 2) |
+			 ((int)strtol(v_patch, NULL, 16) << 8 * 1) | firmware_type;
+
+	return version_number;
 }
 
 uint32_t px4_firmware_version(void)
@@ -166,35 +152,51 @@ uint32_t px4_firmware_version(void)
  */
 static uint32_t version_tag_to_vendor_version_number(const char *tag)
 {
-	uint32_t ver = 0;
-	unsigned len = strlen(tag);
-	unsigned mag = 0;
-	unsigned dashcount = 0;
+	uint32_t version_number = 0;
 
-	for (int i = len - 1; i >= 0; i--) {
-		if (tag[i] == '-') {
-			dashcount++;
+	// extract version numbers
+	int16_t buffer = -1;
+	size_t buffer_counter = 0;
+	char version[6] = {0, 0, 0, 0, 0, 0};
 
-			if (dashcount == 2) {
-				mag = 0;
-				ver = 0;
+	for (size_t i = 0; i < strlen(tag); i++) {
+		if (buffer_counter > 5) {
+			continue;
+		}
+
+		if (tag[i] >= '0' && tag[i] <= '9') {
+			buffer = (buffer == -1) ? 0 : buffer;
+			buffer = buffer * 10 + (tag[i] - '0');
+
+		} else {
+			if (buffer >= 0) {
+				version[buffer_counter] = buffer;
+				buffer_counter++;
 			}
 
-		} else if (tag[i] >= '0' && tag[i] <= '9') {
-			if (mag < 24) {
-				unsigned number = tag[i] - '0';
-				ver += (number << mag);
-				mag += 8;
-			}
+			buffer = -1;
 		}
 	}
 
-	if (dashcount == 1 || dashcount == 3) {
-		return ver;
-
-	} else {
-		return 0;
+	if (buffer >= 0) {
+		version[buffer_counter] = buffer;
+		buffer_counter++;
 	}
+
+	// store version number in uint32_t
+	char v_major[2];
+	char v_minor[2];
+	char v_patch[2];
+
+	sprintf(v_major, "%d", version[3]);
+	sprintf(v_minor, "%d", version[4]);
+	sprintf(v_patch, "%d", version[5]);
+
+	version_number = ((int)strtol(v_major, NULL, 16) << 8 * 2) |
+			 ((int)strtol(v_minor, NULL, 16) << 8 * 1) |
+			 ((int)strtol(v_patch, NULL, 16) << 8 * 0);
+
+	return version_number;
 }
 
 uint32_t px4_firmware_vendor_version(void)
