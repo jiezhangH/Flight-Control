@@ -2453,7 +2453,9 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	_vel_sp(2) = math::min(_vel_sp(2), vel_limit);
 
 	/* apply slewrate (aka acceleration limit) for smooth flying */
-	vel_sp_slewrate(dt);
+	if (!_control_mode.flag_control_auto_enabled) {
+		vel_sp_slewrate(dt);
+	}
 
 	bool avoidance_on = _manual.avoidance_switch == manual_control_setpoint_s::SWITCH_POS_ON ? true : false;
 
