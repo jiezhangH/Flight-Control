@@ -467,10 +467,15 @@ unset MAV_TYPE
 unset OUTPUT_MODE
 
 #
-# Use 400 Hz PWM output for landing gear (frequency also affects RGB LED)
+# Use 50 Hz PWM output for landing gear
 #
-pwm rate -g 0 -r 400
-pwm rate -g 1 -r 20
+if ver hwcmp TAP_V1
+then
+	pwm rate -c 1 -r 400
+else
+	pwm rate -g 0 -r 50
+	pwm rate -g 1 -r 20
+fi
 
 #
 # Load the gear mixer onto fmu
