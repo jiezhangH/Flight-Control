@@ -3217,6 +3217,10 @@ int commander_thread_main(int argc, char *argv[])
 			control_mode.timestamp = now;
 			orb_publish(ORB_ID(vehicle_control_mode), control_mode_pub, &control_mode);
 
+			if (control_mode.flag_control_manual_enabled) {
+				memset(&pos_sp_triplet, 0, sizeof(pos_sp_triplet));
+			}
+
 			status.timestamp = now;
 			orb_publish(ORB_ID(vehicle_status), status_pub, &status);
 
