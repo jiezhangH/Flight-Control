@@ -42,7 +42,6 @@
 #include <errno.h>
 
 #include <uORB/topics/vehicle_attitude.h>
-#include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/mount_orientation.h>
 #include <px4_defines.h>
