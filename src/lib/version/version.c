@@ -36,9 +36,6 @@
 #include "build_git_version.h" //generated from build_git_version.h.in
 
 #include <string.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #if !defined(CONFIG_CDCACM_PRODUCTID)
 # define CONFIG_CDCACM_PRODUCTID 0
