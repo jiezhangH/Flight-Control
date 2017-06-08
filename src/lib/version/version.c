@@ -118,18 +118,9 @@ static uint32_t version_tag_to_number(const char *tag)
 		buffer_counter++;
 	}
 
-	// store version number in uint32_t
-	char v_major[2];
-	char v_minor[2];
-	char v_patch[2];
-
-	sprintf(v_major, "%d", version[0]);
-	sprintf(v_minor, "%d", version[1]);
-	sprintf(v_patch, "%d", version[2]);
-
-	version_number = ((int)strtol(v_major, NULL, 16) << 8 * 3) |
-			 ((int)strtol(v_minor, NULL, 16) << 8 * 2) |
-			 ((int)strtol(v_patch, NULL, 16) << 8 * 1) | firmware_type;
+	version_number = (version[0] << 8 * 3) |
+			 (version[1] << 8 * 2) |
+			 (version[2] << 8 * 1) | firmware_type;
 
 	return version_number;
 }
@@ -183,18 +174,9 @@ static uint32_t version_tag_to_vendor_version_number(const char *tag)
 		buffer_counter++;
 	}
 
-	// store version number in uint32_t
-	char v_major[2];
-	char v_minor[2];
-	char v_patch[2];
-
-	sprintf(v_major, "%d", version[3]);
-	sprintf(v_minor, "%d", version[4]);
-	sprintf(v_patch, "%d", version[5]);
-
-	version_number = ((int)strtol(v_major, NULL, 16) << 8 * 2) |
-			 ((int)strtol(v_minor, NULL, 16) << 8 * 1) |
-			 ((int)strtol(v_patch, NULL, 16) << 8 * 0);
+	version_number = (version[3] << 8 * 2) |
+			 (version[4] << 8 * 1) |
+			 (version[5] << 8 * 0);
 
 	return version_number;
 }
