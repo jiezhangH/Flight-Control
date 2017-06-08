@@ -354,11 +354,6 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
-	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
-		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
-		return PX4_ERROR;
-	}
-
 	if (::ioctl(fd_pwm, PWM_SERVO_ARM, 0) != OK) {
 		PX4_ERR("PWM_SERVO_ARM fail");
 		return PX4_ERROR;
