@@ -483,8 +483,6 @@ CameraTrigger::cycle_trampoline(void *arg)
 					if (cmd.param1 > 0.0f && !trig->_trigger_enabled) {
 						trig->turnOnOff();
 						trig->keepAlive(true);
-						// Give the camera time to turn on, before starting to send trigger signals
-						poll_interval_usec = 5000000;
 						turning_on = true;
 
 					} else if (cmd.param1 <= 0.0f && trig->_trigger_enabled) {
@@ -652,4 +650,3 @@ int camera_trigger_main(int argc, char *argv[])
 
 	return 0;
 }
-
