@@ -46,6 +46,8 @@ bool VersioningTest::_test_flight_version()
 {
 	ut_assert_true(_is_correct_version_tag("v11.45.99-1.2.3", 0xB2D63ff));
 	ut_assert_true(_is_correct_version_tag("v1.2.3", 0x010203ff));
+	ut_assert_true(_is_correct_version_tag("v255.255.255", 0xffffffff));
+	ut_assert_true(_is_correct_version_tag("v255.255.255-11", 0xffffff00));
 	ut_assert_true(_is_correct_version_tag("v1.2.3-11", 0x01020300));
 	ut_assert_true(_is_correct_version_tag("v1.2.3-11-abababab", 0x01020300));
 	ut_assert_true(_is_correct_version_tag("11.45.99-1.2.3", 0x0B2D63ff));
@@ -71,6 +73,8 @@ bool VersioningTest::_test_vendor_version()
 	ut_assert_true(_is_correct_version_tag_vendor("v11.45.99-34.56.88", 0x223858));
 	ut_assert_true(_is_correct_version_tag_vendor("v11.45.99-1.2.3", 0x010203));
 	ut_assert_true(_is_correct_version_tag_vendor("1.2.3-11.45.99", 0x0B2D63));
+	ut_assert_true(_is_correct_version_tag_vendor("v1.2.3-255.255.255", 0xFFFFFF));
+	ut_assert_true(_is_correct_version_tag_vendor("v1.2.3-255.255.255-11", 0xFFFFFF));
 	ut_assert_true(_is_correct_version_tag_vendor("v1.2.3", 0x000000));
 	ut_assert_true(_is_correct_version_tag_vendor("v1.2.3-11", 0x000000));
 	ut_assert_true(_is_correct_version_tag_vendor("v1.2.3-11.45", 0x000000));
