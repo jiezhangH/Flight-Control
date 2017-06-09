@@ -16,20 +16,26 @@ private:
 
 bool VersioningTest::_is_correct_version_tag(const char *version_tag, uint32_t result_goal)
 {
-	if (version_tag_to_number(version_tag) == result_goal) {
+	uint32_t result = version_tag_to_number(version_tag);
+
+	if (result == result_goal) {
 		return true;
 
 	} else {
+		PX4_ERR("Wrong version: tag: %s, got: 0x%x, expected: 0x%x", version_tag, result, result_goal);
 		return false;
 	}
 }
 
 bool VersioningTest::_is_correct_version_tag_vendor(const char *version_tag, uint32_t result_goal)
 {
-	if (version_tag_to_vendor_version_number(version_tag) == result_goal) {
+	uint32_t result = version_tag_to_vendor_version_number(version_tag);
+
+	if (result == result_goal) {
 		return true;
 
 	} else {
+		PX4_ERR("Wrong version: tag: %s, got: 0x%x, expected: 0x%x", version_tag, result, result_goal);
 		return false;
 	}
 }
@@ -63,6 +69,11 @@ bool VersioningTest::_test_flight_version()
 	ut_assert_true(_is_correct_version_tag("0.0.0-1.2.3beta4", 0x00000080));
 	ut_assert_true(_is_correct_version_tag("0.0.0-1.2.3dev4", 0x00000000));
 
+	ut_assert_true(_is_correct_version_tag("v1.6.2-rc2", 0x010602C0));
+	ut_assert_true(_is_correct_version_tag("v1.6.2rc1", 0x010602C0));
+	ut_assert_true(_is_correct_version_tag("v1.6.0-100-g890c415", 0x01060000));
+	ut_assert_true(_is_correct_version_tag("v1.6.2-0.8.7-67-g1d5e979", 0x01060200));
+
 	return true;
 }
 
@@ -90,6 +101,10 @@ bool VersioningTest::_test_vendor_version()
 	ut_assert_true(_is_correct_version_tag_vendor("1.2.3-0.45.99beta4", 0x002D63));
 	ut_assert_true(_is_correct_version_tag_vendor("1.2.3-0.0.0beta4", 0x000000));
 	ut_assert_true(_is_correct_version_tag_vendor("1.2.3-0.0.0dev4", 0x000000));
+
+	ut_assert_true(_is_correct_version_tag_vendor("v1.6.2-rc2", 0x000000));
+	ut_assert_true(_is_correct_version_tag_vendor("v1.6.0-100-g890c415", 0x000000));
+	ut_assert_true(_is_correct_version_tag_vendor("v1.6.2-0.8.7-67-g1d5e979", 0x000807));
 
 	return true;
 }
