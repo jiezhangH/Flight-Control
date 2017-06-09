@@ -709,6 +709,14 @@ bool set_nav_state(struct vehicle_status_s *status,
 	reset_link_loss_globals(armed, old_failsafe, rc_loss_act);
 	reset_link_loss_globals(armed, old_failsafe, data_link_loss_act);
 
+	/* require RC for all modes */
+	if (rc_lost && is_armed) {
+		enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
+
+		set_rc_loss_nav_state(status, armed, status_flags, rc_loss_act);
+		return status->nav_state != nav_state_old;
+	}
+
 	/* evaluate main state to decide in normal (non-failsafe) mode */
 	switch (internal_state->main_state) {
 	case commander_state_s::MAIN_STATE_ACRO:
@@ -717,104 +725,90 @@ bool set_nav_state(struct vehicle_status_s *status,
 	case commander_state_s::MAIN_STATE_STAB:
 	case commander_state_s::MAIN_STATE_ALTCTL:
 
-		/* require RC for all manual modes */
-		if (rc_lost && is_armed) {
-			enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
-			set_rc_loss_nav_state(status, armed, status_flags, rc_loss_act);
+		switch (internal_state->main_state) {
+		case commander_state_s::MAIN_STATE_ACRO:
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_ACRO;
+			break;
 
-		} else {
-			switch (internal_state->main_state) {
-			case commander_state_s::MAIN_STATE_ACRO:
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_ACRO;
-				break;
+		case commander_state_s::MAIN_STATE_MANUAL:
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_MANUAL;
+			break;
 
-			case commander_state_s::MAIN_STATE_MANUAL:
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_MANUAL;
-				break;
+		case commander_state_s::MAIN_STATE_RATTITUDE:
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_RATTITUDE;
+			break;
 
-			case commander_state_s::MAIN_STATE_RATTITUDE:
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_RATTITUDE;
-				break;
+		case commander_state_s::MAIN_STATE_STAB:
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
+			break;
 
-			case commander_state_s::MAIN_STATE_STAB:
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
-				break;
+		case commander_state_s::MAIN_STATE_ALTCTL:
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
+			break;
 
-			case commander_state_s::MAIN_STATE_ALTCTL:
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
-				break;
-
-			default:
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_MANUAL;
-				break;
-			}
+		default:
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_MANUAL;
+			break;
 		}
+
 
 		break;
 
 	case commander_state_s::MAIN_STATE_POSCTL: {
 
-			if (rc_lost && is_armed) {
-				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
-				set_rc_loss_nav_state(status, armed, status_flags, rc_loss_act);
+		/* As long as there is RC, we can fallback to ALTCTL, or STAB. */
+		/* A local position estimate is enough for POSCTL for multirotors,
+		 * this enables POSCTL using e.g. flow.
+		 * For fixedwing, a global position is needed. */
 
-				/* As long as there is RC, we can fallback to ALTCTL, or STAB. */
-				/* A local position estimate is enough for POSCTL for multirotors,
-				 * this enables POSCTL using e.g. flow.
-				 * For fixedwing, a global position is needed. */
+		if (((status->is_rotary_wing && !status_flags->condition_local_position_valid) ||
+				   (!status->is_rotary_wing && !status_flags->condition_global_position_valid))
+				  && is_armed) {
+			enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
-			} else if (((status->is_rotary_wing && !status_flags->condition_local_position_valid) ||
-				    (!status->is_rotary_wing && !status_flags->condition_global_position_valid))
-				   && is_armed) {
-				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
+			if (status_flags->condition_local_altitude_valid && is_armed) {
+				status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
 
-				if (status_flags->condition_local_altitude_valid && is_armed) {
-					status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
+			} else if (is_armed) {
+				status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
+			}
 
-				} else if (is_armed) {
-					status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
-				}
-
-			} else {
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_POSCTL;
+		} else {
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_POSCTL;
 			}
 		}
 		break;
 
 	case commander_state_s::MAIN_STATE_SMART: {
 
-			if (rc_lost && is_armed) {
-				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
+			/* As long as there is RC, we can fallback to ALTCTL, or STAB. */
+			/* A local position estimate is enough for POSCTL for multirotors,
+			 * this enables POSCTL using e.g. flow.
+			 * For fixedwing, a global position is needed. */
 
-				set_rc_loss_nav_state(status, armed, status_flags, rc_loss_act);
+		if (((status->is_rotary_wing && !status_flags->condition_local_position_valid) ||
+				(!status->is_rotary_wing && !status_flags->condition_global_position_valid))
+			  && is_armed) {
+			enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
 
-				/* As long as there is RC, we can fallback to ALTCTL, or STAB. */
-				/* A local position estimate is enough for POSCTL for multirotors,
-				 * this enables POSCTL using e.g. flow.
-				 * For fixedwing, a global position is needed. */
-
-			} else if (((status->is_rotary_wing && !status_flags->condition_local_position_valid) ||
-					(!status->is_rotary_wing && !status_flags->condition_global_position_valid))
-				  && is_armed) {
-				enable_failsafe(status, old_failsafe, mavlink_log_pub, reason_no_rc);
-
-				if (status_flags->condition_local_altitude_valid) {
-					status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
-
-				} else {
-					status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
-				}
+			if (status_flags->condition_local_altitude_valid) {
+				status->nav_state = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
 
 			} else {
-				status->nav_state = vehicle_status_s::NAVIGATION_STATE_SMART;
+				status->nav_state = vehicle_status_s::NAVIGATION_STATE_STAB;
+			}
+
+		} else {
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_SMART;
 			}
 		}
 
 		break;
 
 	case commander_state_s::MAIN_STATE_AUTO_MISSION:
+
 
 		/* go into failsafe
 		 * - if commanded to do so
