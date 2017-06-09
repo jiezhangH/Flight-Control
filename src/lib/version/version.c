@@ -74,6 +74,7 @@ static uint32_t version_tag_to_number(const char *tag)
 	// extract version numbers
 	int16_t buffer = -1;
 	size_t buffer_counter = 0;
+	size_t dash_count = 0;
 	char version[3] = {0, 0, 0};
 	int firmware_type = FIRMWARE_TYPE_RELEASE;
 
@@ -92,6 +93,21 @@ static uint32_t version_tag_to_number(const char *tag)
 		}
 
 		if (buffer_counter > 2) {
+			for (size_t k = i - 1; k < strlen(tag); k++) {
+				if (tag[k] == '-') {
+					dash_count++;
+
+					// v1.2.3-4 should be of type dev
+					if (k == strlen(tag) - 3) {
+						dash_count++;
+					}
+				}
+			}
+
+			if (dash_count > 1) {
+				firmware_type = FIRMWARE_TYPE_DEV;
+			}
+
 			continue;
 		}
 
@@ -171,9 +187,14 @@ static uint32_t version_tag_to_vendor_version_number(const char *tag)
 		buffer_counter++;
 	}
 
-	version_number = (version[3] << 8 * 2) |
-			 (version[4] << 8 * 1) |
-			 (version[5] << 8 * 0);
+	if (buffer_counter == 6) {
+		version_number = (version[3] << 8 * 2) |
+				 (version[4] << 8 * 1) |
+				 (version[5] << 8 * 0);
+
+	} else {
+		version_number = 0;
+	}
 
 	return version_number;
 }
