@@ -2258,30 +2258,27 @@ void MulticopterPositionControl::control_auto(float dt)
 
 
 		/* for auto loiter, we consider gear switch */
-		/* ToDo: at the mode : takeoff not complete and before loiter, landing and rtl when loiter, lower gears */
-		const bool gear_down = ((_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_TAKEOFF) ||
+		/* ToDo: at the mode : takeoff not complete and before loiter, landing and rtl when loiter, lower gears
+		 * NOTE: it is an if else if statment */
+		const bool gear_down = ((_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF) ||
 					(_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND))
 				       || _pos_sp_triplet.current.deploy_gear;
 
 		/* in mission put gears up, and the gear will not up at the when landed or ground_contact */
-		const bool gear_up = ((!_vehicle_land_detected.landed || !_vehicle_land_detected.ground_contact)
-				      && _vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_MISSION
-				      && _pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_TAKEOFF)
-				     && !_pos_sp_triplet.current.deploy_gear;
+		const bool gear_up = ((!_vehicle_land_detected.landed || !_vehicle_land_detected.ground_contact) &&
+				      ((_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_MISSION)
+				       || (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL)));
 
 
 		if (gear_down) {
 			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
-			_gear_state_initialized = (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF);
-		}
 
-		else if (gear_up) {
+		} else if (gear_up) {
 			_att_sp.landing_gear = vehicle_attitude_setpoint_s::LANDING_GEAR_UP;
-			_gear_state_initialized = (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON);
-
-		} else {
-			apply_gear_switch();
 		}
+
+		/* set gear state initialized to true*/
+		_gear_state_initialized = false;
 
 
 	} else {
