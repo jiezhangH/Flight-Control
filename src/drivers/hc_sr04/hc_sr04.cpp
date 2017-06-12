@@ -145,11 +145,13 @@ private:
 
 	volatile timer_inf_t _edges[16] = {{0, 0, 0, 0}}; // Must be a power of 2
 	volatile int 		 _edge_index = 0;
-#endif
 
 	volatile hrt_abstime _distance_time[16] = {0}; // Must be a power of 2
 	volatile int 		 _distance_time_index_on = 0;
 	volatile int 		 _distance_time_index_off = 0;
+#else
+	volatile hrt_abstime _distance_time = 0;
+#endif
 
 	bool				_should_exit = false;
 
@@ -158,7 +160,7 @@ private:
 	float 				_mf_window[_MF_WINDOW_SIZE] = {0.0f};
 	float				_mf_window_sorted[_MF_WINDOW_SIZE] = {0.0f};
 	int 				_mf_cycle_counter;
-	work_s				_work;
+	work_s				_work = {};
 	ringbuffer::RingBuffer	*_reports;
 	volatile enum {
 		Uninitialized = 0,
@@ -174,6 +176,7 @@ private:
 
 	enum Rotation 		_rotation;
 
+	orb_advert_t		_sensor_info_pub;
 	orb_advert_t		_distance_sensor_topic;
 
 	perf_counter_t		_sample_perf;
@@ -262,6 +265,7 @@ HC_SR04::HC_SR04(enum Rotation rotation) :
 	_class_instance(-1),
 	_orb_class_instance(-1),
 	_rotation(rotation),
+	_sensor_info_pub(nullptr),
 	_distance_sensor_topic(nullptr),
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
@@ -281,6 +285,10 @@ HC_SR04::~HC_SR04()
 	/* make sure we are truly inactive */
 	stop();
 
+	/* unadvertise publishing topics */
+	orb_unadvertise(_sensor_info_pub);
+	orb_unadvertise(_distance_sensor_topic);
+
 	/* free any existing reports */
 	if (_reports != nullptr) {
 		delete _reports;
@@ -299,8 +307,6 @@ HC_SR04::~HC_SR04()
 int
 HC_SR04::init()
 {
-	int ret = PX4_ERROR;
-
 	/* do init (and probe) first */
 	if (CDev::init() != OK) {
 		return PX4_ERROR;
@@ -369,7 +375,7 @@ HC_SR04::init()
 	cap_config.filter = 0xf;
 	cap_config.edge = Both;
 	cap_config.callback = &HC_SR04::capture_trampoline;
-	cap_config.context = this;
+	cap_config.context = this; // pass reference to this class
 
 	if (::ioctl(fd_fmu, INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
 		PX4_ERR("Not in a capture mode");
@@ -388,11 +394,10 @@ HC_SR04::init()
 
 	_cycling_rate = SR04_CONVERSION_INTERVAL;
 
-	ret = OK;
 	/* sensor is ok, but we don't really know if it is within range */
 	_sensor_state = Initialized;
 
-	return ret;
+	return OK;
 }
 
 int
@@ -628,13 +633,14 @@ HC_SR04::measure()
 int
 HC_SR04::collect()
 {
-	int ret;
-	ret = OK;
-
 	struct distance_sensor_s report = {};
 
+#if defined(HC_SR04_CAPTURE_DEBUG)
 	hrt_abstime current_distance = _distance_time[_distance_time_index_off++];
 	_distance_time_index_off &= arraySize(_distance_time) - 1;
+#else
+	hrt_abstime current_distance = _distance_time;
+#endif
 
 	report.timestamp = hrt_absolute_time();
 	report.min_distance = get_minimum_distance();
@@ -660,13 +666,13 @@ HC_SR04::collect()
 	/* notify anyone waiting for data */
 	poll_notify(POLLIN);
 
-	return ret;
+	return OK;
 }
 
 float
 HC_SR04::median_filter(float value)
 {
-	/*TO DO: replace with ring buffer*/
+	/* TODO: replace with ring buffer */
 	_mf_window[(_mf_cycle_counter + 1) % _MF_WINDOW_SIZE] = value;
 
 	for (int i = 0; i < _MF_WINDOW_SIZE; ++i) {
@@ -701,23 +707,17 @@ HC_SR04::start()
 	info.ok = true;
 	info.subsystem_type = SUBSYSTEM_TYPE_RANGEFINDER;
 
-	static orb_advert_t pub = nullptr;
-
-	if (pub != nullptr) {
-		orb_publish(ORB_ID(subsystem_info), pub, &info);
-
+	if (_sensor_info_pub != nullptr) {
+		orb_publish(ORB_ID(subsystem_info), _sensor_info_pub, &info);
 
 	} else {
-		pub = orb_advertise(ORB_ID(subsystem_info), &info);
-
+		_sensor_info_pub = orb_advertise(ORB_ID(subsystem_info), &info);
 	}
 }
 
 void
 HC_SR04::stop()
 {
-
-
 	orb_unadvertise(_distance_sensor_topic);
 
 	DevHandle h_fmu;
@@ -758,7 +758,6 @@ HC_SR04::stop()
 	h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
 	_should_exit = true;
 	work_cancel(HPWORK, &_work);
-	usleep(SR04_CONVERSION_INTERVAL + SR04_CONVERSION_INTERVAL / 2);
 }
 
 void
@@ -802,6 +801,12 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 {
 	static hrt_abstime raising_time = 0;
 	static hrt_abstime falling_time = 0;
+
+	if (_should_exit) {
+		// exit call back
+		return;
+	}
+
 #if defined(HC_SR04_CAPTURE_DEBUG)
 	_edges[_edge_index].chan_index = chan_index;
 	_edges[_edge_index].edge_time  = edge_time;
@@ -817,12 +822,15 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 	} else {
 		_sensor_state = WatingRising;
 		falling_time = edge_time;
+
+#if defined(HC_SR04_CAPTURE_DEBUG)
 		_distance_time[_distance_time_index_on++] = falling_time - raising_time;
 		_distance_time_index_on &= arraySize(_distance_time) - 1;
+#else
+		_distance_time = falling_time - raising_time;
+#endif
 
-		if (!_should_exit) {
-			work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
-		}
+		work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
 	}
 }
 
