@@ -116,7 +116,7 @@ int static cmp(const void *a, const void *b)
 class HC_SR04 : public device::CDev
 {
 public:
-	HC_SR04(enum Rotation rotation);
+	HC_SR04(enum Rotation rotation, bool enable_median_filter);
 	virtual ~HC_SR04();
 
 	virtual int 		init();
@@ -174,8 +174,9 @@ private:
 	int					_class_instance;
 	int					_orb_class_instance;
 
-	enum Rotation 		_rotation;
+	bool			_enable_median_filter;
 
+	enum Rotation 		_rotation;
 	orb_advert_t		_sensor_info_pub;
 	orb_advert_t		_distance_sensor_topic;
 
@@ -253,7 +254,7 @@ private:
  */
 extern "C"  __EXPORT int hc_sr04_main(int argc, char *argv[]);
 
-HC_SR04::HC_SR04(enum Rotation rotation) :
+HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
 	_min_distance(SR04_MIN_DISTANCE),
 	_max_distance(SR04_MAX_DISTANCE),
@@ -264,6 +265,7 @@ HC_SR04::HC_SR04(enum Rotation rotation) :
 	_collect_phase(false),
 	_class_instance(-1),
 	_orb_class_instance(-1),
+	_enable_median_filter(enable_median_filter),
 	_rotation(rotation),
 	_sensor_info_pub(nullptr),
 	_distance_sensor_topic(nullptr),
@@ -275,9 +277,6 @@ HC_SR04::HC_SR04(enum Rotation rotation) :
 {
 	/* enable debug() calls */
 	_debug_enabled = false;
-
-	/* work_cancel in the dtor will explode if we don't do this... */
-	memset(&_work, 0, sizeof(_work));
 }
 
 HC_SR04::~HC_SR04()
@@ -430,6 +429,7 @@ HC_SR04::get_maximum_distance()
 	return _max_distance;
 }
 
+// TODO: review this part since it is not compatible with the new architecture
 int
 HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
@@ -545,6 +545,7 @@ HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 	}
 }
 
+// TODO: review this part since it is not compatible with the new architecture
 ssize_t
 HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
 {
@@ -642,10 +643,19 @@ HC_SR04::collect()
 	hrt_abstime current_distance = _distance_time;
 #endif
 
+	float distance = current_distance * SR04_TIME_2_DISTANCE_M;
+
 	report.timestamp = hrt_absolute_time();
 	report.min_distance = get_minimum_distance();
 	report.max_distance = get_maximum_distance();
-	report.current_distance = median_filter(current_distance * SR04_TIME_2_DISTANCE_M);
+
+	if (_enable_median_filter) {
+		report.current_distance = median_filter(distance);
+
+	} else {
+		report.current_distance = distance;
+	}
+
 	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
 	report.orientation = _rotation;
 	_mf_cycle_counter++;
@@ -754,7 +764,8 @@ HC_SR04::stop()
 	cap_config.filter = 0;
 	cap_config.edge = Disabled;
 	cap_config.callback = nullptr;
-	cap_config.context = nullptr;;
+	cap_config.context = nullptr;
+
 	h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
 	_should_exit = true;
 	work_cancel(HPWORK, &_work);
@@ -842,7 +853,7 @@ namespace  hc_sr04
 
 HC_SR04	*g_dev;
 
-void	start(enum Rotation rotation);
+void	start(enum Rotation rotation, bool enable_median_filter);
 void	stop();
 void	test();
 void	info();
@@ -851,7 +862,7 @@ void	info();
  * Start the driver.
  */
 void
-start(enum Rotation rotation)
+start(enum Rotation rotation, bool enable_median_filter)
 {
 	if (g_dev != nullptr) {
 		PX4_ERR("already started");
@@ -859,7 +870,7 @@ start(enum Rotation rotation)
 	}
 
 	/* create the driver */
-	g_dev = new HC_SR04(rotation);
+	g_dev = new HC_SR04(rotation, enable_median_filter);
 
 	if (g_dev == nullptr) {
 		goto fail;
@@ -1002,16 +1013,20 @@ hc_sr04_main(int argc, char *argv[])
 {
 
 	int ch;
+	bool enable_median_filter = false;
 	enum Rotation rotation = ROTATION_NONE;
 	int myoptind = 1;
 	const char *myoptarg = NULL;
 
 
-	while ((ch = px4_getopt(argc, argv, "R:", &myoptind, &myoptarg)) != EOF) {
+	while ((ch = px4_getopt(argc, argv, "R:m", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'R':
 			rotation = (enum Rotation)atoi(myoptarg);
 			break;
+
+		case 'm':
+			enable_median_filter = true;
 
 		default:
 			PX4_WARN("missing rotation information");
@@ -1024,7 +1039,7 @@ hc_sr04_main(int argc, char *argv[])
 	 * Start/load the driver.
 	 */
 	if (!strcmp(verb, "start")) {
-		hc_sr04::start(rotation);
+		hc_sr04::start(rotation, enable_median_filter);
 	}
 
 	/*
