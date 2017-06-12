@@ -122,3 +122,15 @@ PARAM_DEFINE_INT32(MAV_BROADCAST, 0);
  * @max 1000
  */
 PARAM_DEFINE_INT32(MAV_TEST_PAR, 1);
+
+/**
+ * Last flight UUID
+ *
+ * This number is incremented automatically at every arming in order to remember the last flight UUID.
+ * The first flight is 1 which is why the number starts at 0.
+ *
+ * @min 0
+ * @reboot_required true
+ * @group MAVLink
+ */
+PARAM_DEFINE_INT32(MAV_FLIGHT_UUID, 0);

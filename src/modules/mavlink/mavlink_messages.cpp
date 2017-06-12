@@ -3340,6 +3340,88 @@ protected:
 	}
 };
 
+class MavlinkStreamFlightInformation : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamFlightInformation::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "FLIGHT_INFORMATION";
+	}
+
+	static uint16_t get_id_static()
+	{
+		return MAVLINK_MSG_ID_FLIGHT_INFORMATION;
+	}
+
+	uint16_t get_id()
+	{
+		return get_id_static();
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamFlightInformation(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_FLIGHT_INFORMATION_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_armed_sub;
+	bool _armed_before = false;
+	int32_t _flight_uuid = 0;
+	param_t _param_flight_uuid = PARAM_INVALID;
+
+	/* do not allow top copying this class */
+	MavlinkStreamFlightInformation(MavlinkStreamFlightInformation &);
+	MavlinkStreamFlightInformation &operator = (const MavlinkStreamFlightInformation &);
+
+protected:
+	explicit MavlinkStreamFlightInformation(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_armed_sub(_mavlink->add_orb_subscription(ORB_ID(actuator_armed)))
+	{
+		// We get the last flight ID from the parameter. Otherwise we would lose it
+		// after a power cycle.
+		_param_flight_uuid = param_find("MAV_FLIGHT_UUID");
+		param_get(_param_flight_uuid, &_flight_uuid);
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct actuator_armed_s armed;
+		bool updated = false;
+
+		if (_armed_sub->update(&armed)) {
+			if (!_armed_before && armed.armed) {
+				_armed_before = armed.armed;
+				// Increase counter on arming.
+				_flight_uuid++;
+				param_set(_param_flight_uuid, &_flight_uuid);
+
+			} else if (_armed_before && !armed.armed) {
+				_armed_before = armed.armed;
+			}
+
+			updated = true;
+		}
+
+		// We don't want publish a flight UUID
+		if (updated && _flight_uuid >= 0) {
+			mavlink_flight_information_t msg {};
+			msg.flight_uuid = (uint64_t)_flight_uuid;
+			// TODO: add remaining fields.
+			mavlink_msg_flight_information_send_struct(_mavlink->get_channel(), &msg);
+		}
+	}
+};
+
 class MavlinkStreamAltitude : public MavlinkStream
 {
 public:
@@ -4037,6 +4119,7 @@ const StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamCameraTrigger::new_instance, &MavlinkStreamCameraTrigger::get_name_static, &MavlinkStreamCameraTrigger::get_id_static),
 	new StreamListItem(&MavlinkStreamDistanceSensor::new_instance, &MavlinkStreamDistanceSensor::get_name_static, &MavlinkStreamDistanceSensor::get_id_static),
 	new StreamListItem(&MavlinkStreamExtendedSysState::new_instance, &MavlinkStreamExtendedSysState::get_name_static, &MavlinkStreamExtendedSysState::get_id_static),
+	new StreamListItem(&MavlinkStreamFlightInformation::new_instance, &MavlinkStreamFlightInformation::get_name_static, &MavlinkStreamFlightInformation::get_id_static),
 	new StreamListItem(&MavlinkStreamAltitude::new_instance, &MavlinkStreamAltitude::get_name_static, &MavlinkStreamAltitude::get_id_static),
 	new StreamListItem(&MavlinkStreamADSBVehicle::new_instance, &MavlinkStreamADSBVehicle::get_name_static, &MavlinkStreamADSBVehicle::get_id_static),
 	new StreamListItem(&MavlinkStreamCollision::new_instance, &MavlinkStreamCollision::get_name_static, &MavlinkStreamCollision::get_id_static),
