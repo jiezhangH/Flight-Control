@@ -66,10 +66,18 @@ uint32_t version_tag_to_number(const char *tag)
 	int16_t buffer = -1;
 	size_t buffer_counter = 0;
 	size_t dash_count = 0;
+	size_t point_count = 0;
 	char version[3] = {0, 0, 0};
 	int firmware_type = FIRMWARE_TYPE_RELEASE;
 
 	for (size_t i = 0; i < strlen(tag); i++) {
+		if (tag[i] == '-') {
+			dash_count++;
+
+		} else if (tag[i] == '.') {
+			point_count++;
+		}
+
 		if (tag[i] == 'r' && i < strlen(tag) - 1 && tag[i + 1] == 'c') {
 			firmware_type = FIRMWARE_TYPE_RC;
 
@@ -82,23 +90,16 @@ uint32_t version_tag_to_number(const char *tag)
 		} else if (tag[i] == 'v' && i > 0) {
 			firmware_type = FIRMWARE_TYPE_DEV;
 		}
+	}
 
+	if ((dash_count == 1 && point_count == 2 && firmware_type == FIRMWARE_TYPE_RELEASE) ||
+	    (dash_count == 2 && point_count == 2) ||
+	    (dash_count == 3 && point_count == 4)) {
+		firmware_type = FIRMWARE_TYPE_DEV;
+	}
+
+	for (size_t i = 0; i < strlen(tag); i++) {
 		if (buffer_counter > 2) {
-			for (size_t k = i - 1; k < strlen(tag); k++) {
-				if (tag[k] == '-') {
-					dash_count++;
-
-					// v1.2.3-4 should be of type dev
-					if (k == strlen(tag) - 3) {
-						dash_count++;
-					}
-				}
-			}
-
-			if (dash_count > 1) {
-				firmware_type = FIRMWARE_TYPE_DEV;
-			}
-
 			continue;
 		}
 
@@ -142,6 +143,18 @@ uint32_t version_tag_to_vendor_version_number(const char *tag)
 	size_t buffer_counter = 0;
 	char version[6] = {0, 0, 0, 0, 0, 0};
 
+	size_t dash_count = 0;
+	size_t point_count = 0;
+
+	for (size_t i = 0; i < strlen(tag); i++) {
+		if (tag[i] == '-') {
+			dash_count++;
+
+		} else if (tag[i] == '.') {
+			point_count++;
+		}
+	}
+
 	for (size_t i = 0; i < strlen(tag); i++) {
 		if (buffer_counter > 5) {
 			continue;
@@ -153,6 +166,10 @@ uint32_t version_tag_to_vendor_version_number(const char *tag)
 
 		} else {
 			if (buffer >= 0) {
+				if (buffer_counter + 1 == 4 && tag[i] == '-') {
+					break;
+				}
+
 				version[buffer_counter] = buffer;
 				buffer_counter++;
 			}
@@ -161,7 +178,7 @@ uint32_t version_tag_to_vendor_version_number(const char *tag)
 		}
 	}
 
-	if (buffer >= 0) {
+	if (buffer >= 0 && (buffer_counter + 1 == 3 || buffer_counter + 1 == 6)) {
 		version[buffer_counter] = buffer;
 		buffer_counter++;
 	}
