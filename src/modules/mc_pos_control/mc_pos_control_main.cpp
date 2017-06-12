@@ -2065,6 +2065,7 @@ void MulticopterPositionControl::control_auto(float dt)
 					if (!is_2_target_threshold) {
 
 						/* set target threshold to half dist pre-current */
+						float target_threshold_tmp = target_threshold_xy;
 						target_threshold_xy = vec_prev_to_current.length() * 0.5f;
 
 						if ((target_threshold_xy - _nav_rad.get()) < SIGMA_NORM) {
@@ -2087,7 +2088,7 @@ void MulticopterPositionControl::control_auto(float dt)
 							final_cruise_speed = vel_close;
 
 						} else {
-							float slope = (get_cruising_speed_xy() - vel_close) / (target_threshold_xy - acceptance_radius);
+							float slope = (get_cruising_speed_xy() - vel_close) / (target_threshold_tmp - acceptance_radius);
 							final_cruise_speed = slope  * (target_threshold_xy - acceptance_radius) + vel_close;
 							final_cruise_speed = (final_cruise_speed > vel_close) ? final_cruise_speed : vel_close;
 						}
