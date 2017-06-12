@@ -1027,6 +1027,7 @@ hc_sr04_main(int argc, char *argv[])
 
 		case 'm':
 			enable_median_filter = true;
+			break;
 
 		default:
 			PX4_WARN("missing rotation information");
