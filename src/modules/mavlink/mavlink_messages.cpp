@@ -3408,7 +3408,7 @@ protected:
 				_flight_uuid++;
 				param_set_no_notification(_param_flight_uuid, &_flight_uuid);
 				// TODO: the param save is not needed once params are auto-saved.
-				param_save();
+				param_save_default();
 			}
 
 			updated = true;
