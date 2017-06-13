@@ -157,8 +157,8 @@ private:
 
 	float				_min_distance;
 	float				_max_distance;
-	float 				_mf_window[_MF_WINDOW_SIZE] = {0.0f};
-	float				_mf_window_sorted[_MF_WINDOW_SIZE] = {0.0f};
+	float 				_mf_window[_MF_WINDOW_SIZE] = {};
+	float				_mf_window_sorted[_MF_WINDOW_SIZE] = {};
 	int 				_mf_cycle_counter;
 	work_s				_work = {};
 	ringbuffer::RingBuffer	*_reports;
