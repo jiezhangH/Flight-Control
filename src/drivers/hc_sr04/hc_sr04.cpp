@@ -121,7 +121,7 @@ public:
 
 	virtual int 		init();
 
-	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
+	// virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int			ioctl(struct file *filp, int cmd, unsigned long arg);
 
 	/**
@@ -171,6 +171,7 @@ private:
 
 	int					_measure_ticks;
 	bool				_collect_phase;
+	volatile bool				_sensor_data_available;
 	int					_class_instance;
 	int					_orb_class_instance;
 
@@ -263,6 +264,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_sensor_state(Uninitialized),
 	_measure_ticks(0),
 	_collect_phase(false),
+	_sensor_data_available(false),
 	_class_instance(-1),
 	_orb_class_instance(-1),
 	_enable_median_filter(enable_median_filter),
@@ -306,6 +308,8 @@ HC_SR04::~HC_SR04()
 int
 HC_SR04::init()
 {
+	PX4_INFO("Init sensor");
+
 	/* do init (and probe) first */
 	if (CDev::init() != OK) {
 		return PX4_ERROR;
@@ -339,6 +343,8 @@ HC_SR04::init()
 
 	unsigned capture_count = 0;
 
+	PX4_INFO("setting PWM rate");
+
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
 		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
 		return PX4_ERROR;
@@ -369,6 +375,8 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
+	PX4_INFO("Setting call back");
+
 	input_capture_config_t cap_config;
 	cap_config.channel = 2;
 	cap_config.filter = 0xf;
@@ -393,8 +401,13 @@ HC_SR04::init()
 
 	_cycling_rate = SR04_CONVERSION_INTERVAL;
 
+	PX4_INFO("Sensor initialized");
+
 	/* sensor is ok, but we don't really know if it is within range */
 	_sensor_state = Initialized;
+
+	// start driver
+	start();
 
 	return OK;
 }
@@ -546,64 +559,64 @@ HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 }
 
 // TODO: review this part since it is not compatible with the new architecture
-ssize_t
-HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
-{
-	unsigned count = buflen / sizeof(struct distance_sensor_s);
-	struct distance_sensor_s *rbuf = reinterpret_cast<struct distance_sensor_s *>(buffer);
-	int ret = 0;
-
-	/* buffer must be large enough */
-	if (count < 1) {
-		return -ENOSPC;
-	}
-
-	/* if automatic measurement is enabled */
-	if (_measure_ticks > 0) {
-		/*
-		 * While there is space in the caller's buffer, and reports, copy them.
-		 * Note that we may be pre-empted by the workq thread while we are doing this;
-		 * we are careful to avoid racing with them.
-		 */
-		while (count--) {
-			if (_reports->get(rbuf)) {
-				ret += sizeof(*rbuf);
-				rbuf++;
-			}
-		}
-
-		/* if there was no data, warn the caller */
-		return ret ? ret : -EAGAIN;
-	}
-
-	/* manual measurement - run one conversion */
-	do {
-		_reports->flush();
-
-		/* trigger a measurement */
-		if (OK != measure()) {
-			ret = -EIO;
-			break;
-		}
-
-		/* wait for it to complete */
-		usleep(_cycling_rate * 2);
-
-		/* run the collection phase */
-		if (OK != collect()) {
-			ret = -EIO;
-			break;
-		}
-
-		/* state machine will have generated a report, copy it out */
-		if (_reports->get(rbuf)) {
-			ret = sizeof(*rbuf);
-		}
-
-	} while (0);
-
-	return ret;
-}
+// ssize_t
+// HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
+// {
+// 	unsigned count = buflen / sizeof(struct distance_sensor_s);
+// 	struct distance_sensor_s *rbuf = reinterpret_cast<struct distance_sensor_s *>(buffer);
+// 	int ret = 0;
+//
+// 	/* buffer must be large enough */
+// 	if (count < 1) {
+// 		return -ENOSPC;
+// 	}
+//
+// 	/* if automatic measurement is enabled */
+// 	if (_measure_ticks > 0) {
+// 		/*
+// 		 * While there is space in the caller's buffer, and reports, copy them.
+// 		 * Note that we may be pre-empted by the workq thread while we are doing this;
+// 		 * we are careful to avoid racing with them.
+// 		 */
+// 		while (count--) {
+// 			if (_reports->get(rbuf)) {
+// 				ret += sizeof(*rbuf);
+// 				rbuf++;
+// 			}
+// 		}
+//
+// 		/* if there was no data, warn the caller */
+// 		return ret ? ret : -EAGAIN;
+// 	}
+//
+// 	/* manual measurement - run one conversion */
+// 	do {
+// 		_reports->flush();
+//
+// 		/* trigger a measurement */
+// 		if (OK != measure()) {
+// 			ret = -EIO;
+// 			break;
+// 		}
+//
+// 		/* wait for it to complete */
+// 		usleep(_cycling_rate * 2);
+//
+// 		/* run the collection phase */
+// 		if (OK != collect()) {
+// 			ret = -EIO;
+// 			break;
+// 		}
+//
+// 		/* state machine will have generated a report, copy it out */
+// 		if (_reports->get(rbuf)) {
+// 			ret = sizeof(*rbuf);
+// 		}
+//
+// 	} while (0);
+//
+// 	return ret;
+// }
 
 int
 HC_SR04::measure()
@@ -691,6 +704,8 @@ HC_SR04::median_filter(float value)
 
 	qsort(_mf_window_sorted, _MF_WINDOW_SIZE, sizeof(float), cmp);
 
+	_mf_cycle_counter++;
+
 	if (_mf_window_sorted[(_MF_WINDOW_SIZE / 2)] < get_maximum_distance()) {
 		return _mf_window_sorted[(_MF_WINDOW_SIZE / 2)];
 
@@ -702,6 +717,7 @@ HC_SR04::median_filter(float value)
 void
 HC_SR04::start()
 {
+	PX4_INFO("entered start routine");
 	/* reset the report ring and state machine */
 	_collect_phase = false;
 	_reports->flush();
@@ -723,6 +739,9 @@ HC_SR04::start()
 	} else {
 		_sensor_info_pub = orb_advertise(ORB_ID(subsystem_info), &info);
 	}
+
+	PX4_INFO("schedule workqueue call");
+	work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
 }
 
 void
@@ -783,11 +802,59 @@ HC_SR04::cycle_trampoline(void *arg)
 void
 HC_SR04::cycle()
 {
-	/*_circle_count record current sonar　*/
-	/* perform collection */
-	if (OK != collect()) {
-		DEVICE_DEBUG("collection error");
+	// /*_circle_count record current sonar　*/
+	// /* perform collection */
+	// if (OK != collect()) {
+	// 	DEVICE_DEBUG("collection error");
+	// }
+	if (_should_exit) {
+		// exit
+		return;
 	}
+
+	irqstate_t flags = px4_enter_critical_section();
+	bool sensor_data_available = _sensor_data_available;
+
+	if (_sensor_data_available) {
+		_sensor_data_available = false;
+	}
+
+	float distance = _distance_time * SR04_TIME_2_DISTANCE_M;
+	px4_leave_critical_section(flags);
+
+	if (!sensor_data_available) {
+		work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
+		return;
+	}
+
+	struct distance_sensor_s report = {};
+
+	report.timestamp = hrt_absolute_time();
+
+	report.min_distance = get_minimum_distance();
+
+	report.max_distance = get_maximum_distance();
+
+	if (_enable_median_filter) {
+		report.current_distance = median_filter(distance);
+
+	} else {
+		report.current_distance = distance;
+	}
+
+	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
+	report.orientation = _rotation;
+
+	/* publish it, if we are the primary */
+	if (_distance_sensor_topic != nullptr) {
+		orb_publish(ORB_ID(distance_sensor), _distance_sensor_topic, &report);
+
+	} else {
+		_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
+					 &_orb_class_instance, ORB_PRIO_LOW);
+	}
+
+	work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
 }
 
 void
@@ -840,8 +907,8 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 #else
 		_distance_time = falling_time - raising_time;
 #endif
-
-		work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
+		_sensor_data_available = true;
+		// work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
 	}
 }
 
@@ -855,7 +922,7 @@ HC_SR04	*g_dev;
 
 void	start(enum Rotation rotation, bool enable_median_filter);
 void	stop();
-void	test();
+// void	test();
 void	info();
 
 /**
@@ -915,77 +982,77 @@ void stop()
  * make sure we can collect data from the sensor in polled
  * and automatic modes.
  */
-void
-test()
-{
-	struct distance_sensor_s report;
-	ssize_t sz;
-	int ret;
-
-	int fd = open(SR04_DEVICE_PATH, O_RDONLY);
-
-	if (fd < 0) {
-		PX4_ERR("%s open failed (try 'hc_sr04 start' if the driver is not running", SR04_DEVICE_PATH);
-		exit(1);
-	}
-
-	/* do a simple demand read */
-	sz = read(fd, &report, sizeof(report));
-
-	if (sz != sizeof(report)) {
-		PX4_ERR("immediate read failed");
-		exit(1);
-	}
-
-	PX4_INFO("single read");
-	PX4_INFO("measurement: %0.2f", (double)report.current_distance);
-	PX4_INFO("time:        %lld", report.timestamp);
-
-	/* start the sensor polling at 2Hz */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 20)) {
-		PX4_ERR("failed to set 20Hz poll rate");
-		exit(1);
-	}
-
-	/* read the sensor 5x and report each value */
-	for (unsigned i = 0; i < 5; i++) {
-		struct pollfd fds;
-
-		/* wait for data to be ready */
-		fds.fd = fd;
-		fds.events = POLLIN;
-		ret = poll(&fds, 1, 2000);
-
-		if (ret != 1) {
-			PX4_ERR("timed out waiting for sensor data");
-			exit(1);
-		}
-
-		/* now go get it */
-		sz = read(fd, &report, sizeof(report));
-
-		if (sz != sizeof(report)) {
-			PX4_ERR("periodic read failed");
-			exit(1);
-		}
-
-		PX4_INFO("periodic read %u", i);
-
-		/* Print the sonar rangefinder report sonar distance vector */
-		PX4_INFO("measurement: %0.3f", (double)report.current_distance);
-
-		PX4_INFO("time:        %lld", report.timestamp);
-	}
-
-	/* reset the sensor polling to default rate */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT)) {
-		PX4_ERR("failed to set default poll rate");
-		exit(1);;
-	}
-
-	PX4_INFO("PASS");
-	exit(0);
-}
+// void
+// test()
+// {
+// 	struct distance_sensor_s report;
+// 	ssize_t sz;
+// 	int ret;
+//
+// 	int fd = open(SR04_DEVICE_PATH, O_RDONLY);
+//
+// 	if (fd < 0) {
+// 		PX4_ERR("%s open failed (try 'hc_sr04 start' if the driver is not running", SR04_DEVICE_PATH);
+// 		exit(1);
+// 	}
+//
+// 	/* do a simple demand read */
+// 	sz = read(fd, &report, sizeof(report));
+//
+// 	if (sz != sizeof(report)) {
+// 		PX4_ERR("immediate read failed");
+// 		exit(1);
+// 	}
+//
+// 	PX4_INFO("single read");
+// 	PX4_INFO("measurement: %0.2f", (double)report.current_distance);
+// 	PX4_INFO("time:        %lld", report.timestamp);
+//
+// 	/* start the sensor polling at 2Hz */
+// 	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 20)) {
+// 		PX4_ERR("failed to set 20Hz poll rate");
+// 		exit(1);
+// 	}
+//
+// 	/* read the sensor 5x and report each value */
+// 	for (unsigned i = 0; i < 5; i++) {
+// 		struct pollfd fds;
+//
+// 		/* wait for data to be ready */
+// 		fds.fd = fd;
+// 		fds.events = POLLIN;
+// 		ret = poll(&fds, 1, 2000);
+//
+// 		if (ret != 1) {
+// 			PX4_ERR("timed out waiting for sensor data");
+// 			exit(1);
+// 		}
+//
+// 		/* now go get it */
+// 		sz = read(fd, &report, sizeof(report));
+//
+// 		if (sz != sizeof(report)) {
+// 			PX4_ERR("periodic read failed");
+// 			exit(1);
+// 		}
+//
+// 		PX4_INFO("periodic read %u", i);
+//
+// 		/* Print the sonar rangefinder report sonar distance vector */
+// 		PX4_INFO("measurement: %0.3f", (double)report.current_distance);
+//
+// 		PX4_INFO("time:        %lld", report.timestamp);
+// 	}
+//
+// 	/* reset the sensor polling to default rate */
+// 	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT)) {
+// 		PX4_ERR("failed to set default poll rate");
+// 		exit(1);;
+// 	}
+//
+// 	PX4_INFO("PASS");
+// 	exit(0);
+// }
 
 
 /**
@@ -1053,9 +1120,9 @@ hc_sr04_main(int argc, char *argv[])
 	/*
 	 * Test the driver/device.
 	 */
-	if (!strcmp(verb, "test")) {
-		hc_sr04::test();
-	}
+	// if (!strcmp(verb, "test")) {
+	// 	hc_sr04::test();
+	// }
 
 	/*
 	 * Print driver information.
