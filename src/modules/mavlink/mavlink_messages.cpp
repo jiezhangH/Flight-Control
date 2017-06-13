@@ -3387,7 +3387,7 @@ protected:
 	explicit MavlinkStreamFlightInformation(Mavlink *mavlink) : MavlinkStream(mavlink),
 		_armed_sub(_mavlink->add_orb_subscription(ORB_ID(actuator_armed)))
 	{
-		// We get the last flight ID from the parameter. Otherwise we would lose it
+		// We get the next flight ID from the parameter. Otherwise we would lose it
 		// after a power cycle.
 		_param_flight_uuid = param_find("MAV_FLIGHT_UUID");
 		param_get(_param_flight_uuid, &_flight_uuid);
@@ -3401,12 +3401,14 @@ protected:
 		if (_armed_sub->update(&armed)) {
 			if (!_armed_before && armed.armed) {
 				_armed_before = armed.armed;
-				// Increase counter on arming.
-				_flight_uuid++;
-				param_set(_param_flight_uuid, &_flight_uuid);
 
 			} else if (_armed_before && !armed.armed) {
 				_armed_before = armed.armed;
+				// Increase counter on disarming.
+				_flight_uuid++;
+				param_set_no_notification(_param_flight_uuid, &_flight_uuid);
+				// TODO: the param save is not needed once params are auto-saved.
+				param_save();
 			}
 
 			updated = true;

@@ -124,10 +124,11 @@ PARAM_DEFINE_INT32(MAV_BROADCAST, 0);
 PARAM_DEFINE_INT32(MAV_TEST_PAR, 1);
 
 /**
- * Last flight UUID
+ * Next flight UUID
  *
- * This number is incremented automatically at every arming in order to remember the last flight UUID.
- * The first flight is 1 which is why the number starts at 0.
+ * This number is incremented automatically after every flight on
+ * disarming in order to remember the next flight UUID.
+ * The first flight is 0.
  *
  * @min 0
  * @reboot_required true
