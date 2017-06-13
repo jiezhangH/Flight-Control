@@ -3412,8 +3412,7 @@ protected:
 			updated = true;
 		}
 
-		// We don't want publish a flight UUID
-		if (updated && _flight_uuid >= 0) {
+		if (updated) {
 			mavlink_flight_information_t msg {};
 			msg.flight_uuid = (uint64_t)_flight_uuid;
 			// TODO: add remaining fields.
