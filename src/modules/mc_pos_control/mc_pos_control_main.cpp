@@ -134,6 +134,8 @@ private:
 
 	/** Time in us that direction change condition has to be true for direction change state */
 	static constexpr uint64_t DIRECTION_CHANGE_TRIGGER_TIME_US = 100000;
+	/** Time in us that the no obstacle ahead condition has to be true to exit obstacle avoidance lock in */
+	static constexpr uint64_t FORWARD_MOVEMENT_TRIGGER_TIME_US = 500000;
 
 	bool		_task_should_exit = false;			/**<true if task should exit */
 	bool		_gear_state_initialized = false;	/**<true if the gear state has been initialized */
@@ -223,6 +225,7 @@ private:
 
 
 	systemlib::Hysteresis _manual_direction_change_hysteresis;
+	systemlib::Hysteresis _allow_forward_movement_hysteresis;
 
 	math::LowPassFilter2p _filter_manual_pitch;
 	math::LowPassFilter2p _filter_manual_roll;
@@ -518,6 +521,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
 	_manual_direction_change_hysteresis(false),
+	_allow_forward_movement_hysteresis(false),
 	_filter_manual_pitch(50.0f, 10.0f),
 	_filter_manual_roll(50.0f, 10.0f),
 	_user_intention_xy(brake),
@@ -547,6 +551,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	/* set trigger time for manual direction change detection */
 	_manual_direction_change_hysteresis.set_hysteresis_time_from(false, DIRECTION_CHANGE_TRIGGER_TIME_US);
+	_allow_forward_movement_hysteresis.set_hysteresis_time_from(false, FORWARD_MOVEMENT_TRIGGER_TIME_US);
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
@@ -2509,16 +2514,20 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 
 		if (_avoidance_lock_in) {
 			bool no_obstacle_ahead = (_sonar_measurament.current_distance >= _sonar_measurament.max_distance);
+			_allow_forward_movement_hysteresis.set_state_and_update(no_obstacle_ahead);
 
-			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead*/
-			if (((vel_sp_body(0) < 0.0f) && (fabsf(vel_sp_body(0)) > 0.1f)) || ((fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f))
-					&& no_obstacle_ahead)) {
+			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead OR
+			 * no obstacle ahead for more than 0.5s*/
+			if (((vel_sp_body(0) < 0.0f) && (fabsf(vel_sp_body(0)) > 0.01f)) || ((fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f))
+					&& no_obstacle_ahead) || (_allow_forward_movement_hysteresis.get_state())) {
 				_avoidance_lock_in = false;
 
 			} else {
 				/* set velocity to 0 in order to stop in front of an obstacle*/
 				_vel_sp(0) = 0.0f;
 				_vel_sp(1) = 0.0f;
+				/*change previous setpoint in oder for the slewrate to be correct when exiting obstacle avoidance*/
+				_vel_sp_prev = _vel_sp;
 			}
 		}
 	}
