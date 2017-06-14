@@ -308,8 +308,6 @@ HC_SR04::~HC_SR04()
 int
 HC_SR04::init()
 {
-	PX4_INFO("Init sensor");
-
 	/* do init (and probe) first */
 	if (CDev::init() != OK) {
 		return PX4_ERROR;
@@ -343,8 +341,6 @@ HC_SR04::init()
 
 	unsigned capture_count = 0;
 
-	PX4_INFO("setting PWM rate");
-
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
 		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
 		return PX4_ERROR;
@@ -375,8 +371,6 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
-	PX4_INFO("Setting call back");
-
 	input_capture_config_t cap_config;
 	cap_config.channel = 2;
 	cap_config.filter = 0xf;
@@ -400,8 +394,6 @@ HC_SR04::init()
 	}
 
 	_cycling_rate = SR04_CONVERSION_INTERVAL;
-
-	PX4_INFO("Sensor initialized");
 
 	/* sensor is ok, but we don't really know if it is within range */
 	_sensor_state = Initialized;
@@ -558,66 +550,6 @@ HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 	}
 }
 
-// TODO: review this part since it is not compatible with the new architecture
-// ssize_t
-// HC_SR04::read(struct file *filp, char *buffer, size_t buflen)
-// {
-// 	unsigned count = buflen / sizeof(struct distance_sensor_s);
-// 	struct distance_sensor_s *rbuf = reinterpret_cast<struct distance_sensor_s *>(buffer);
-// 	int ret = 0;
-//
-// 	/* buffer must be large enough */
-// 	if (count < 1) {
-// 		return -ENOSPC;
-// 	}
-//
-// 	/* if automatic measurement is enabled */
-// 	if (_measure_ticks > 0) {
-// 		/*
-// 		 * While there is space in the caller's buffer, and reports, copy them.
-// 		 * Note that we may be pre-empted by the workq thread while we are doing this;
-// 		 * we are careful to avoid racing with them.
-// 		 */
-// 		while (count--) {
-// 			if (_reports->get(rbuf)) {
-// 				ret += sizeof(*rbuf);
-// 				rbuf++;
-// 			}
-// 		}
-//
-// 		/* if there was no data, warn the caller */
-// 		return ret ? ret : -EAGAIN;
-// 	}
-//
-// 	/* manual measurement - run one conversion */
-// 	do {
-// 		_reports->flush();
-//
-// 		/* trigger a measurement */
-// 		if (OK != measure()) {
-// 			ret = -EIO;
-// 			break;
-// 		}
-//
-// 		/* wait for it to complete */
-// 		usleep(_cycling_rate * 2);
-//
-// 		/* run the collection phase */
-// 		if (OK != collect()) {
-// 			ret = -EIO;
-// 			break;
-// 		}
-//
-// 		/* state machine will have generated a report, copy it out */
-// 		if (_reports->get(rbuf)) {
-// 			ret = sizeof(*rbuf);
-// 		}
-//
-// 	} while (0);
-//
-// 	return ret;
-// }
-
 int
 HC_SR04::measure()
 {
@@ -717,7 +649,6 @@ HC_SR04::median_filter(float value)
 void
 HC_SR04::start()
 {
-	PX4_INFO("entered start routine");
 	/* reset the report ring and state machine */
 	_collect_phase = false;
 	_reports->flush();
@@ -802,11 +733,6 @@ HC_SR04::cycle_trampoline(void *arg)
 void
 HC_SR04::cycle()
 {
-	// /*_circle_count record current sonar　*/
-	// /* perform collection */
-	// if (OK != collect()) {
-	// 	DEVICE_DEBUG("collection error");
-	// }
 	if (_should_exit) {
 		// exit
 		return;
@@ -908,7 +834,6 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 		_distance_time = falling_time - raising_time;
 #endif
 		_sensor_data_available = true;
-		// work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
 	}
 }
 
@@ -977,6 +902,7 @@ void stop()
 	exit(0);
 }
 
+// TODO: need reimplementation
 /**
  * Perform some basic functional tests on the driver;
  * make sure we can collect data from the sensor in polled
