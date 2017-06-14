@@ -35,9 +35,9 @@ then
 fi
 
 # start hc_sr04, rotation pitch 90 deg
-# if hc_sr04 -R 24 start
-# then
-# fi
+if hc_sr04 -R 24 -m start
+then
+fi
 
 if ver hwcmp TAP_V2
 then
