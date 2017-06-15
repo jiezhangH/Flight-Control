@@ -58,7 +58,6 @@ public:
 
 	int		upload(const char *filenames[]);
 	int 	checkcrc(const char *filenames[]);
-	static const uint8_t	_crc_table[256];
 
 private:
 
