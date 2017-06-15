@@ -169,7 +169,6 @@ private:
 	} _sensor_state;
 
 	int					_measure_ticks;
-	bool				_collect_phase;
 	volatile bool				_sensor_data_available;
 	int					_class_instance;
 	int					_orb_class_instance;
@@ -183,8 +182,6 @@ private:
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
-
-	int					_cycling_rate;	/* */
 
 
 	std::vector<float>
@@ -228,7 +225,6 @@ private:
 	*/
 	void				cycle();
 	int					measure();
-	int					collect();
 	/**
 	* Static trampoline from the workq context; because we don't have a
 	* generic workq wrapper yet.
@@ -262,7 +258,6 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_reports(nullptr),
 	_sensor_state(Uninitialized),
 	_measure_ticks(0),
-	_collect_phase(false),
 	_sensor_data_available(false),
 	_class_instance(-1),
 	_orb_class_instance(-1),
@@ -272,8 +267,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_distance_sensor_topic(nullptr),
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
-	_cycling_rate(0)	/* initialising cycling rate (which can differ depending on one sonar or multiple) */
+	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows"))
 
 {
 	/* enable debug() calls */
@@ -336,21 +330,22 @@ HC_SR04::init()
 
 	unsigned capture_count = 0;
 
+	// set PWM rate for the sonar to 20Hz
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
 		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
 		return PX4_ERROR;
 	}
 
 	unsigned group = 1;
-	uint32_t alt_channel_groups = 0;
-	alt_channel_groups |= (1 << group);
 	uint32_t group_mask;
 
+	// Get the group mask
 	if (::ioctl(fd_pwm, PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
 		PX4_ERR("PWM_SERVO_GET_RATEGROUP group %u fail", group);
 		return PX4_ERROR;
 	}
 
+	// Apply group mask
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
 		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
 		return PX4_ERROR;
@@ -361,6 +356,7 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
+	// Set pulsewidth of 10ms specific for this sonar sensor
 	if (::ioctl(fd_pwm, PWM_SERVO_SET(group), 10) != OK) {
 		PX4_ERR("PWM_SERVO_SET group %u fail", group);
 		return PX4_ERROR;
@@ -387,8 +383,6 @@ HC_SR04::init()
 		PX4_ERR("INPUT_CAP_SET fail");
 		return PX4_ERROR;
 	}
-
-	_cycling_rate = SR04_CONVERSION_INTERVAL;
 
 	/* sensor is ok, but we don't really know if it is within range */
 	_sensor_state = Initialized;
@@ -458,7 +452,7 @@ HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 					bool want_start = (_measure_ticks == 0);
 
 					/* set interval for next measurement to minimum legal value */
-					_measure_ticks = USEC2TICK(_cycling_rate);
+					_measure_ticks = USEC2TICK(SR04_CONVERSION_INTERVAL);
 
 					/* if we need to start the poll state machine, do it */
 					if (want_start) {
@@ -478,7 +472,7 @@ HC_SR04::ioctl(struct file *filp, int cmd, unsigned long arg)
 					int ticks = USEC2TICK(1000000 / arg);
 
 					/* check against maximum rate */
-					if (ticks < USEC2TICK(_cycling_rate)) {
+					if (ticks < USEC2TICK(SR04_CONVERSION_INTERVAL)) {
 						return -EINVAL;
 					}
 
@@ -570,55 +564,6 @@ HC_SR04::measure()
 	return ret;
 }
 
-
-int
-HC_SR04::collect()
-{
-	struct distance_sensor_s report = {};
-
-#if defined(HC_SR04_CAPTURE_DEBUG)
-	hrt_abstime current_distance = _distance_time[_distance_time_index_off++];
-	_distance_time_index_off &= arraySize(_distance_time) - 1;
-#else
-	hrt_abstime current_distance = _distance_time;
-#endif
-
-	float distance = current_distance * SR04_TIME_2_DISTANCE_M;
-
-	report.timestamp = hrt_absolute_time();
-	report.min_distance = get_minimum_distance();
-	report.max_distance = get_maximum_distance();
-
-	if (_enable_median_filter) {
-		report.current_distance = median_filter(distance);
-
-	} else {
-		report.current_distance = distance;
-	}
-
-	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
-	report.orientation = _rotation;
-	_mf_cycle_counter++;
-
-	/* publish it, if we are the primary */
-	if (_distance_sensor_topic != nullptr) {
-		orb_publish(ORB_ID(distance_sensor), _distance_sensor_topic, &report);
-
-	} else {
-		_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
-					 &_orb_class_instance, ORB_PRIO_LOW);
-	}
-
-	if (_reports->force(&report)) {
-		perf_count(_buffer_overflows);
-	}
-
-	/* notify anyone waiting for data */
-	poll_notify(POLLIN);
-
-	return OK;
-}
-
 float
 HC_SR04::median_filter(float value)
 {
@@ -644,8 +589,7 @@ HC_SR04::median_filter(float value)
 void
 HC_SR04::start()
 {
-	/* reset the report ring and state machine */
-	_collect_phase = false;
+	/* reset the report ring */
 	_reports->flush();
 
 	_should_exit = false;
@@ -694,8 +638,6 @@ HC_SR04::stop()
 
 	h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 50);
 	unsigned group = 1;
-	uint32_t alt_channel_groups = 0;
-	alt_channel_groups |= (1 << group);
 	uint32_t group_mask;
 
 	if (h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
