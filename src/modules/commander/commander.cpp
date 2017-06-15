@@ -156,6 +156,7 @@ bool prevent_poweroff_flag = false; ///< If the system is armed it is not allowe
 
 #define PRINT_INTERVAL	5000000
 #define PRINT_MODE_REJECT_INTERVAL	500000
+#define PRINT_ARM_REJECT_INTERVAL	4000000
 
 #define INAIR_RESTART_HOLDOFF_INTERVAL	500000
 
@@ -4162,7 +4163,7 @@ print_reject_arm(const char *msg)
 {
 	hrt_abstime t = hrt_absolute_time();
 
-	if (t - last_print_mode_reject_time > PRINT_MODE_REJECT_INTERVAL) {
+	if (t - last_print_mode_reject_time > PRINT_ARM_REJECT_INTERVAL) {
 		last_print_mode_reject_time = t;
 		mavlink_log_critical(&mavlink_log_pub, msg);
 		tune_negative(true);
