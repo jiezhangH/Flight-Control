@@ -121,7 +121,6 @@ public:
 
 	virtual int 		init();
 
-	// virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int			ioctl(struct file *filp, int cmd, unsigned long arg);
 
 	/**
@@ -285,10 +284,6 @@ HC_SR04::~HC_SR04()
 {
 	/* make sure we are truly inactive */
 	stop();
-
-	/* unadvertise publishing topics */
-	orb_unadvertise(_sensor_info_pub);
-	orb_unadvertise(_distance_sensor_topic);
 
 	/* free any existing reports */
 	if (_reports != nullptr) {
@@ -659,6 +654,7 @@ HC_SR04::start()
 
 	/* notify about state change */
 	struct subsystem_info_s info = {};
+	info.timestamp = hrt_absolute_time();
 	info.present = true;
 	info.enabled = true;
 	info.ok = true;
@@ -671,13 +667,14 @@ HC_SR04::start()
 		_sensor_info_pub = orb_advertise(ORB_ID(subsystem_info), &info);
 	}
 
-	PX4_INFO("schedule workqueue call");
 	work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, 0);
 }
 
 void
 HC_SR04::stop()
 {
+	/* unadvertise publishing topics */
+	orb_unadvertise(_sensor_info_pub);
 	orb_unadvertise(_distance_sensor_topic);
 
 	DevHandle h_fmu;
@@ -741,6 +738,7 @@ HC_SR04::cycle()
 	irqstate_t flags = px4_enter_critical_section();
 	bool sensor_data_available = _sensor_data_available;
 
+	// reset flag
 	if (_sensor_data_available) {
 		_sensor_data_available = false;
 	}
@@ -805,11 +803,6 @@ void HC_SR04::capture_callback(uint32_t chan_index,
 {
 	static hrt_abstime raising_time = 0;
 	static hrt_abstime falling_time = 0;
-
-	if (_should_exit) {
-		// exit call back
-		return;
-	}
 
 #if defined(HC_SR04_CAPTURE_DEBUG)
 	_edges[_edge_index].chan_index = chan_index;
