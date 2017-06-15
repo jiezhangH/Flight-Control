@@ -223,8 +223,14 @@ TAP_ESC_UPLOADER::upload_id(uint8_t esc_id, int32_t fw_size)
 		ret = reboot(esc_id);
 
 		if (ret != OK) {
-			PX4_LOG("reboot failed");
-			return ret;
+			PX4_LOG("reboot failed,reboot again");
+			ret = reboot(esc_id);
+			usleep(2000);
+
+			if (ret != OK) {
+				PX4_LOG("reboot failed");
+				return ret;
+			}
 		}
 
 		PX4_LOG("esc_id %d uploader complete", esc_id);
@@ -378,7 +384,16 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 
 		} else {
 			/* reboot tap esc_id */
-			reboot(esc_id);
+			if (ret != OK) {
+				PX4_LOG("reboot failed,reboot again");
+				ret = reboot(esc_id);
+				usleep(2000);
+
+				if (ret != OK) {
+					PX4_LOG("reboot failed");
+					return ret;
+				}
+			}
 		}
 	}
 
