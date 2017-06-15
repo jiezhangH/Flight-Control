@@ -194,6 +194,17 @@ PARAM_DEFINE_FLOAT(COM_RC_LOSS_T, 0.5f);
 PARAM_DEFINE_FLOAT(COM_RC_STICK_OV, 12.0f);
 
 /**
+ * RC loss failsafe behavior switch
+ *
+ * If equal to zero RC loss triggers RTL only for manual mode. If equal to one RC loss triggers
+ * RTL in every mode.
+ *
+ * @group Commander
+ * @boolean
+ */
+PARAM_DEFINE_FLOAT(COM_RCLOSS_SITL, 0);
+
+/**
  * Home set horizontal threshold
  *
  * The home position will be set if the estimated positioning accuracy is below the threshold.
