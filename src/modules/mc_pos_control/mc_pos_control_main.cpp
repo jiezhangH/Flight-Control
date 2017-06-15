@@ -156,7 +156,6 @@ private:
 	bool 		_in_takeoff = false; 				/**<true if takeoff ramp is applied */
 	bool 		_in_landing = false;				/**<true if landing descent (only used in auto) */
 	bool 		_lnd_reached_ground = false; 		/**<true if controller assumes the vehicle has reached the ground after landing */
-	bool 		_state_updn_revert = false; 		/**<true if vehicle is upside down */
 	bool 		_avoidance_lock_in = false;
 
 	int		_control_task;			/**< task handle for task */
@@ -830,16 +829,6 @@ MulticopterPositionControl::poll_subscriptions()
 		math::Vector<3> euler_angles;
 		euler_angles = _R.to_euler();
 		_yaw = euler_angles(2);
-		float roll_angle = euler_angles(0);
-		float pitch_angle = euler_angles(1);
-
-		if ((fabsf(roll_angle) > 0.95f * M_PI_F) && (fabsf(pitch_angle) < 0.05f * M_PI_F)) {
-			_state_updn_revert = true;
-
-		} else {
-			_state_updn_revert = false;
-		}
-
 
 		if (_control_mode.flag_control_manual_enabled) {
 			if (_heading_reset_counter != _ctrl_state.quat_reset_counter) {
@@ -1147,8 +1136,7 @@ MulticopterPositionControl::apply_gear_switch()
 	// If the user had the switch in the gear up position and took off ignore it
 	// until he toggles the switch to avoid retracting the gear immediately on takeoff.
 	// only after gear state has been initialized, then can switch the gear down
-	if (!_gear_state_initialized && (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF
-					 || _state_updn_revert)) {
+	if (!_gear_state_initialized && (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF)) {
 		_gear_state_initialized = true;
 	}
 
@@ -3223,7 +3211,6 @@ MulticopterPositionControl::task_main()
 			_in_takeoff  = false;
 			_in_landing = false;
 			_lnd_reached_ground = false;
-			_state_updn_revert = false;
 
 			/* also reset previous setpoints */
 			_yaw_takeoff = _yaw;
