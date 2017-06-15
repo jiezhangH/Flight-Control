@@ -2710,6 +2710,9 @@ int commander_thread_main(int argc, char *argv[])
 			}
 		}
 
+		/*The relative altitude of the home point */
+		float current_relative_alt = global_position.alt - _home.alt;
+
 		if(gohome_land_iterrupt) {
 			if((pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
@@ -2717,7 +2720,7 @@ int commander_thread_main(int argc, char *argv[])
 				if((fabsf(sp_man.x - 0.f) > min_interrupt_stick_change ||
 					fabsf(sp_man.y - 0.f) >min_interrupt_stick_change ||
 					(sp_man.z - 0.5f) > min_interrupt_stick_change) &&
-						fabsf(local_position.z) > allow_interrupt_min_alt) {
+						current_relative_alt > allow_interrupt_min_alt) {
 
 						control_mode.flag_control_updated = true;
 						main_state_transition(&status, commander_state_s::MAIN_STATE_POSCTL, main_state_prev, &status_flags, &internal_state);
