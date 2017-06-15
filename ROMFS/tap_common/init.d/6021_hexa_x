@@ -132,6 +132,8 @@ then
 
 		# Altitude (manual) mode parameters
 		param set MPC_MAN_TILT_MAX 24
+
+		param set COM_RCLOSS_SITL 1
 	fi
 
 	#
