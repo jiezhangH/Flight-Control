@@ -86,6 +86,8 @@ Land::on_activation()
 {
 	set_current_position_item(&_mission_item);
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+	pos_sp_triplet->previous.valid = false;
+	mission_apply_limitation(&_mission_item);
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
 	pos_sp_triplet->previous.valid = false;
 	pos_sp_triplet->next.valid = false;
@@ -193,6 +195,7 @@ Land::set_autoland_item()
 	reset_mission_item_reached();
 
 	/* convert mission item to current position setpoint and make it valid */
+	mission_apply_limitation(&_mission_item);
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
 	pos_sp_triplet->next.valid = false;
 

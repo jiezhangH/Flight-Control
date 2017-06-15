@@ -87,18 +87,12 @@ RTL::on_inactive()
 	_rtl_state = RTL_STATE_NONE;
 }
 
-float
-RTL::get_rtl_altitude()
-{
-	return (_param_return_alt.get() < _navigator->get_land_detected()->alt_max) ? _param_return_alt.get() :
-	       _navigator->get_land_detected()->alt_max;
-}
-
 void
 RTL::on_activation()
 {
 	set_current_position_item(&_mission_item);
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+	mission_apply_limitation(&_mission_item);
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
 	pos_sp_triplet->previous.valid = false;
 	pos_sp_triplet->next.valid = false;
@@ -161,15 +155,11 @@ RTL::set_rtl_item()
 						  _navigator->get_home_position()->lon,
 						  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
 
-			// but never climb higher than the return altitude
-			climb_alt = math::min(climb_alt, _navigator->get_home_position()->alt + get_rtl_altitude());
-
 			// do also not reduce altitude if already higher
 			climb_alt = math::max(climb_alt, _navigator->get_global_position()->alt);
 
 			// and also make sure that an absolute minimum altitude is obeyed so the landing gear does not catch.
 			climb_alt = math::max(climb_alt, _navigator->get_home_position()->alt + _param_min_loiter_alt.get());
-
 
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
@@ -342,6 +332,7 @@ RTL::set_rtl_item()
 	reset_mission_item_reached();
 
 	/* convert mission item to current position setpoint and make it valid */
+	mission_apply_limitation(&_mission_item);
 	mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
 	pos_sp_triplet->next.valid = false;
 

@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- *   Copyright (c) 2013-2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2013-2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
  * @author Julian Oes <julian@oes.ch>
  * @author Anton Babushkin <anton.babushkin@me.com>
  * @author Thomas Gubler <thomasgubler@gmail.com>
+ * @author Dennis Mannhart <dennis@px4.io>
  */
 
 #ifndef NAVIGATOR_H
@@ -251,6 +252,7 @@ private:
 	int		_param_update_sub;		/**< param update subscription */
 	int		_vehicle_command_sub;		/**< vehicle commands (onboard and offboard) */
 
+
 	orb_advert_t	_pos_sp_triplet_pub;		/**< publish position setpoint triplet */
 	orb_advert_t	_mission_result_pub;
 	orb_advert_t	_geofence_result_pub;
@@ -270,6 +272,7 @@ private:
 	position_setpoint_triplet_s			_pos_sp_triplet;	/**< triplet of position setpoints */
 	position_setpoint_triplet_s			_reposition_triplet;	/**< triplet for non-mission direct position command */
 	position_setpoint_triplet_s			_takeoff_triplet;	/**< triplet for non-mission direct takeoff command */
+
 
 	mission_result_s				_mission_result;
 	geofence_result_s				_geofence_result;
@@ -375,11 +378,6 @@ private:
 	 * Main task.
 	 */
 	void		task_main();
-
-	/**
-	 * Translate mission item to a position setpoint.
-	 */
-	void		mission_item_to_position_setpoint(const mission_item_s *item, position_setpoint_s *sp);
 
 	/**
 	 * Publish a new position setpoint triplet for position controllers

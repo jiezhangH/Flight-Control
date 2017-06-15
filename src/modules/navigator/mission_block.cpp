@@ -379,19 +379,17 @@ MissionBlock::is_mission_item_reached()
 					   _navigator->get_global_position()->vel_e * _navigator->get_global_position()->vel_e);
 
 
+		/* we reached desired velcoity */
+
 		if (fabsf(ground_speed - _mission_item.requested_speed) < 0.5f) {
 			_waypoint_velocity_reached = true;
+			return true;
 		}
-
-	} else {
-		_waypoint_velocity_reached = true;
 	}
 
 
-
-
 	/* Once the waypoint, yaw setpoint, velocity setpoint have been reached we can start the loiter time countdown */
-	if (_waypoint_position_reached && _waypoint_yaw_reached && _waypoint_velocity_reached) {
+	if (_waypoint_position_reached && _waypoint_yaw_reached) {
 
 		if (_time_first_inside_orbit == 0) {
 			_time_first_inside_orbit = now;
@@ -850,10 +848,31 @@ MissionBlock::set_brake_item(struct mission_item_s *item)
 	item->altitude_is_relative = false;
 	item->altitude = _navigator->get_global_position()->alt;
 	item->yaw = NAN;
-	item->acceptance_radius = 1000.f; // set it large since we don't care about waypoint
+	item->acceptance_radius = 1e8f; // set it large since we don't care about waypoint
 	item->requested_speed = 0.000001f; // set speed to small number since we want to brake
 	item->force_velocity = 1;
 	item->time_inside = 0.0f;
 	item->autocontinue = true;
 	item->origin = ORIGIN_ONBOARD;
+}
+
+void
+MissionBlock::mission_apply_limitation(struct mission_item_s *item)
+{
+
+	/* do nothing if altitude max is negative */
+	if (_navigator->get_land_detected()->alt_max > 0.0f) {
+
+		/* get absolut altitude */
+		float altitude_abs = item->altitude_is_relative
+				     ? item->altitude + _navigator->get_home_position()->alt
+				     : item->altitude;
+
+		if ((_navigator->get_land_detected()->alt_max + _navigator->get_home_position()->alt) < altitude_abs) {
+			item->altitude = item->altitude_is_relative ?
+					 _navigator->get_land_detected()->alt_max :
+					 _navigator->get_land_detected()->alt_max + _navigator->get_home_position()->alt;
+
+		}
+	}
 }

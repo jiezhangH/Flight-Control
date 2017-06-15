@@ -144,6 +144,12 @@ protected:
 
 	void issue_command(const struct mission_item_s *item);
 
+	/**
+	 * This function limits the setpoint dependent
+	 * on vehicle model
+	 */
+	void	mission_apply_limitation(struct mission_item_s *item);
+
 	mission_item_s _mission_item;
 	bool _waypoint_position_reached;
 	bool _waypoint_yaw_reached;
