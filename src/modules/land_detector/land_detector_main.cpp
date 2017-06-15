@@ -206,6 +206,22 @@ int land_detector_main(int argc, char *argv[])
 					PX4_INFO("State: Landed");
 					break;
 
+				case LandDetector::LandDetectionState::MAYBE_LANDED:
+					PX4_INFO("State: Maybe Landed");
+					break;
+
+				case LandDetector::LandDetectionState::GROUND_CONTACT:
+					PX4_INFO("State: Ground Contact");
+					break;
+
+				case LandDetector::LandDetectionState::INVERTED:
+					PX4_INFO("State: Inverted");
+					break;
+
+				case LandDetector::LandDetectionState::CRASH:
+					PX4_INFO("State: Crashed");
+					break;
+
 				case LandDetector::LandDetectionState::FREEFALL:
 					PX4_INFO("State: Freefall");
 					break;

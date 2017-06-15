@@ -92,6 +92,18 @@ void FixedwingLandDetector::_update_params()
 	param_get(_paramHandle.maxIntVelocity, &_params.maxIntVelocity);
 }
 
+bool FixedwingLandDetector::_get_crash_state()
+{
+	//TODO
+	return false;
+}
+
+bool FixedwingLandDetector::_get_inverted_state()
+{
+	//TODO
+	return false;
+}
+
 float FixedwingLandDetector::_get_max_altitude()
 {
 	//ToDo

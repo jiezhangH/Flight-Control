@@ -921,6 +921,10 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		e_R = e_R * (1.0f - direct_w) + e_R_d * direct_w;
 	}
 
+	/*publish angle error*/
+	_v_rates_sp.roll_err = e_R(0);
+	_v_rates_sp.pitch_err = e_R(1);
+
 	/* calculate angular rates setpoint */
 	_rates_sp = _params.att_p.emult(e_R);
 

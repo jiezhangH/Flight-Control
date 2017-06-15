@@ -59,7 +59,9 @@ public:
 		LANDED = 1,
 		FREEFALL = 2,
 		GROUND_CONTACT = 3,
-		MAYBE_LANDED = 4
+		MAYBE_LANDED = 4,
+		CRASH = 5,
+		INVERTED = 6
 	};
 
 	LandDetector();
@@ -130,6 +132,16 @@ protected:
 	virtual bool _get_freefall_state() = 0;
 
 	/**
+	 * @return true if UAV is in crash state.
+	 */
+	virtual bool _get_crash_state() = 0;
+
+	/**
+	 * @return true if UAV is in crash state.
+	 */
+	virtual bool _get_inverted_state() = 0;
+
+	/**
 	 *  @return maximum altitude that can be reached
 	 */
 	virtual float _get_max_altitude() = 0;
@@ -143,6 +155,12 @@ protected:
 
 	/** Run main land detector loop at this rate in Hz. */
 	static constexpr uint32_t LAND_DETECTOR_UPDATE_RATE_HZ = 50;
+
+	/** Time in us that crash conditions have to hold before triggering crashed. */
+	static constexpr uint64_t CRASHED_DETECTOR_TRIGGER_TIME_US = 500000;
+
+	/** Time in us that inverted conditions have to hold before triggering inverted. */
+	static constexpr uint64_t INVERTED_DETECTOR_TRIGGER_TIME_US = 500000;
 
 	/** Time in us that landing conditions have to hold before triggering a land. */
 	static constexpr uint64_t LAND_DETECTOR_TRIGGER_TIME_US = 300000;
@@ -167,6 +185,8 @@ protected:
 	systemlib::Hysteresis _landed_hysteresis;
 	systemlib::Hysteresis _maybe_landed_hysteresis;
 	systemlib::Hysteresis _ground_contact_hysteresis;
+	systemlib::Hysteresis _crash_hysteresis;
+	systemlib::Hysteresis _inverted_hysteresis;
 
 	float _altitude_max;
 

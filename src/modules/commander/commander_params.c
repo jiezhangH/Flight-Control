@@ -631,3 +631,13 @@ PARAM_DEFINE_FLOAT(COM_ARM_IMU_GYR, 0.15f);
  * @increment 0.5
  */
 PARAM_DEFINE_FLOAT(COM_MIN_ALT, 2.5f);
+
+/**
+ * Crash detection of params
+ *
+ * If not equal zero ,it means the vehicle disarm when crashed
+ *
+ * @group Commander
+ * @boolean
+ */
+PARAM_DEFINE_INT32(COM_DISARM_CRASH, 0);

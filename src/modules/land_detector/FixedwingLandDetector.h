@@ -71,6 +71,10 @@ protected:
 
 	virtual bool _get_freefall_state() override;
 
+	virtual bool _get_crash_state() override;
+
+	virtual bool _get_inverted_state() override;
+
 	virtual float _get_max_altitude() override;
 private:
 	struct {

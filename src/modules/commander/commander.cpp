@@ -1304,6 +1304,7 @@ int commander_thread_main(int argc, char *argv[])
 	bool was_landed = true;
 	bool was_falling = false;
 	bool was_armed = false;
+	bool was_crashed = false;
 
 	bool startup_in_hil = false;
 
@@ -1354,6 +1355,7 @@ int commander_thread_main(int argc, char *argv[])
 	param_t _param_arm_switch_is_button = param_find("COM_ARM_SWISBTN");
 	param_t _param_gohome_land_iterrupt = param_find("COM_ALLOW_INT");
 	param_t _param_allow_interrupt_min_alt = param_find("COM_MIN_ALT");
+	param_t _param_disarm_detect_crash = param_find("COM_DISARM_CRASH");
 
 	param_t _param_fmode_1 = param_find("COM_FLTMODE1");
 	param_t _param_fmode_2 = param_find("COM_FLTMODE2");
@@ -1705,8 +1707,9 @@ int commander_thread_main(int argc, char *argv[])
 	int32_t rc_in_off = 0;
 	bool hotplug_timeout = hrt_elapsed_time(&commander_boot_timestamp) > HOTPLUG_SENS_TIMEOUT;
 	int32_t arm_without_gps = 0;
-	static int32_t gohome_land_iterrupt = 0;
-	static float allow_interrupt_min_alt = 0;
+	int32_t gohome_land_iterrupt = 0;
+	float allow_interrupt_min_alt = 0.0f;
+	int32_t disarm_detect_crash = 0;
 	param_get(_param_autostart_id, &autostart_id);
 	param_get(_param_rc_in_off, &rc_in_off);
 	param_get(_param_arm_without_gps, &arm_without_gps);
@@ -1714,6 +1717,7 @@ int commander_thread_main(int argc, char *argv[])
 	param_get(_param_arm_switch_is_button, &arm_switch_is_button);
 	param_get(_param_gohome_land_iterrupt, &gohome_land_iterrupt);
 	param_get(_param_allow_interrupt_min_alt, &allow_interrupt_min_alt);
+	param_get(_param_disarm_detect_crash, &disarm_detect_crash);
 
 	can_arm_without_gps = (arm_without_gps == 1);
 	status.rc_input_mode = rc_in_off;
@@ -1739,7 +1743,7 @@ int commander_thread_main(int argc, char *argv[])
 	int32_t datalink_loss_act = 0;
 	int32_t rc_loss_act = 0;
 	int32_t datalink_loss_timeout = 10;
-	float rc_loss_timeout = 0.5;
+	float rc_loss_timeout = 0.5f;
 	int32_t datalink_regain_timeout = 0;
 	float offboard_loss_timeout = 0.0f;
 	int32_t offboard_loss_act = 0;
@@ -2233,15 +2237,17 @@ int commander_thread_main(int argc, char *argv[])
 				}
 			}
 
-			if (was_falling != land_detector.freefall) {
-				if (land_detector.freefall) {
-					mavlink_and_console_log_info(&mavlink_log_pub, "Freefall detected");
-				}
+			if (!was_falling && land_detector.freefall) {
+				mavlink_and_console_log_info(&mavlink_log_pub, "Freefall detected");
 			}
 
+			if(!was_crashed && land_detector.crash) {
+				mavlink_and_console_log_info(&mavlink_log_pub, "Crash detected");
+			}
 
 			was_landed = land_detector.landed;
 			was_falling = land_detector.freefall;
+			was_crashed = land_detector.crash;
 		}
 
 
@@ -2258,6 +2264,11 @@ int commander_thread_main(int argc, char *argv[])
 		// Check for auto-disarm
 		if (armed.armed && land_detector.landed && disarm_when_landed > 0) {
 			auto_disarm_hysteresis.set_state_and_update(true);
+
+		} else if(armed.armed && land_detector.crash && disarm_detect_crash > 0){
+			//TODO
+			//Now it needs a lot of verification
+
 		} else {
 			auto_disarm_hysteresis.set_state_and_update(false);
 		}

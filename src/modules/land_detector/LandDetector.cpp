@@ -59,6 +59,8 @@ LandDetector::LandDetector() :
 	_landed_hysteresis(true),
 	_maybe_landed_hysteresis(true),
 	_ground_contact_hysteresis(true),
+	_crash_hysteresis(false),
+	_inverted_hysteresis(false),
 	_taskShouldExit(false),
 	_taskIsRunning(false),
 	_total_flight_time{0},
@@ -69,6 +71,9 @@ LandDetector::LandDetector() :
 	_landed_hysteresis.set_hysteresis_time_from(false, LAND_DETECTOR_TRIGGER_TIME_US);
 	_maybe_landed_hysteresis.set_hysteresis_time_from(false, MAYBE_LAND_DETECTOR_TRIGGER_TIME_US);
 	_ground_contact_hysteresis.set_hysteresis_time_from(false, GROUND_CONTACT_TRIGGER_TIME_US);
+	_crash_hysteresis.set_hysteresis_time_from(false, CRASHED_DETECTOR_TRIGGER_TIME_US);
+	_inverted_hysteresis.set_hysteresis_time_from(false, INVERTED_DETECTOR_TRIGGER_TIME_US);
+
 }
 
 LandDetector::~LandDetector()
@@ -109,6 +114,8 @@ void LandDetector::_cycle()
 		_landDetected.landed = false;
 		_landDetected.ground_contact = false;
 		_landDetected.maybe_landed = false;
+		_landDetected.crash = false;
+		_landDetected.inverted = false;
 		_p_total_flight_time_high = param_find("LND_FLIGHT_T_HI");
 		_p_total_flight_time_low = param_find("LND_FLIGHT_T_LO");
 
@@ -136,6 +143,8 @@ void LandDetector::_cycle()
 	bool landDetected = (_state == LandDetectionState::LANDED);
 	bool maybe_landedDetected = (_state == LandDetectionState::MAYBE_LANDED);
 	bool ground_contactDetected = (_state == LandDetectionState::GROUND_CONTACT);
+	bool crashDetected = (_state == LandDetectionState::CRASH);
+	bool invertedDetected = (_state == LandDetectionState::INVERTED);
 
 	// Only publish very first time or when the result has changed.
 	if ((_landDetectedPub == nullptr) ||
@@ -143,6 +152,8 @@ void LandDetector::_cycle()
 	    (_landDetected.landed != landDetected) ||
 	    (_landDetected.ground_contact != ground_contactDetected) ||
 	    (_landDetected.maybe_landed != maybe_landedDetected) ||
+	    (_landDetected.crash != crashDetected) ||
+	    (_landDetected.inverted != invertedDetected) ||
 	    (fabsf(_landDetected.alt_max - alt_max_prev) > FLT_EPSILON)) {
 
 		if (!landDetected && _landDetected.landed) {
@@ -165,6 +176,8 @@ void LandDetector::_cycle()
 		_landDetected.landed = (_state == LandDetectionState::LANDED);
 		_landDetected.ground_contact = (_state == LandDetectionState::GROUND_CONTACT);
 		_landDetected.maybe_landed = (_state == LandDetectionState::MAYBE_LANDED);
+		_landDetected.crash = (_state == LandDetectionState::CRASH);
+		_landDetected.inverted = (_state == LandDetectionState::INVERTED);
 		_landDetected.alt_max = _altitude_max;
 
 		int instance;
@@ -208,12 +221,20 @@ void LandDetector::_update_state()
 	/* when we are landed we also have ground contact for sure but only one output state can be true at a particular time
 	 * with higher priority for landed */
 	_freefall_hysteresis.set_state_and_update(_get_freefall_state());
+	_crash_hysteresis.set_state_and_update(_get_crash_state());
+	_inverted_hysteresis.set_state_and_update(_get_inverted_state());
 	_landed_hysteresis.set_state_and_update(_get_landed_state());
 	_maybe_landed_hysteresis.set_state_and_update(_get_maybe_landed_state());
 	_ground_contact_hysteresis.set_state_and_update(_get_ground_contact_state());
 
 	if (_freefall_hysteresis.get_state()) {
 		_state = LandDetectionState::FREEFALL;
+
+	} else if (_inverted_hysteresis.get_state()) {
+		_state = LandDetectionState::INVERTED;
+
+	} else if (_crash_hysteresis.get_state()) {
+		_state = LandDetectionState::CRASH;
 
 	} else if (_landed_hysteresis.get_state()) {
 		_state = LandDetectionState::LANDED;
