@@ -88,6 +88,7 @@
 #include <uORB/topics/safety.h>
 #include <uORB/topics/adc_report.h>
 #include <uORB/topics/multirotor_motor_limits.h>
+#include <uORB/topics/vehicle_land_detected.h>
 
 #ifdef HRT_PPM_CHANNEL
 # include <systemlib/ppm_decode.h>
@@ -194,6 +195,7 @@ private:
 	int		_armed_sub;
 	int		_param_sub;
 	int		_adc_sub;
+	int     _vehicle_landed_sub;
 	struct rc_input_values	_rc_in;
 	float		_analog_rc_rssi_volt;
 	bool		_analog_rc_rssi_stable;
@@ -225,6 +227,7 @@ private:
 
 	static pwm_limit_t	_pwm_limit;
 	static actuator_armed_s	_armed;
+	static vehicle_land_detected_s _vehicle_landed_state;
 	uint16_t	_failsafe_pwm[_max_actuators];
 	uint16_t	_disarmed_pwm[_max_actuators];
 	uint16_t	_min_pwm[_max_actuators];
@@ -314,6 +317,7 @@ const unsigned		PX4FMU::_ngpio = arraySize(PX4FMU::_gpio_tab);
 #endif
 pwm_limit_t		PX4FMU::_pwm_limit;
 actuator_armed_s	PX4FMU::_armed = {};
+vehicle_land_detected_s PX4FMU::_vehicle_landed_state = {};
 
 namespace
 {
@@ -334,6 +338,7 @@ PX4FMU::PX4FMU() :
 	_armed_sub(-1),
 	_param_sub(-1),
 	_adc_sub(-1),
+	_vehicle_landed_sub(-1),
 	_rc_in{},
 	_analog_rc_rssi_volt(-1.0f),
 	_analog_rc_rssi_stable(false),
@@ -1315,9 +1320,15 @@ PX4FMU::cycle()
 	/* check arming state */
 	bool updated = false;
 
-	orb_check(_armed_sub, &updated);
+	orb_check(_vehicle_landed_sub, &updated);
 
 	if (updated) {
+		orb_copy(ORB_ID(vehicle_land_detected), _vehicle_landed_sub, &_vehicle_landed_state);
+	}
+
+	orb_check(_armed_sub, &updated);
+
+	if (updated || _vehicle_landed_state.inverted) {
 		orb_copy(ORB_ID(actuator_armed), _armed_sub, &_armed);
 
 		/* Update the armed status and check that we're not locked down.
@@ -1325,9 +1336,8 @@ PX4FMU::cycle()
 		_throttle_armed = (_safety_off && _armed.armed && !_armed.lockdown) ||
 				  (_safety_off && _armed.in_esc_calibration_mode);
 
-
 		/* update PWM status if armed or if disarmed PWM values are set */
-		bool pwm_on = _armed.armed || _num_disarmed_set > 0 || _armed.in_esc_calibration_mode;
+		bool pwm_on = _armed.armed || _num_disarmed_set > 0 || _armed.in_esc_calibration_mode || _vehicle_landed_state.inverted;
 
 		if (_pwm_on != pwm_on) {
 			_pwm_on = pwm_on;

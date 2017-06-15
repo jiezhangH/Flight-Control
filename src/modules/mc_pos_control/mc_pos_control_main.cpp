@@ -1136,7 +1136,8 @@ MulticopterPositionControl::apply_gear_switch()
 	// If the user had the switch in the gear up position and took off ignore it
 	// until he toggles the switch to avoid retracting the gear immediately on takeoff.
 	// only after gear state has been initialized, then can switch the gear down
-	if (!_gear_state_initialized && (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF)) {
+	if (!_gear_state_initialized && (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_OFF
+					 || _vehicle_land_detected.inverted)) {
 		_gear_state_initialized = true;
 	}
 
