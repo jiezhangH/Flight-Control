@@ -211,6 +211,7 @@ private:
 	bool		_pwm_on;
 	uint32_t	_pwm_mask;
 	bool		_pwm_initialized;
+	bool        _was_inverted;
 
 	MixerGroup	*_mixers;
 
@@ -352,6 +353,7 @@ PX4FMU::PX4FMU() :
 	_pwm_on(false),
 	_pwm_mask(0),
 	_pwm_initialized(false),
+	_was_inverted(false),
 	_mixers(nullptr),
 	_groups_required(0),
 	_groups_subscribed(0),
@@ -1366,6 +1368,16 @@ PX4FMU::cycle()
 		}
 
 	}
+
+#endif
+
+#ifdef RC_SERIAL_PORT
+
+	if (!_was_inverted && _vehicle_landed_state.inverted) {
+		st24_bind();
+	}
+
+	_was_inverted =  _vehicle_landed_state.inverted;
 
 #endif
 
