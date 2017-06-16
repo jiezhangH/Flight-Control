@@ -700,7 +700,7 @@ bool set_nav_state(struct vehicle_status_s *status,
 	const bool rc_loss_act_configured = rc_loss_act > link_loss_actions_t::DISABLED;
 	const bool rc_lost = rc_loss_act_configured && (status->rc_signal_lost || status_flags->rc_signal_lost_cmd);
 	int rcloss_sitl = 0;
-	param_t param_rcloss_sitl = param_find("COM_RC_LOSS_S");
+	param_t param_rcloss_sitl = param_find("COM_RC_LOSS_MAN");
 	param_get(param_rcloss_sitl, &rcloss_sitl);
 
 	bool is_armed = (status->arming_state == vehicle_status_s::ARMING_STATE_ARMED
