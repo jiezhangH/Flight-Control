@@ -1006,6 +1006,7 @@ PX4FMU::cycle()
 		_param_sub = orb_subscribe(ORB_ID(parameter_update));
 		_adc_sub = orb_subscribe(ORB_ID(adc_report));
 		_rc_sub = orb_subscribe(ORB_ID(rc_channels));
+		_vehicle_landed_sub =  orb_subscribe(ORB_ID(vehicle_land_detected));
 
 		/* initialize PWM limit lib */
 		pwm_limit_init(&_pwm_limit);
