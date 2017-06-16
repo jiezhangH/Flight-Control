@@ -202,7 +202,7 @@ PARAM_DEFINE_FLOAT(COM_RC_STICK_OV, 12.0f);
  * @group Commander
  * @boolean
  */
-PARAM_DEFINE_FLOAT(COM_RCLOSS_SITL, 0);
+PARAM_DEFINE_FLOAT(COM_RC_LOSS_S, 0);
 
 /**
  * Home set horizontal threshold
