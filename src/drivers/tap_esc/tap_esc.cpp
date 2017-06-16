@@ -847,6 +847,9 @@ TAP_ESC::cycle()
 					// printf("speed is %d\n",feed_back_data.speed );
 					//mavlink_log_info(&_mavlink_log_pub, "tap_esc: %d speed : %d", (int)_esc_feedback.esc[feed_back_data.channelID].esc_state
 					//		,_esc_feedback.esc[feed_back_data.channelID].esc_rpm);
+					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint_raw = motor_out[feed_back_data.channelID];
+					// PWM convert to RPM,PWM:1200~1900<-->RPM:1600~7500 so rpm = 1600 + (pwm - 1200)*((7500-1600)/(1900-1200))
+					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint = motor_out[feed_back_data.channelID] * 8.43f - 8514.3f;
 					_esc_feedback.esc_connectiontype = esc_status_s::ESC_CONNECTION_TYPE_SERIAL;
 					_esc_feedback.counter++;
 					_esc_feedback.esc_count = esc_count;
