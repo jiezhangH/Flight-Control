@@ -100,6 +100,7 @@
 #define NAN_VALUE	(0.0f/0.0f)		/**< NaN value for throttle lock mode */
 #define BUTTON_SAFETY	px4_arch_gpioread(GPIO_BTN_SAFETY)
 #define CYCLE_COUNT 10			/* safety switch must be held for 1 second to activate */
+#define RC_LOST_TIMEOUT 2       /*Lost signal to judge the timeout time*/
 
 /*
  * Define the various LED flash sequences for each system state.
@@ -196,6 +197,7 @@ private:
 	int		_param_sub;
 	int		_adc_sub;
 	int     _vehicle_landed_sub;
+	int     _rc_sub;
 	struct rc_input_values	_rc_in;
 	float		_analog_rc_rssi_volt;
 	bool		_analog_rc_rssi_stable;
@@ -229,6 +231,7 @@ private:
 	static pwm_limit_t	_pwm_limit;
 	static actuator_armed_s	_armed;
 	static vehicle_land_detected_s _vehicle_landed_state;
+	static rc_channels_s  _rc;     /**< rc channel data*/
 	uint16_t	_failsafe_pwm[_max_actuators];
 	uint16_t	_disarmed_pwm[_max_actuators];
 	uint16_t	_min_pwm[_max_actuators];
@@ -319,6 +322,7 @@ const unsigned		PX4FMU::_ngpio = arraySize(PX4FMU::_gpio_tab);
 pwm_limit_t		PX4FMU::_pwm_limit;
 actuator_armed_s	PX4FMU::_armed = {};
 vehicle_land_detected_s PX4FMU::_vehicle_landed_state = {};
+rc_channels_s  PX4FMU::_rc = {};
 
 namespace
 {
@@ -340,6 +344,7 @@ PX4FMU::PX4FMU() :
 	_param_sub(-1),
 	_adc_sub(-1),
 	_vehicle_landed_sub(-1),
+	_rc_sub(-1),
 	_rc_in{},
 	_analog_rc_rssi_volt(-1.0f),
 	_analog_rc_rssi_stable(false),
@@ -1000,6 +1005,7 @@ PX4FMU::cycle()
 		_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
 		_param_sub = orb_subscribe(ORB_ID(parameter_update));
 		_adc_sub = orb_subscribe(ORB_ID(adc_report));
+		_rc_sub = orb_subscribe(ORB_ID(rc_channels));
 
 		/* initialize PWM limit lib */
 		pwm_limit_init(&_pwm_limit);
@@ -1372,8 +1378,16 @@ PX4FMU::cycle()
 #endif
 
 #ifdef RC_SERIAL_PORT
+	/*Update rc information*/
+	orb_check(_rc_sub, &updated);
 
-	if (!_was_inverted && _vehicle_landed_state.inverted) {
+	if (updated) {
+		orb_copy(ORB_ID(rc_channels), _rc_sub, &_rc);
+	}
+
+	/*Only rc lost or rc not binding can enter the manual binding*/
+	if (!_was_inverted && _vehicle_landed_state.inverted &&
+	    (hrt_absolute_time() > _rc.timestamp + (uint64_t)(RC_LOST_TIMEOUT * 1e6f))) {
 		st24_bind();
 	}
 
@@ -1463,7 +1477,7 @@ PX4FMU::cycle()
 		//warnx("RCscan: %s RC input locked", RC_SCAN_STRING[_rc_scan_state]);
 	}
 
-	// read all available data from the serial RC input UART
+// read all available data from the serial RC input UART
 	int newBytes = ::read(_rcs_fd, &_rcs_buf[0], SBUS_BUFFER_SIZE);
 
 	switch (_rc_scan_state) {
