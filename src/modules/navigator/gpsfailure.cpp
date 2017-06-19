@@ -163,7 +163,7 @@ GpsFailure::advance_gpsf()
 	case GPSF_STATE_NONE:
 		_gpsf_state = GPSF_STATE_LOITER;
 		warnx("gpsf loiter");
-		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "GPS failed: open loop loiter/");
+		mavlink_log_critical(_navigator->get_mavlink_log_pub(), "GPS failed: open loop loiter.");
 		break;
 
 	case GPSF_STATE_LOITER:
