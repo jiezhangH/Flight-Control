@@ -64,7 +64,7 @@ MulticopterLandDetector::MulticopterLandDetector() : LandDetector(),
 	_ctrl_state_sub(-1),
 	_vehicle_control_mode_sub(-1),
 	_battery_sub(-1),
-	_v_rates_sp_sub(-1),
+	_v_att_sp_sub(-1),
 	_vehicleLocalPosition{},
 	_actuators{},
 	_arming{},
@@ -102,7 +102,7 @@ void MulticopterLandDetector::_initialize_topics()
 	_ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
 	_vehicle_control_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_battery_sub = orb_subscribe(ORB_ID(battery_status));
-	_v_rates_sp_sub = orb_subscribe(ORB_ID(vehicle_rates_setpoint));
+	_v_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 }
 
 void MulticopterLandDetector::_update_topics()
@@ -115,7 +115,7 @@ void MulticopterLandDetector::_update_topics()
 	_orb_update(ORB_ID(control_state), _ctrl_state_sub, &_ctrl_state);
 	_orb_update(ORB_ID(vehicle_control_mode), _vehicle_control_mode_sub, &_control_mode);
 	_orb_update(ORB_ID(battery_status), _battery_sub, &_battery);
-	_orb_update(ORB_ID(vehicle_rates_setpoint), _v_rates_sp_sub, &_v_rates_sp);
+	_orb_update(ORB_ID(vehicle_attitude_setpoint), _v_att_sp_sub, &_v_att_sp);
 }
 
 void MulticopterLandDetector::_update_params()
@@ -156,8 +156,8 @@ bool MulticopterLandDetector::_get_crash_state()
 	}
 
 	/*check for angle error*/
-	if ((math::degrees(fabsf(_v_rates_sp.roll_err)) < CRASH_CHECK_ANGLE_DEVIATION_CD) &&
-	    (math::degrees(fabsf(_v_rates_sp.pitch_err)) < CRASH_CHECK_ANGLE_DEVIATION_CD)) {
+	if ((math::degrees(fabsf(_v_att_sp.roll_err)) < CRASH_CHECK_ANGLE_DEVIATION_CD) &&
+	    (math::degrees(fabsf(_v_att_sp.pitch_err)) < CRASH_CHECK_ANGLE_DEVIATION_CD)) {
 		return false;
 	}
 

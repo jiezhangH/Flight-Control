@@ -53,7 +53,7 @@
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/sensor_combined.h>
-#include <uORB/topics/vehicle_rates_setpoint.h>
+#include <uORB/topics/vehicle_attitude_setpoint.h>
 
 #include "LandDetector.h"
 
@@ -128,7 +128,7 @@ private:
 	int _ctrl_state_sub;
 	int _vehicle_control_mode_sub;
 	int _battery_sub;
-	int _v_rates_sp_sub;
+	int _v_att_sp_sub;
 
 	struct vehicle_local_position_s		_vehicleLocalPosition;
 	struct actuator_controls_s		_actuators;
@@ -138,7 +138,7 @@ private:
 	struct control_state_s			_ctrl_state;
 	struct vehicle_control_mode_s		_control_mode;
 	struct battery_status_s  _battery;
-	struct vehicle_rates_setpoint_s		_v_rates_sp;		/**< vehicle rates setpoint */
+	struct vehicle_attitude_setpoint_s		_v_att_sp;		/**< vehicle angle setpoint */
 
 	uint64_t _min_trust_start;		///< timestamp when minimum trust was applied first
 	uint64_t _arming_time;
