@@ -610,7 +610,7 @@ bool preflightCheck(orb_advert_t *mavlink_log_pub, bool checkMag, bool checkAcc,
 		/* check if the primary device is present */
 		if (!prime_found && prime_id != 0) {
 			if (reportFailures) {
-				mavlink_log_critical(mavlink_log_pub, "Warning: Primary compass not found.");
+				mavlink_log_critical(mavlink_log_pub, "Primary compass not found.");
 			}
 			failed = true;
 		}
@@ -639,7 +639,7 @@ bool preflightCheck(orb_advert_t *mavlink_log_pub, bool checkMag, bool checkAcc,
 		/* check if the primary device is present */
 		if (!prime_found && prime_id != 0) {
 			if (reportFailures) {
-				mavlink_log_critical(mavlink_log_pub, "Warning: Primary accelerometer not found");
+				mavlink_log_critical(mavlink_log_pub, "Primary accelerometer not found.");
 			}
 			failed = true;
 		}
@@ -668,7 +668,7 @@ bool preflightCheck(orb_advert_t *mavlink_log_pub, bool checkMag, bool checkAcc,
 		/* check if the primary device is present */
 		if (!prime_found && prime_id != 0) {
 			if (reportFailures) {
-				mavlink_log_critical(mavlink_log_pub, "Warning: Primary gyro not found.");
+				mavlink_log_critical(mavlink_log_pub, "Primary gyro not found.");
 			}
 			failed = true;
 		}
@@ -698,7 +698,7 @@ bool preflightCheck(orb_advert_t *mavlink_log_pub, bool checkMag, bool checkAcc,
 		// // check if the primary device is present
 		if (!prime_found && prime_id != 0) {
 			if (reportFailures) {
-				mavlink_log_critical(mavlink_log_pub, "warning: primary barometer not operational.");
+				mavlink_log_critical(mavlink_log_pub, "Primary barometer not operational.");
 			}
 			failed = true;
 		}
