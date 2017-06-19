@@ -301,7 +301,7 @@ Navigator::task_main()
 
 	} else {
 		if (_geofence.clearDm() != OK) {
-			mavlink_log_critical(&_mavlink_log_pub, "failed clearing geofence");
+			mavlink_log_critical(&_mavlink_log_pub, "Failed clearing geofence.");
 		}
 	}
 
@@ -596,7 +596,7 @@ Navigator::task_main()
 
 				/* Issue a warning about the geofence violation once */
 				if (!_geofence_violation_warning_sent) {
-					mavlink_log_critical(&_mavlink_log_pub, "Geofence violation");
+					mavlink_log_critical(&_mavlink_log_pub, "Geofence violation.");
 					_geofence_violation_warning_sent = true;
 				}
 
