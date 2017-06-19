@@ -384,6 +384,8 @@ TAP_ESC_UPLOADER::checkcrc(const char *filenames[])
 
 		} else {
 			/* reboot tap esc_id */
+			ret = reboot(esc_id);
+
 			if (ret != OK) {
 				PX4_LOG("reboot failed,reboot again");
 				ret = reboot(esc_id);
