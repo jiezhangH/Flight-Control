@@ -205,11 +205,11 @@ bool MissionFeasibilityChecker::checkHomePositionAltitude(dm_item_t dm_current, 
 			warning_issued = true;
 
 			if (throw_error) {
-				mavlink_log_critical(_mavlink_log_pub, "Rejecting mission: no home pos, waypoint %d uses relative altitude.", i + 1);
+				mavlink_log_critical(_mavlink_log_pub, "Rejecting mission: no home pos, WP %d uses rel alt.", i + 1);
 				return false;
 
 			} else	{
-				mavlink_log_critical(_mavlink_log_pub, "Warning: No home position, waypoint %d uses relative altitude.", i + 1);
+				mavlink_log_critical(_mavlink_log_pub, "Warning: no home pos, WP %d uses rel alt.", i + 1);
 				return true;
 			}
 		}
@@ -278,7 +278,7 @@ bool MissionFeasibilityChecker::checkMissionItemValidity(dm_item_t dm_current, s
 		    missionitem.nav_cmd != NAV_CMD_DO_SET_CAM_TRIGG_DIST &&
 		    missionitem.nav_cmd != NAV_CMD_DO_VTOL_TRANSITION) {
 
-			mavlink_log_critical(_mavlink_log_pub, "Rejecting mission item %i: unsupported command: %d.", (int)(i + 1),
+			mavlink_log_critical(_mavlink_log_pub, "Rejecting mission item %i unsupported command: %d.", (int)(i + 1),
 					     (int)missionitem.nav_cmd);
 			return false;
 		}
@@ -288,7 +288,7 @@ bool MissionFeasibilityChecker::checkMissionItemValidity(dm_item_t dm_current, s
 		    i == 0 &&
 		    condition_landed) {
 
-			mavlink_log_critical(_mavlink_log_pub, "Rejecting mission that starts with LAND command while vehicle is landed.");
+			mavlink_log_critical(_mavlink_log_pub, "Mission rejected: starts with LAND, already landed.");
 			return false;
 		}
 
@@ -343,7 +343,7 @@ bool MissionFeasibilityChecker::checkFixedWingLanding(dm_item_t dm_current, size
 
 						} else {
 							/* Landing waypoint is above altitude of slope at the given waypoint distance */
-							mavlink_log_critical(_mavlink_log_pub, "Landing: last waypoint too high/too close.");
+							mavlink_log_critical(_mavlink_log_pub, "Landing: last waypoint too high or too close.");
 							mavlink_log_critical(_mavlink_log_pub, "Move down to %.1fm or move further away by %.1fm.",
 									     (double)(slope_alt_req),
 									     (double)(wp_distance_req - wp_distance));
