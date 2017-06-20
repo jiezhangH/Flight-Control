@@ -177,14 +177,14 @@ static bool imuConsistencyCheck(orb_advert_t *mavlink_log_pub, bool checkAcc, bo
 	if (checkAcc) {
 		if (sensors.accel_inconsistency_m_s_s > test_limit) {
 			if (report_status) {
-				mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: ACCELEROMETERS INCONSISTENT - CHECK CALIBRATION.");
+				mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: ACCELS INCONSISTENT - CHECK CAL.");
 			}
 			success = false;
 			goto out;
 
 		} else if (sensors.accel_inconsistency_m_s_s > test_limit * 0.5f) {
 			if (report_status) {
-				mavlink_log_info(mavlink_log_pub, "PREFLIGHT ADVICE: ACCELEROMETERS INCONSISTENT - CHECK CALIBRATION.");
+				mavlink_log_info(mavlink_log_pub, "PREFLIGHT ADVICE: ACCELS INCONSISTENT - CHECK CAL.");
 
 			}
 		}
@@ -194,14 +194,14 @@ static bool imuConsistencyCheck(orb_advert_t *mavlink_log_pub, bool checkAcc, bo
 	if (checkGyro) {
 		if (sensors.gyro_inconsistency_rad_s > test_limit) {
 			if (report_status) {
-				mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: GYROS INCONSISTENT - CHECK CALIBRATION.");
+				mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: GYROS INCONSISTENT - CHECK CAL.");
 			}
 			success = false;
 			goto out;
 
 		} else if (sensors.gyro_inconsistency_rad_s > test_limit * 0.5f) {
 			if (report_status) {
-				mavlink_log_info(mavlink_log_pub, "PREFLIGHT ADVICE: GYROS INCONSISTENT - CHECK CALIBRATION.");
+				mavlink_log_info(mavlink_log_pub, "PREFLIGHT ADVICE: GYROS INCONSISTENT - CHECK CAL.");
 
 			}
 		}
@@ -262,7 +262,7 @@ static bool accelerometerCheck(orb_advert_t *mavlink_log_pub, unsigned instance,
 
 			if (accel_magnitude < 4.0f || accel_magnitude > 15.0f /* m/s^2 */) {
 				if (report_fail) {
-					mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: ACCELEROMETER RANGE, hold still on arming.");
+					mavlink_log_critical(mavlink_log_pub, "PREFLIGHT FAIL: ACCEL RANGE, hold still on arming.");
 				}
 				/* this is frickin' fatal */
 				success = false;
