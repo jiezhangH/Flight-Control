@@ -501,7 +501,7 @@ transition_result_t hil_state_transition(hil_state_t new_state, orb_advert_t sta
 		switch (new_state) {
 		case vehicle_status_s::HIL_STATE_OFF:
 			/* we're in HIL and unexpected things can happen if we disable HIL now */
-			mavlink_log_critical(mavlink_log_pub, "Not switching off HIL (safety).");
+			mavlink_log_critical(mavlink_log_pub, "Not switching off HIL as safety precaution.");
 			ret = TRANSITION_DENIED;
 			break;
 
