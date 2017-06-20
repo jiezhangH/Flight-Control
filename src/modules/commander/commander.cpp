@@ -1189,7 +1189,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 
 				// switch to AUTO_MISSION and ARM
 				if ((TRANSITION_DENIED != main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_MISSION, main_state_prev, &status_flags, &internal_state))
-					&& (TRANSITION_DENIED != arm_disarm(true, &mavlink_log_pub, "mission start command"))) {
+					&& (TRANSITION_DENIED != arm_disarm(true, &mavlink_log_pub, "Mission start command."))) {
 
 					cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
 				} else {
@@ -2695,7 +2695,7 @@ int commander_thread_main(int argc, char *argv[])
 						// It is normal to take over with sticks after takeoff and loiter
 						break;
 					case commander_state_s::MAIN_STATE_AUTO_RTL:
-						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, aborted return to launch.");
+						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, aborted RTL.");
 						break;
 					case commander_state_s::MAIN_STATE_AUTO_MISSION:
 						mavlink_log_critical(&mavlink_log_pub, "Returned control to pilot, paused mission.");
@@ -2823,7 +2823,7 @@ int commander_thread_main(int argc, char *argv[])
 						internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE &&
 						!arm_switch_to_disarm_transition &&
 						!land_detector.landed) {
-					print_reject_arm("NOT DISARMING: Not in manual mode or landed yet.");
+					print_reject_arm("NOT DISARMING: not in manual mode or landed yet.");
 
 				} else if ((stick_off_counter == rc_arm_hyst && stick_on_counter < rc_arm_hyst) || arm_switch_to_disarm_transition) {
 					/* disarm to STANDBY if ARMED or to STANDBY_ERROR if ARMED_ERROR */
