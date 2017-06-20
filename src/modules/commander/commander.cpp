@@ -294,7 +294,7 @@ void get_circuit_breaker_params();
 
 void check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool *valid_out, bool *changed);
 
-transition_result_t set_main_state_rc(struct vehicle_status_s *status, const bool force);
+transition_result_t set_main_state_rc(struct vehicle_status_s *status);
 
 void set_control_mode();
 
@@ -2941,7 +2941,7 @@ int commander_thread_main(int argc, char *argv[])
 
 			/* evaluate the main state machine according to mode switches */
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
-			transition_result_t main_res = set_main_state_rc(&status, false);
+			transition_result_t main_res = set_main_state_rc(&status);
 
 			/* store last position lock state */
 			status_flags.condition_last_global_position_valid = status_flags.condition_global_position_valid;
@@ -3100,23 +3100,6 @@ int commander_thread_main(int argc, char *argv[])
 			if (status.rc_signal_lost && (internal_state.main_state == commander_state_s::MAIN_STATE_MANUAL)
 				&& status_flags.condition_home_position_valid) {
 				(void)main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LOITER, main_state_prev, &status_flags, &internal_state);
-			}
-
-			if (!status.rc_signal_lost){
-				/* evaluate the main state machine according to mode switches */
-				transition_result_t main_res = set_main_state_rc(&status, true);
-
-				/* store last position lock state */
-				status_flags.condition_last_global_position_valid = status_flags.condition_global_position_valid;
-
-				/* check if transition was successful */
-				if (main_res == TRANSITION_CHANGED) {
-					main_state_changed = true;
-
-				} else if (main_res == TRANSITION_DENIED) {
-					/* DENIED here indicates bug in the commander */
-					mavlink_log_critical(&mavlink_log_pub, "Not able to auto switch to Switch-mode");
-				}
 			}
 		}
 
@@ -3559,7 +3542,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 }
 
 transition_result_t
-set_main_state_rc(struct vehicle_status_s *status_local, const bool force)
+set_main_state_rc(struct vehicle_status_s *status_local)
 {
 	/* set main state according to RC switches */
 	transition_result_t res = TRANSITION_DENIED;
