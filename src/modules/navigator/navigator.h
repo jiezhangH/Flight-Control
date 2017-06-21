@@ -64,6 +64,7 @@
 #include "loiter.h"
 #include "takeoff.h"
 #include "land.h"
+#include "descend.h"
 #include "rtl.h"
 #include "datalinkloss.h"
 #include "enginefailure.h"
@@ -75,7 +76,7 @@
 /**
  * Number of navigation modes that need on_active/on_inactive calls
  */
-#define NAVIGATOR_MODE_ARRAY_SIZE 10
+#define NAVIGATOR_MODE_ARRAY_SIZE 11
 
 class Navigator : public control::SuperBlock
 {
@@ -294,6 +295,7 @@ private:
 	Loiter		_loiter;			/**< class that handles loiter */
 	Takeoff		_takeoff;			/**< class for handling takeoff commands */
 	Land		_land;			/**< class for handling land commands */
+	Descend		_descend;			/**< class for handling descend commands */
 	RTL 		_rtl;				/**< class that handles RTL */
 	RCLoss 		_rcLoss;				/**< class that handles RTL according to
 							  OBC rules (rc loss mode) */

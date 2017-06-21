@@ -149,6 +149,7 @@ Navigator::Navigator() :
 	_loiter(this, "LOI"),
 	_takeoff(this, "TKF"),
 	_land(this, "LND"),
+	_descend(this, "DSC"),
 	_rtl(this, "RTL"),
 	_rcLoss(this, "RCL"),
 	_dataLinkLoss(this, "DLL"),
@@ -176,7 +177,8 @@ Navigator::Navigator() :
 	_navigation_mode_array[6] = &_rcLoss;
 	_navigation_mode_array[7] = &_takeoff;
 	_navigation_mode_array[8] = &_land;
-	_navigation_mode_array[9] = &_follow_target;
+	_navigation_mode_array[9] = &_descend;
+	_navigation_mode_array[10] = &_follow_target;
 
 	updateParams();
 }
@@ -643,7 +645,7 @@ Navigator::task_main()
 
 		case vehicle_status_s::NAVIGATION_STATE_DESCEND:
 			_pos_sp_triplet_published_invalid_once = false;
-			_navigation_mode = &_land;
+			_navigation_mode = &_descend;
 			break;
 
 		case vehicle_status_s::NAVIGATION_STATE_AUTO_RTGS:

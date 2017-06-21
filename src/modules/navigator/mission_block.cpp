@@ -774,6 +774,41 @@ MissionBlock::set_land_item(struct mission_item_s *item, bool at_current_locatio
 }
 
 void
+MissionBlock::set_descend_item(struct mission_item_s *item)
+{
+
+	/* VTOL transition to RW before landing */
+	if (_navigator->get_vstatus()->is_vtol && !_navigator->get_vstatus()->is_rotary_wing &&
+	    _param_force_vtol.get() == 1) {
+		struct vehicle_command_s cmd = {};
+		cmd.command = NAV_CMD_DO_VTOL_TRANSITION;
+		cmd.param1 = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+
+		if (_cmd_pub != nullptr) {
+			orb_publish(ORB_ID(vehicle_command), _cmd_pub, &cmd);
+
+		} else {
+			_cmd_pub = orb_advertise_queue(ORB_ID(vehicle_command), &cmd, vehicle_command_s::ORB_QUEUE_LENGTH);
+		}
+	}
+
+	/* set the descend item */
+	item->nav_cmd = NAV_CMD_LAND;
+	//lat/lon are not being used as descend implies no valid position
+	item->lat = _navigator->get_global_position()->lat;
+	item->lon = _navigator->get_global_position()->lon;
+	item->yaw = _navigator->get_global_position()->yaw;
+	item->altitude = 0;
+	item->altitude_is_relative = false;
+	item->loiter_radius = _navigator->get_loiter_radius();
+	item->acceptance_radius = _navigator->get_acceptance_radius();
+	item->time_inside = 0.0f;
+	item->autocontinue = true;
+	item->origin = ORIGIN_ONBOARD;
+	item->deploy_gear = true;
+}
+
+void
 MissionBlock::set_current_position_item(struct mission_item_s *item)
 {
 	*item = {};
