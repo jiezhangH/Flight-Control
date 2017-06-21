@@ -101,7 +101,6 @@ PARAM_DEFINE_FLOAT(BAT_LOW_THR, 0.15f);
  * @max 0.1
  * @decimal 2
  * @increment 0.01
- * @reboot_required true
  */
 PARAM_DEFINE_FLOAT(BAT_CRIT_THR, 0.07f);
 
@@ -118,7 +117,6 @@ PARAM_DEFINE_FLOAT(BAT_CRIT_THR, 0.07f);
  * @max 0.07
  * @decimal 2
  * @increment 0.01
- * @reboot_required true
  */
 PARAM_DEFINE_FLOAT(BAT_EMERGEN_THR, 0.05f);
 
