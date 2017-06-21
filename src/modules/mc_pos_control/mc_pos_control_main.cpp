@@ -915,11 +915,19 @@ MulticopterPositionControl::poll_subscriptions()
 
 		/* we need either a valid position setpoint or a valid velocity setpoint */
 		_pos_sp_triplet.current.valid = false;
+		_pos_sp_triplet.previous.valid = false;
 
 		if (PX4_ISFINITE(_pos_sp_triplet.current.lat) && PX4_ISFINITE(_pos_sp_triplet.current.lon)
 		    && PX4_ISFINITE(_pos_sp_triplet.current.alt)) {
 			_pos_sp_triplet.current.valid = true;
 		}
+
+		if (PX4_ISFINITE(_pos_sp_triplet.previous.lat) && PX4_ISFINITE(_pos_sp_triplet.previous.lon)
+		    && PX4_ISFINITE(_pos_sp_triplet.previous.alt)) {
+			_pos_sp_triplet.previous.valid = true;
+		}
+
+
 	}
 
 	orb_check(_home_pos_sub, &updated);
@@ -2481,6 +2489,7 @@ MulticopterPositionControl::do_control(float dt)
 		 * controller will not use the old triplets but waits until triplets
 		 * have been updated */
 		_pos_sp_triplet.current.valid = false;
+		_pos_sp_triplet.previous.valid = false;
 
 		_hold_offboard_xy = false;
 		_hold_offboard_z = false;
