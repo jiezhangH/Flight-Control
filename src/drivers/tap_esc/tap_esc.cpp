@@ -920,7 +920,7 @@ TAP_ESC::cycle()
 		int parse_ret_val = _tunes.get_next_tune(frequency, duration, silence);
 
 		// the return value is 0 if one tone need to be played and 1 if the sequence needs to continue
-		if (parse_ret_val >= 0) {
+		if (parse_ret_val >= 0 && frequency > 0) {
 			esc_tune_packet.frequency = frequency;
 			esc_tune_packet.duration_ms = (uint16_t)(duration / 1000); // convert to ms
 			esc_tune_packet.strength = _tune.strength;
