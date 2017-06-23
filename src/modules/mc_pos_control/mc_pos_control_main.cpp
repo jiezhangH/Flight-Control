@@ -138,8 +138,9 @@ private:
 	static constexpr uint64_t FORWARD_MOVEMENT_TRIGGER_TIME_US = 500000;
 
 	bool		_task_should_exit = false;			/**<true if task should exit */
-	bool		_gear_state_initialized = false;	/**<true if the gear state has been initialized */
-	bool    	 _was_armed = false;        		/**< true if the pre state was armed */
+	bool		_gear_state_initialized = false;		/**<true if the gear state has been initialized */
+	uint8_t		_gear_switch_prev = manual_control_setpoint_s::SWITCH_POS_NONE;		/**< Last state of the gear switch */
+	bool		_was_armed = false;		 		/**< true if the pre state was armed */
 	bool 		_reset_pos_sp = true;  				/**<true if position setpoint needs a reset */
 	bool 		_reset_alt_sp = true; 				/**<true if altitude setpoint needs a reset */
 	bool 		_do_reset_alt_pos_flag = true; 		/**< TODO: check if we need this */
@@ -1156,9 +1157,10 @@ MulticopterPositionControl::apply_gear_switch()
 		_gear_state_initialized = true;
 	}
 
-	if (_gear_state_initialized) {
+	if (_gear_state_initialized && (_gear_switch_prev != _manual.gear_switch)) {
 		_att_sp.landing_gear = (_manual.gear_switch == manual_control_setpoint_s::SWITCH_POS_ON) ?
 				       vehicle_attitude_setpoint_s::LANDING_GEAR_UP : vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN;
+		_gear_switch_prev = _manual.gear_switch;
 	}
 }
 
