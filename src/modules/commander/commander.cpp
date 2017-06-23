@@ -2317,6 +2317,7 @@ int commander_thread_main(int argc, char *argv[])
 					}
 
 					status_changed = true;
+
 				} else if (!status_flags.usb_connected &&
 					   battery.warning == battery_status_s::BATTERY_WARNING_CRITICAL &&
 					   !critical_battery_voltage_actions_done) {
@@ -2713,9 +2714,8 @@ int commander_thread_main(int argc, char *argv[])
 
 		/*The relative altitude of the home point */
 		float current_relative_alt = global_position.alt - _home.alt;
-
 		if(gohome_land_iterrupt) {
-			if((pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
+			if(!emergency_battery_voltage_actions_done && (pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL)) {
 				if((fabsf(sp_man.x - 0.f) > min_interrupt_stick_change ||
@@ -3111,9 +3111,11 @@ int commander_thread_main(int argc, char *argv[])
 			orb_copy(ORB_ID(vehicle_command), cmd_sub, &cmd);
 
 			/* handle it */
-			if (handle_command(&status, &safety, &cmd, &armed, &_home, &global_position, &local_position,
+			if (!warning_action_on && !critical_battery_voltage_actions_done && !emergency_battery_voltage_actions_done){
+				if (handle_command(&status, &safety, &cmd, &armed, &_home, &global_position, &local_position,
 					&attitude, &home_pub, &command_ack_pub, &command_ack, &_roi, &roi_pub)) {
-				status_changed = true;
+					status_changed = true;
+				}
 			}
 		}
 
