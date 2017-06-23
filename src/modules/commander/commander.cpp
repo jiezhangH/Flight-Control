@@ -2822,7 +2822,7 @@ int commander_thread_main(int argc, char *argv[])
 						internal_state.main_state != commander_state_s::MAIN_STATE_STAB &&
 						internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE &&
 						!arm_switch_to_disarm_transition &&
-						!land_detector.landed) {
+						!(land_detector.landed || (arm_button_pressed && land_detector.ground_contact))) {
 					print_reject_arm("NOT DISARMING: not in manual mode or landed yet.");
 
 				} else if ((stick_off_counter == rc_arm_hyst && stick_on_counter < rc_arm_hyst) || arm_switch_to_disarm_transition) {
