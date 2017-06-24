@@ -3569,7 +3569,7 @@ set_main_state_rc(struct vehicle_status_s *status_local, const bool force)
 	// feature, just in case offboard control goes crazy.
 
 	/* manual setpoint has not updated, do not re-evaluate it */
-	if (force || (!(!status_flags.condition_last_global_position_valid &&
+	if (!force && (!(!status_flags.condition_last_global_position_valid &&
 		status_flags.condition_global_position_valid) &&
 		!(!status_flags.condition_last_home_position_valid && status_flags.condition_home_position_valid)
 		&& (((_last_sp_man.timestamp != 0) && (_last_sp_man.timestamp == sp_man.timestamp)) ||
