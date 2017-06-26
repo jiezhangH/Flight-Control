@@ -3123,11 +3123,9 @@ int commander_thread_main(int argc, char *argv[])
 			orb_copy(ORB_ID(vehicle_command), cmd_sub, &cmd);
 
 			/* handle it */
-			if (!warning_action_on && !critical_battery_voltage_actions_done && !emergency_battery_voltage_actions_done){
-				if (handle_command(&status, &safety, &cmd, &armed, &_home, &global_position, &local_position,
-					&attitude, &home_pub, &command_ack_pub, &command_ack, &_roi, &roi_pub)) {
-					status_changed = true;
-				}
+			if (handle_command(&status, &safety, &cmd, &armed, &_home, &global_position, &local_position,
+				&attitude, &home_pub, &command_ack_pub, &command_ack, &_roi, &roi_pub)) {
+				status_changed = true;
 			}
 		}
 
