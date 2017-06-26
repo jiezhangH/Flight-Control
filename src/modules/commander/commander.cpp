@@ -2944,7 +2944,6 @@ int commander_thread_main(int argc, char *argv[])
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
 			transition_result_t main_res = set_main_state_rc(&status);
 
-
 			/* store last position lock state */
 			status_flags.condition_last_global_position_valid = status_flags.condition_global_position_valid;
 
