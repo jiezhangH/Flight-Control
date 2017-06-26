@@ -149,9 +149,9 @@ then
 	param set RTL_LAND_DELAY 2.5
 
 	#
-	# Mission settings
+	# Vehicle model settings
 	#
-	param set MIS_ALT_MAX 100.0
+	param set LNDMC_ALT_MAX 100.0
 
 	#
 	# Maximum tilt angle
