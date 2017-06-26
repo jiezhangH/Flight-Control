@@ -219,14 +219,14 @@ Battery::estimateRemaining(float voltage_v, float current_a, float throttle_norm
 void
 Battery::determineWarning()
 {
-	// Smallest values must come first
-	if (_remaining < _param_emergency_thr.get()) {
+	// propagate warning state only if the state is higher, otherwise remain in current waringin state
+	if (_remaining < _param_emergency_thr.get() || (_warning == battery_status_s::BATTERY_WARNING_EMERGENCY)) {
 		_warning = battery_status_s::BATTERY_WARNING_EMERGENCY;
 
-	} else if (_remaining < _param_crit_thr.get()) {
+	} else if (_remaining < _param_crit_thr.get() || (_warning == battery_status_s::BATTERY_WARNING_CRITICAL)) {
 		_warning = battery_status_s::BATTERY_WARNING_CRITICAL;
 
-	} else if (_remaining < _param_low_thr.get()) {
+	} else if (_remaining < _param_low_thr.get() || (_warning == battery_status_s::BATTERY_WARNING_LOW)) {
 		_warning = battery_status_s::BATTERY_WARNING_LOW;
 	}
 }
