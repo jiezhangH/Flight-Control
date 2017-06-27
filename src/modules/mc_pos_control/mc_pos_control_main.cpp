@@ -2534,7 +2534,10 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		}
 	}
 
-	limit_altitude();
+	/* in auto the setpoint is already limited by the navigator */
+	if (!_control_mode.flag_control_auto_enabled) {
+		limit_altitude();
+	}
 
 	if (_run_alt_control) {
 		if (PX4_ISFINITE(_pos_sp(2))) {
