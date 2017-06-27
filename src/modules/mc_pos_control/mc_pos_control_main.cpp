@@ -2236,15 +2236,18 @@ void MulticopterPositionControl::control_auto(float dt)
 							vel_sp_along_track = vel_sp_along_track_prev;
 						}
 
-						/* make sure that vel_sp_along track is at least min */
-						vel_sp_along_track = (vel_sp_along_track < vel_close) ? vel_close : vel_sp_along_track;
-
 						/* if we are close to target and the previous velocity setpoints was smaller than
 						 * vel_sp_along_track, then take over the previous one
 						 * this ensures smoothness since we anyway want to slow down
 						 */
-						vel_sp_along_track = (vel_sp_along_track > vel_sp_along_track_prev) ?
-								     vel_sp_along_track_prev : vel_sp_along_track;
+						if ((vel_sp_along_track_prev < vel_sp_along_track) && (vel_sp_along_track * vel_sp_along_track_prev > 0.0f)
+						    && (vel_sp_along_track_prev > vel_close)) {
+							vel_sp_along_track = vel_sp_along_track_prev;
+						}
+
+						/* make sure that vel_sp_along track is at least min */
+						vel_sp_along_track = (vel_sp_along_track < vel_close) ? vel_close : vel_sp_along_track;
+
 
 					} else {
 
@@ -2254,10 +2257,9 @@ void MulticopterPositionControl::control_auto(float dt)
 
 						/* since we want to slow down take over previous velocity setpoint along track if it was lower but ensure its not zero */
 						if ((vel_sp_along_track_prev < vel_sp_along_track) && (vel_sp_along_track * vel_sp_along_track_prev > 0.0f)
-						    && (vel_sp_along_track > 0.1f)) {
+						    && (vel_sp_along_track_prev > 0.5f)) {
 							vel_sp_along_track = vel_sp_along_track_prev;
 						}
-
 					}
 				}
 
