@@ -1118,7 +1118,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 	case vehicle_command_s::VEHICLE_CMD_NAV_TAKEOFF: {
 
 			/* Refuse to takeoff when landed and switch is in rtl position */
-			if (sp_man.return_switch){
+			if (sp_man.return_switch || _desired_flight_mode == commander_state_s::MAIN_STATE_AUTO_RTL){
 				mavlink_log_critical(&mavlink_log_pub, "Takeoff denied, switch out of RTL.");
 				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
 
