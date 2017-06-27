@@ -155,6 +155,9 @@ RTL::set_rtl_item()
 						  _navigator->get_home_position()->lon,
 						  _navigator->get_global_position()->lat, _navigator->get_global_position()->lon);
 
+			/* limit altitude to rtl max */
+			climb_alt = _navigator->get_home_position()->alt + _param_return_alt.get();
+
 			// do also not reduce altitude if already higher
 			climb_alt = math::max(climb_alt, _navigator->get_global_position()->alt);
 
