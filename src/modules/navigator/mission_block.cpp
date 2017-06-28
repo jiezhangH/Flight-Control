@@ -723,6 +723,8 @@ MissionBlock::set_takeoff_item(struct mission_item_s *item, float abs_altitude, 
 	item->pitch_min = min_pitch;
 	item->autocontinue = false;
 	item->origin = ORIGIN_ONBOARD;
+	item->deploy_gear = false;
+
 }
 
 void
