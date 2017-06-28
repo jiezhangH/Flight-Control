@@ -255,6 +255,11 @@ static float avionics_power_rail_voltage;		// voltage of the avionics power rail
 
 static bool can_arm_without_gps = false;
 
+bool low_battery_voltage_actions_done = false;
+bool critical_battery_voltage_actions_done = false;
+bool emergency_battery_voltage_actions_done = false;
+int32_t low_bat_action = 0;
+
 
 /**
  * The daemon app only briefly exists to start
@@ -764,6 +769,15 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 			/* set HIL state */
 			hil_state_t new_hil_state = (base_mode & VEHICLE_MODE_FLAG_HIL_ENABLED) ? vehicle_status_s::HIL_STATE_ON : vehicle_status_s::HIL_STATE_OFF;
 			transition_result_t hil_ret = hil_state_transition(new_hil_state, status_pub, status_local, &mavlink_log_pub);
+
+			bool no_mode_switch_low_battery;
+			no_mode_switch_low_battery = !critical_battery_voltage_actions_done || (low_bat_action == 0 || (custom_main_mode == PX4_CUSTOM_MAIN_MODE_MANUAL
+				|| custom_sub_mode == PX4_CUSTOM_SUB_MODE_AUTO_LAND || custom_sub_mode == PX4_CUSTOM_SUB_MODE_AUTO_RTL) );
+
+			if (!no_mode_switch_low_battery) {
+				main_ret = TRANSITION_NOT_CHANGED;
+				return true;
+			}
 
 			// We ignore base_mode & VEHICLE_MODE_FLAG_SAFETY_ARMED because
 			// the command VEHICLE_CMD_COMPONENT_ARM_DISARM should be used
@@ -1555,10 +1569,6 @@ int commander_thread_main(int argc, char *argv[])
 	unsigned stick_off_counter = 0;
 	unsigned stick_on_counter = 0;
 
-	bool low_battery_voltage_actions_done = false;
-	bool critical_battery_voltage_actions_done = false;
-	bool emergency_battery_voltage_actions_done = false;
-
 	bool status_changed = true;
 	bool param_init_forced = true;
 
@@ -1762,7 +1772,6 @@ int commander_thread_main(int argc, char *argv[])
 	int autosave_params; /**< Autosave of parameters enabled/disabled, loaded from parameter */
 
 	int32_t disarm_when_landed = 0;
-	int32_t low_bat_action = 0;
 
 	/* check which state machines for changes, clear "changed" flag */
 	bool arming_state_changed = false;
@@ -2942,7 +2951,8 @@ int commander_thread_main(int argc, char *argv[])
 
 			/* evaluate the main state machine according to mode switches */
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
-			transition_result_t main_res = set_main_state_rc(&status);
+			transition_result_t main_res = set_main_state_rc(&status, false);
+
 
 			/* store last position lock state */
 			status_flags.condition_last_global_position_valid = status_flags.condition_global_position_valid;
@@ -3600,6 +3610,17 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 
 	control_mode.flag_control_updated = false;
 	_last_sp_man = sp_man;
+
+	/*do not allow mode switching if the battery is critical unless switching to MANUAL (6) or RTL (1). If COM_LOW_BAT_ACT is set to Warning (0)
+	* always allow mode switching*/
+	bool no_mode_switch_low_battery;
+	no_mode_switch_low_battery = !critical_battery_voltage_actions_done || (low_bat_action == 0) || (sp_man.mode_slot == manual_control_setpoint_s::MODE_SLOT_6
+								|| sp_man.mode_slot == manual_control_setpoint_s::MODE_SLOT_1) ;
+
+	if (!no_mode_switch_low_battery) {
+		res = TRANSITION_NOT_CHANGED;
+		return res;
+	}
 
 	/* offboard switch overrides main switch */
 	if (sp_man.offboard_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
