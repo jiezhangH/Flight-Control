@@ -3101,6 +3101,17 @@ int commander_thread_main(int argc, char *argv[])
 				&& status_flags.condition_home_position_valid) {
 				(void)main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LOITER, main_state_prev, &status_flags, &internal_state);
 			}
+
+			if (!status.rc_signal_lost) {
+					if (was_armed) {
+						transition_result_t res_auto = main_state_transition(&status, _desired_flight_mode, main_state_prev, &status_flags, &internal_state);
+						if (res_auto == TRANSITION_CHANGED) {
+							 mavlink_log_critical(&mavlink_log_pub, "Auto switch to Switch-mode");
+						} else if (res_auto == TRANSITION_DENIED) {
+							 mavlink_log_critical(&mavlink_log_pub, "Not able to auto switch to Switch-mode");
+						}
+					}
+				}
 		}
 
 		/* handle commands last, as the system needs to be updated to handle them */
