@@ -3104,7 +3104,7 @@ int commander_thread_main(int argc, char *argv[])
 			}
 
 			if (!status.rc_signal_lost) {
-					if (was_armed) {
+					if (was_armed && (internal_state.main_state != _desired_flight_mode)) {
 						transition_result_t res_auto = main_state_transition(&status, _desired_flight_mode, main_state_prev, &status_flags, &internal_state);
 						if (res_auto == TRANSITION_CHANGED) {
 							 mavlink_log_critical(&mavlink_log_pub, "Auto switch to Switch-mode");
