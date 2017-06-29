@@ -1121,6 +1121,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 			if (sp_man.return_switch || _desired_flight_mode == commander_state_s::MAIN_STATE_AUTO_RTL){
 				mavlink_log_critical(&mavlink_log_pub, "Takeoff denied, switch out of RTL.");
 				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
+				main_state_transition(&status, _desired_flight_mode, main_state_prev, &status_flags, &internal_state);
 
 			}
 			else if (TRANSITION_CHANGED == main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_TAKEOFF, main_state_prev, &status_flags, &internal_state)) {
