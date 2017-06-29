@@ -770,12 +770,16 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 			hil_state_t new_hil_state = (base_mode & VEHICLE_MODE_FLAG_HIL_ENABLED) ? vehicle_status_s::HIL_STATE_ON : vehicle_status_s::HIL_STATE_OFF;
 			transition_result_t hil_ret = hil_state_transition(new_hil_state, status_pub, status_local, &mavlink_log_pub);
 
-			bool no_mode_switch_low_battery = critical_battery_voltage_actions_done && low_bat_action != 0 && custom_main_mode != PX4_CUSTOM_MAIN_MODE_MANUAL
-				&& custom_sub_mode != PX4_CUSTOM_SUB_MODE_AUTO_LAND && custom_sub_mode != PX4_CUSTOM_SUB_MODE_AUTO_RTL;
+			/* If parameter COM_LOW_BAT_ACT configures an automatic low battery reaction (not only Warning 0) prevent switching out of it unless switching to MANUAL, AUTO_RTL or AUTO_LAND. */
+			bool no_mode_switch_low_battery = low_bat_action != 0 && critical_battery_voltage_actions_done &&
+					custom_main_mode != PX4_CUSTOM_MAIN_MODE_MANUAL &&
+					custom_sub_mode != PX4_CUSTOM_SUB_MODE_AUTO_LAND &&
+					custom_sub_mode != PX4_CUSTOM_SUB_MODE_AUTO_RTL;
 
 			if (no_mode_switch_low_battery) {
-				main_ret = TRANSITION_NOT_CHANGED;
-				return true;
+				main_ret = TRANSITION_DENIED;
+				mavlink_log_critical(&mavlink_log_pub, "Cannot switch out of low battery reaction.");
+				break;
 			}
 
 			// We ignore base_mode & VEHICLE_MODE_FLAG_SAFETY_ARMED because
@@ -3634,9 +3638,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 
 			/* fallback to LOITER if home position not set */
 			res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_LOITER, main_state_prev, &status_flags, &internal_state);
-		}
-
-		if (res != TRANSITION_DENIED) {
+		} else {
 			/* changed successfully or already in this state */
 			return res;
 		}
@@ -3655,13 +3657,13 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 		int new_mode = _flight_mode_slots[sp_man.mode_slot];
 		_desired_flight_mode = _flight_mode_slots[sp_man.mode_slot];
 
-		/*do not allow mode switching if the battery is critical unless switching to MANUAL, AUTO_RTL or AUTO_LAND. If COM_LOW_BAT_ACT is set to Warning (0)
-		* always allow mode switching*/
-		bool no_mode_switch_low_battery = critical_battery_voltage_actions_done && low_bat_action != 0 && new_mode != commander_state_s::MAIN_STATE_MANUAL
-								&& new_mode !=  commander_state_s::MAIN_STATE_AUTO_LAND && new_mode != commander_state_s::MAIN_STATE_AUTO_RTL;
+		/* If parameter COM_LOW_BAT_ACT configures an automatic low battery reaction (not only Warning 0) prevent switching out of it unless switching to MANUAL, AUTO_RTL or AUTO_LAND. */
+		bool no_mode_switch_low_battery = low_bat_action != 0 && critical_battery_voltage_actions_done &&
+				new_mode != commander_state_s::MAIN_STATE_MANUAL &&
+				new_mode !=  commander_state_s::MAIN_STATE_AUTO_LAND &&
+				new_mode != commander_state_s::MAIN_STATE_AUTO_RTL;
 
 		if (no_mode_switch_low_battery) {
-			res = TRANSITION_NOT_CHANGED;
 			return res;
 		}
 
