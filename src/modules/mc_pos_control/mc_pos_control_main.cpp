@@ -331,9 +331,6 @@ private:
 	float _yaw;				/**< yaw angle (euler) */
 	float _yaw_takeoff;	/**< home yaw angle present when vehicle was taking off (euler) */
 	float _yaw_lock_in;
-
-	float _vel_z_lp;
-	float _acc_z_lp;
 	float _vel_max_xy;  /**< equal to vel_max except in auto mode when close to target */
 	float _acceleration_state_dependent_xy; /* acceleration limit applied in manual mode */
 	float _acceleration_state_dependent_z; /* acceleration limit applied in manual mode in z */
@@ -532,8 +529,6 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_yaw(0.0f),
 	_yaw_takeoff(0.0f),
 	_yaw_lock_in(0.0f),
-	_vel_z_lp(0),
-	_acc_z_lp(0),
 	_vel_max_xy(0.0f),
 	_acceleration_state_dependent_xy(0.0f),
 	_acceleration_state_dependent_z(0.0f),
@@ -2774,11 +2769,6 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 
 	float tilt_max = _params.tilt_max_air;
 	float thr_max = _params.thr_max;
-	/* filter vel_z over 1/8sec */
-	_vel_z_lp = _vel_z_lp * (1.0f - dt * 8.0f) + dt * 8.0f * _vel(2);
-	/* filter vel_z change over 1/8sec */
-	float vel_z_change = (_vel(2) - _vel_prev(2)) / dt;
-	_acc_z_lp = _acc_z_lp * (1.0f - dt * 8.0f) + dt * 8.0f * vel_z_change;
 
 	// We can only run the control if we're already in-air, have a takeoff setpoint,
 	// or if we're in offboard control.
@@ -2798,59 +2788,6 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 		/* adjust limits for landing mode */
 		/* limit max tilt and min lift when landing */
 		tilt_max = _params.tilt_max_land;
-
-		if (thr_min < 0.0f) {
-			thr_min = 0.0f;
-		}
-
-		/* descend stabilized, we're landing */
-		if (!_in_landing && !_lnd_reached_ground
-		    && (float)fabsf(_acc_z_lp) < 0.1f
-		    && _vel_z_lp > 0.6f * _params.land_speed) {
-			_in_landing = true;
-		}
-
-		float land_z_threshold = 0.1f;
-
-
-		/* assume ground, cut thrust */
-		if (_in_landing
-		    && _vel_z_lp < land_z_threshold) {
-			thr_max = 0.0f;
-			_in_landing = false;
-			_lnd_reached_ground = true;
-
-		} else if (_in_landing
-			   && _vel_z_lp < math::min(0.3f * _params.land_speed, 2.5f * land_z_threshold)) {
-			/* not on ground but with ground contact, stop position and velocity control */
-			thrust_sp(0) = 0.0f;
-			thrust_sp(1) = 0.0f;
-			_vel_sp(0) = _vel(0);
-			_vel_sp(1) = _vel(1);
-			_pos_sp(0) = _pos(0);
-			_pos_sp(1) = _pos(1);
-		}
-
-		/* once we assumed to have reached the ground always cut the thrust.
-			Only free fall detection below can revoke this
-		*/
-		if (!_in_landing && _lnd_reached_ground) {
-			thr_max = 0.0f;
-		}
-
-		/* if we suddenly fall, reset landing logic and remove thrust limit */
-		if (_lnd_reached_ground
-		    /* XXX: magic value, assuming free fall above 4m/s2 acceleration */
-		    && (_acc_z_lp > 4.0f
-			|| _vel_z_lp > 2.0f * _params.land_speed)) {
-			thr_max = _params.thr_max;
-			_in_landing = true;
-			_lnd_reached_ground = false;
-		}
-
-	} else {
-		_in_landing = false;
-		_lnd_reached_ground = false;
 	}
 
 	/* limit min lift */
