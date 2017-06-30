@@ -57,6 +57,7 @@ MulticopterLandDetector::MulticopterLandDetector() : LandDetector(),
 	_paramHandle(),
 	_params(),
 	_vehicleLocalPositionSub(-1),
+	_vehicleLocalPositionSetpointSub(-1),
 	_actuatorsSub(-1),
 	_armingSub(-1),
 	_attitudeSub(-1),
@@ -66,6 +67,7 @@ MulticopterLandDetector::MulticopterLandDetector() : LandDetector(),
 	_battery_sub(-1),
 	_v_att_sp_sub(-1),
 	_vehicleLocalPosition{},
+	_vehicleLocalPositionSetpoint{},
 	_actuators{},
 	_arming{},
 	_vehicleAttitude{},
@@ -88,12 +90,14 @@ MulticopterLandDetector::MulticopterLandDetector() : LandDetector(),
 	_paramHandle.manual_stick_down_threshold = param_find("LNDMC_MAN_DWNTHR");
 	_paramHandle.altitude_max = param_find("LNDMC_ALT_MAX");
 	_paramHandle.manual_stick_up_position_takeoff_threshold = param_find("LNDMC_POS_UPTHR");
+	_paramHandle.landSpeed = param_find("MPC_LAND_SPEED");
 }
 
 void MulticopterLandDetector::_initialize_topics()
 {
 	// subscribe to position, attitude, arming and velocity changes
 	_vehicleLocalPositionSub = orb_subscribe(ORB_ID(vehicle_local_position));
+	_vehicleLocalPositionSetpointSub = orb_subscribe(ORB_ID(vehicle_local_position_setpoint));
 	_attitudeSub = orb_subscribe(ORB_ID(vehicle_attitude));
 	_actuatorsSub = orb_subscribe(ORB_ID(actuator_controls_0));
 	_armingSub = orb_subscribe(ORB_ID(actuator_armed));
@@ -108,6 +112,7 @@ void MulticopterLandDetector::_initialize_topics()
 void MulticopterLandDetector::_update_topics()
 {
 	_orb_update(ORB_ID(vehicle_local_position), _vehicleLocalPositionSub, &_vehicleLocalPosition);
+	_orb_update(ORB_ID(vehicle_local_position_setpoint), _vehicleLocalPositionSetpointSub, &_vehicleLocalPositionSetpoint);
 	_orb_update(ORB_ID(vehicle_attitude), _attitudeSub, &_vehicleAttitude);
 	_orb_update(ORB_ID(actuator_controls_0), _actuatorsSub, &_actuators);
 	_orb_update(ORB_ID(actuator_armed), _armingSub, &_arming);
@@ -134,6 +139,7 @@ void MulticopterLandDetector::_update_params()
 	param_get(_paramHandle.manual_stick_down_threshold, &_params.manual_stick_down_threshold);
 	param_get(_paramHandle.altitude_max, &_params.altitude_max);
 	param_get(_paramHandle.manual_stick_up_position_takeoff_threshold, &_params.manual_stick_up_position_takeoff_threshold);
+	param_get(_paramHandle.landSpeed, &_params.landSpeed);
 }
 
 
@@ -236,9 +242,15 @@ bool MulticopterLandDetector::_get_ground_contact_state()
 	bool horizontalMovement = sqrtf(_vehicleLocalPosition.vx * _vehicleLocalPosition.vx
 					+ _vehicleLocalPosition.vy * _vehicleLocalPosition.vy) > _params.maxVelocity;
 
+	// if we have a valid velocity setpoint and the vehicle is demanded to go down but no vertical movement present,
+	// we then can assume that the vehicle hit ground
+	bool in_descend = _is_velocity_control_active() && (_vehicleLocalPositionSetpoint.vz >= 0.9f * _params.landSpeed);
+	bool hit_ground = in_descend && !verticalMovement;
+
 	// If pilots commands down or in auto mode and we are already below minimal thrust and we do not move down we assume ground contact
 	// TODO: we need an accelerometer based check for vertical movement for flying without GPS
-	if (manual_control_idle_or_auto && _has_low_thrust() && (!horizontalMovement || !_has_position_lock()) &&
+	if (manual_control_idle_or_auto && (_has_low_thrust() || hit_ground) && (!horizontalMovement || !_has_position_lock())
+	    &&
 	    (!verticalMovement || !_has_altitude_lock())) {
 		return true;
 	}
@@ -379,6 +391,15 @@ bool MulticopterLandDetector::_has_position_lock()
 bool MulticopterLandDetector::_has_manual_control_present()
 {
 	return _control_mode.flag_control_manual_enabled && _manual.timestamp > 0;
+}
+
+bool MulticopterLandDetector::_is_velocity_control_active()
+{
+	bool is_finite = PX4_ISFINITE(_vehicleLocalPositionSetpoint.vx) && PX4_ISFINITE(_vehicleLocalPositionSetpoint.vy)
+			 && PX4_ISFINITE(_vehicleLocalPositionSetpoint.vz);
+
+	return (_vehicleLocalPositionSetpoint.timestamp != 0) &&
+	       (hrt_elapsed_time(&_vehicleLocalPositionSetpoint.timestamp) < 500000) && is_finite;
 }
 
 bool MulticopterLandDetector::_has_low_thrust()
