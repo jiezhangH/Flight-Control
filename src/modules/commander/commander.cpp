@@ -2837,13 +2837,13 @@ int commander_thread_main(int argc, char *argv[])
 						internal_state.main_state != commander_state_s::MAIN_STATE_STAB &&
 						internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE &&
 						!arm_switch_to_disarm_transition &&
-						!(land_detector.landed || (arm_button_pressed && land_detector.ground_contact))) {
+						!(land_detector.landed || (arm_button_pressed && land_detector.maybe_landed))) {
 
 					if (!arm_button_pressed) {
 						print_reject_arm("NOT DISARMING: not in manual mode or landed yet.");
 					}
 
-				} else if ((stick_off_counter == rc_arm_hyst && stick_on_counter < rc_arm_hyst) || arm_switch_to_disarm_transition || (arm_button_pressed && land_detector.ground_contact)) {
+				} else if ((stick_off_counter == rc_arm_hyst && stick_on_counter < rc_arm_hyst) || arm_switch_to_disarm_transition || (arm_button_pressed && land_detector.maybe_landed)) {
 					/* disarm to STANDBY if ARMED or to STANDBY_ERROR if ARMED_ERROR */
 					arming_state_t new_arming_state = (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED ? vehicle_status_s::ARMING_STATE_STANDBY :
 									   vehicle_status_s::ARMING_STATE_STANDBY_ERROR);
