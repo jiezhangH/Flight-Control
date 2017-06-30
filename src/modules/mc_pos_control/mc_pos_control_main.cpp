@@ -2388,8 +2388,8 @@ void MulticopterPositionControl::control_auto(float dt)
 			_do_reset_alt_pos_flag = true;
 		}
 
-		/* for auto loiter, we consider gear switch */
-		/* ToDo: at the mode : takeoff not complete and before loiter, landing and rtl when loiter, lower gears
+		/* For most cases we want to have gears up except when being on ground. For cases not mentioned below
+		 * we do not care if gears are up or down
 		 * NOTE: it is an if else if statment */
 		bool on_ground = (_vehicle_land_detected.landed) || (_vehicle_land_detected.maybe_landed)
 				 || (_vehicle_land_detected.ground_contact);
@@ -2398,7 +2398,8 @@ void MulticopterPositionControl::control_auto(float dt)
 				       || _pos_sp_triplet.current.deploy_gear;
 
 		/* in mission put gears up, and the gear will not up at the when landed or ground_contact */
-		const bool gear_up = ((_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_MISSION)
+		const bool gear_up = (((_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_MISSION) &&
+				       !(_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_TAKEOFF))
 				      || (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_AUTO_RTL));
 
 		if (gear_down) {
