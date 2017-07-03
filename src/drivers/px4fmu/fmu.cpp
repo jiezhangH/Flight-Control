@@ -89,6 +89,7 @@
 #include <uORB/topics/adc_report.h>
 #include <uORB/topics/multirotor_motor_limits.h>
 #include <uORB/topics/vehicle_land_detected.h>
+#include <uORB/topics/led_control.h>
 
 #ifdef HRT_PPM_CHANNEL
 # include <systemlib/ppm_decode.h>
@@ -176,6 +177,14 @@ private:
 		"ST24"
 	};
 
+	enum class BindingStates {
+		INIT = 0,
+		START,
+		WAIT,
+		END,
+		BOUND
+	};
+
 	hrt_abstime _rc_scan_begin = 0;
 	bool _rc_scan_locked = true;
 	bool _report_lock = true;
@@ -202,6 +211,7 @@ private:
 	float		_analog_rc_rssi_volt;
 	bool		_analog_rc_rssi_stable;
 	orb_advert_t	_to_input_rc;
+	orb_advert_t    _led_control_pub;
 	orb_advert_t	_outputs_pub;
 	unsigned	_num_outputs;
 	int		_class_instance;
@@ -231,7 +241,6 @@ private:
 	static pwm_limit_t	_pwm_limit;
 	static actuator_armed_s	_armed;
 	static vehicle_land_detected_s _vehicle_landed_state;
-	static rc_channels_s  _rc;     /**< rc channel data*/
 	uint16_t	_failsafe_pwm[_max_actuators];
 	uint16_t	_disarmed_pwm[_max_actuators];
 	uint16_t	_min_pwm[_max_actuators];
@@ -253,6 +262,7 @@ private:
 	bool st24_flag;
 	int  st24_time_now;
 	int  st24_time_start;
+	BindingStates _binding_state;
 
 	static bool	arm_nothrottle()
 	{
@@ -322,7 +332,6 @@ const unsigned		PX4FMU::_ngpio = arraySize(PX4FMU::_gpio_tab);
 pwm_limit_t		PX4FMU::_pwm_limit;
 actuator_armed_s	PX4FMU::_armed = {};
 vehicle_land_detected_s PX4FMU::_vehicle_landed_state = {};
-rc_channels_s  PX4FMU::_rc = {};
 
 namespace
 {
@@ -349,6 +358,7 @@ PX4FMU::PX4FMU() :
 	_analog_rc_rssi_volt(-1.0f),
 	_analog_rc_rssi_stable(false),
 	_to_input_rc(nullptr),
+	_led_control_pub(nullptr),
 	_outputs_pub(nullptr),
 	_num_outputs(0),
 	_class_instance(0),
@@ -379,7 +389,8 @@ PX4FMU::PX4FMU() :
 	_ctl_latency(perf_alloc(PC_ELAPSED, "ctl_lat")),
 	st24_flag(true),
 	st24_time_now(0),
-	st24_time_start(0)
+	st24_time_start(0),
+	_binding_state(BindingStates::INIT)
 {
 	for (unsigned i = 0; i < _max_actuators; i++) {
 		_min_pwm[i] = PWM_DEFAULT_MIN;
@@ -1372,6 +1383,7 @@ PX4FMU::cycle()
 				dsm_bind_ioctl((int)cmd.param2);
 
 			} else if ((int)cmd.param1 == 1) {
+				_binding_state = BindingStates::START;
 				st24_bind();
 			}
 		}
@@ -1381,20 +1393,50 @@ PX4FMU::cycle()
 #endif
 
 #ifdef RC_SERIAL_PORT
-	/*Update rc information*/
-	orb_check(_rc_sub, &updated);
 
-	if (updated) {
-		orb_copy(ORB_ID(rc_channels), _rc_sub, &_rc);
-	}
-
-	/*Only rc lost or rc not binding can enter the manual binding*/
-	if (!_was_inverted && _vehicle_landed_state.inverted &&
-	    (hrt_absolute_time() > _rc.timestamp + (uint64_t)(RC_LOST_TIMEOUT * 1e6f))) {
+	// Bind the aircraft only if it is upsidedown and it does not have a valid RC bind
+	if (!_was_inverted && _vehicle_landed_state.inverted && _rc_in.rc_lost && !_armed.armed) {
+		_binding_state = BindingStates::START;
 		st24_bind();
 	}
 
-	_was_inverted =  _vehicle_landed_state.inverted;
+	_was_inverted = _vehicle_landed_state.inverted;
+
+	// RC is bound to the aircraft
+	if (!_rc_in.rc_lost && _binding_state == BindingStates::WAIT) {
+		_binding_state = BindingStates::END;
+	}
+
+	// send led messages only in start or in end state
+	if (_binding_state == BindingStates::START || _binding_state == BindingStates::END) {
+		led_control_s leds = {};
+
+		// binding led message
+		if (_binding_state == BindingStates::START) {
+			leds.led_mask = 0xFF;
+			leds.color = led_control_s::COLOR_YELLOW;
+			leds.mode = led_control_s::MODE_BLINK_FAST;
+			leds.num_blinks = 0;
+			leds.priority = 2;
+			_binding_state = BindingStates::WAIT;
+		}
+
+		// stop leds
+		if (_binding_state == BindingStates::END) {
+			leds.led_mask = 0xFF;
+			leds.mode = led_control_s::MODE_DISABLED;
+			leds.priority = 2;
+			_binding_state = BindingStates::BOUND;
+		}
+
+		// publish led msg
+		if (_led_control_pub != nullptr) {
+			orb_publish(ORB_ID(led_control), _led_control_pub, &leds);
+
+		} else {
+			_led_control_pub = orb_advertise(ORB_ID(led_control), &leds);
+		}
+	}
 
 #endif
 
