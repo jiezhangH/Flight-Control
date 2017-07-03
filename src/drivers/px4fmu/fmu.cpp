@@ -101,7 +101,6 @@
 #define NAN_VALUE	(0.0f/0.0f)		/**< NaN value for throttle lock mode */
 #define BUTTON_SAFETY	px4_arch_gpioread(GPIO_BTN_SAFETY)
 #define CYCLE_COUNT 10			/* safety switch must be held for 1 second to activate */
-#define RC_LOST_TIMEOUT 2       /*Lost signal to judge the timeout time*/
 
 /*
  * Define the various LED flash sequences for each system state.
