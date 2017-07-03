@@ -1330,6 +1330,7 @@ int commander_thread_main(int argc, char *argv[])
 	bool was_falling = false;
 	bool was_armed = false;
 	bool was_crashed = false;
+	float max_altitude = NAN;
 
 	bool startup_in_hil = false;
 
@@ -2273,9 +2274,19 @@ int commander_thread_main(int argc, char *argv[])
 				mavlink_and_console_log_info(&mavlink_log_pub, "Crash detected.");
 			}
 
+			if((land_detector.alt_max <= 0.0f) && !PX4_ISFINITE(max_altitude)){
+				mavlink_and_console_log_info(&mavlink_log_pub, "No altitude limit");
+			}
+
+			if((land_detector.alt_max > 0.0f) && (!PX4_ISFINITE(max_altitude) || (fabsf(max_altitude - land_detector.alt_max) > FLT_EPSILON))){
+				mavlink_and_console_log_info(&mavlink_log_pub, "Altitude limit: %i meters above home", (uint64_t)land_detector.alt_max);
+			}
+
 			was_landed = land_detector.landed;
 			was_falling = land_detector.freefall;
 			was_crashed = land_detector.crash;
+			max_altitude = land_detector.alt_max;
+
 		}
 
 
