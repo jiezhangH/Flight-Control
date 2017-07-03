@@ -2954,7 +2954,7 @@ int commander_thread_main(int argc, char *argv[])
 
 			/* evaluate the main state machine according to mode switches */
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
-			transition_result_t main_res = set_main_state_rc(&status, false);
+			transition_result_t main_res = set_main_state_rc(&status);
 
 
 			/* store last position lock state */
