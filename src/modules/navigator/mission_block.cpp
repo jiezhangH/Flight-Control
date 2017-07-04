@@ -500,7 +500,9 @@ MissionBlock::issue_command(const struct mission_item_s *item)
 		PX4_INFO("forwarding command %d", item->nav_cmd);
 		struct vehicle_command_s cmd = {};
 		mission_item_to_vehicle_command(item, &cmd);
-		_action_start = hrt_absolute_time();
+		const hrt_abstime now = hrt_absolute_time();
+		_action_start = now;
+		cmd.timestamp = now;
 
 		if (_cmd_pub != nullptr) {
 			orb_publish(ORB_ID(vehicle_command), _cmd_pub, &cmd);
@@ -737,6 +739,7 @@ MissionBlock::set_land_item(struct mission_item_s *item, bool at_current_locatio
 		struct vehicle_command_s cmd = {};
 		cmd.command = NAV_CMD_DO_VTOL_TRANSITION;
 		cmd.param1 = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+		cmd.timestamp = hrt_absolute_time();
 
 		if (_cmd_pub != nullptr) {
 			orb_publish(ORB_ID(vehicle_command), _cmd_pub, &cmd);

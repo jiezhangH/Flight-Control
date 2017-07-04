@@ -547,6 +547,7 @@ Navigator::task_main()
 					vcmd.command = vehicle_command_s::VEHICLE_CMD_MISSION_START;
 					vcmd.param1 = land_start;
 					vcmd.param2 = 0;
+					vcmd.timestamp = hrt_absolute_time();
 
 					orb_advert_t pub = orb_advertise_queue(ORB_ID(vehicle_command), &vcmd, vehicle_command_s::ORB_QUEUE_LENGTH);
 					(void)orb_unadvertise(pub);
