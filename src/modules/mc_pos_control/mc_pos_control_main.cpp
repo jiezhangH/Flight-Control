@@ -2601,9 +2601,9 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		vel_sp_slewrate(dt);
 	}
 
-	bool avoidance_on = _manual.avoidance_switch == manual_control_setpoint_s::SWITCH_POS_ON ? true : false;
+	const bool obsavoid_on = _manual.obsavoid_switch == manual_control_setpoint_s::SWITCH_POS_ON;
 
-	if (avoidance_on) {
+	if (obsavoid_on) {
 		bool obstacle_ahead = (_sonar_measurament.orientation == ROTATION_PITCH_90
 				       && _sonar_measurament.current_distance < _sonar_measurament.max_distance &&
 				       (altitude_above_home > 1.5f));
