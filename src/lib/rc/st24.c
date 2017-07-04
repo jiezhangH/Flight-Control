@@ -213,6 +213,7 @@ int st24_decode(uint8_t byte, uint8_t *rssi, uint8_t *lost_count, uint16_t *chan
 						chan_index++;
 					}
 
+					*channel_count += 2; // add two virtual channels for arm button and kill switch hotkey
 					const bool arm_button_pressed = channels[0] == 0;
 
 					/* Kill hotkey: pressing the arm button three times with low throttle within 1.5s
