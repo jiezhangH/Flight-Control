@@ -242,9 +242,16 @@ then
 	#
 	# Switch mapping
 	#
+	param set RC_MAP_ARM_SW 13
+	param set COM_ARM_SWISBTN 1
 	param set RC_MAP_FLTMODE 5
-	param set RC_MAP_KILL_SW 6
 	param set RC_MAP_GEAR_SW 11
+	param set RC_MAP_KILL_SW 14
+
+	#obstacle avoidance switch
+	param set RC_MAP_AVOID_SW 12
+	param set RC_AVOID_TH -0.25
+	param set RC_AVOID_MID_TH -0.75
 
 	# pan control
 	param set RC_MAP_AUX1 8
@@ -262,12 +269,6 @@ then
 	param set MNT_MAN_ROLL 0
 	param set MNT_MAN_PITCH 2
 	param set MNT_MAN_YAW 1
-
-	#
-	# Arm button settings
-	#
-	param set RC_MAP_ARM_SW 12
-	param set COM_ARM_SWISBTN 1
 
 	# Set landing detection stick up/down thresholds
 	# requires an ST16 in rabbit mode or with new
