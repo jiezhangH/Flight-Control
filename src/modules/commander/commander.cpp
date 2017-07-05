@@ -1782,8 +1782,11 @@ int commander_thread_main(int argc, char *argv[])
 	bool arming_state_changed = false;
 	bool main_state_changed = false;
 	bool failsafe_old = false;
+	bool arming_button_switch_allowed = true; /*if this flag is true, then switch from arming to disarming (vice versa) is allowed */
 
 	bool have_taken_off_since_arming = false;
+
+
 
 	/* initialize low priority thread */
 	pthread_attr_t commander_low_prio_attr;
@@ -2818,6 +2821,11 @@ int commander_thread_main(int argc, char *argv[])
 			const bool in_armed_state = status.arming_state == vehicle_status_s::ARMING_STATE_ARMED || status.arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR;
 			const bool arm_button_pressed = arm_switch_is_button == 1 && sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_ON;
 
+			/* if the armbutton was released or was never pressed, we can swith arm state by pressing the arming button */
+			if(!arm_button_pressed){
+				arming_button_switch_allowed = true;
+			}
+
 			/* DISARM
 			 * check if left stick is in lower left position or arm button is pushed or arm switch has transition from arm to disarm
 			 * and we are in MANUAL, Rattitude, or AUTO_READY mode or (ASSIST mode and landed)
@@ -2830,7 +2838,7 @@ int commander_thread_main(int argc, char *argv[])
 			if (in_armed_state &&
 				(status.rc_input_mode != vehicle_status_s::RC_IN_MODE_OFF) &&
 				(status.is_rotary_wing || (!status.is_rotary_wing && land_detector.landed)) &&
-				(stick_in_lower_left || arm_button_pressed || arm_switch_to_disarm_transition) ) {
+				(stick_in_lower_left || (arm_button_pressed && arming_button_switch_allowed) || arm_switch_to_disarm_transition) ) {
 
 				/* default is set to disarm */
 				bool disarm = false;
@@ -2851,7 +2859,7 @@ int commander_thread_main(int argc, char *argv[])
 					use_stick_counter = false;
 				}
 
-				if(arm_switch_to_disarm_transition || ((stick_on_counter < rc_arm_hyst) && land_detector.landed)){
+				if(arm_switch_to_disarm_transition || (land_detector.landed)){
 					/* we disarm directly */
 					disarm = true;
 
@@ -2859,6 +2867,7 @@ int commander_thread_main(int argc, char *argv[])
 
 					if((stick_off_counter == rc_arm_hyst)){
 						disarm = true;
+						stick_off_counter = 0;
 					}else{
 						stick_off_counter++;
 					}
@@ -2884,11 +2893,11 @@ int commander_thread_main(int argc, char *argv[])
 
 					if (arming_ret == TRANSITION_CHANGED) {
 						arming_state_changed = true;
+
+						/* don't allow to switch to arm if the arming button still is pressed */
+						arming_button_switch_allowed = false;
 					}
 				}
-			/* do not reset the counter when holding the arm button longer than needed */
-			} else if (!(arm_switch_is_button == 1 && sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_ON)) {
-				stick_off_counter = 0;
 			}
 
 			/* ARM
@@ -2901,8 +2910,8 @@ int commander_thread_main(int argc, char *argv[])
 
 			if (!in_armed_state &&
 				status.rc_input_mode != vehicle_status_s::RC_IN_MODE_OFF &&
-				(stick_in_lower_right || arm_button_pressed || arm_switch_to_arm_transition) ) {
-				if ((stick_on_counter == rc_arm_hyst && stick_off_counter < rc_arm_hyst) || arm_switch_to_arm_transition) {
+				(stick_in_lower_right || (arm_button_pressed && arming_button_switch_allowed) || arm_switch_to_arm_transition) ) {
+				if ((stick_on_counter == rc_arm_hyst) || arm_switch_to_arm_transition) {
 
 					/* we check outside of the transition function here because the requirement
 					 * for being in manual mode only applies to manual arming actions.
@@ -2941,6 +2950,10 @@ int commander_thread_main(int argc, char *argv[])
 
 						if (arming_ret == TRANSITION_CHANGED) {
 							arming_state_changed = true;
+
+							/* don't allow to switch to disarm if the arming button still is pressed */
+							arming_button_switch_allowed = false;
+
 						} else {
 							usleep(100000);
 							print_reject_arm("NOT ARMING: preflight checks failed.");
@@ -2949,7 +2962,7 @@ int commander_thread_main(int argc, char *argv[])
 				}
 				stick_on_counter++;
 			/* do not reset the counter when holding the arm button longer than needed */
-			} else if (!(arm_switch_is_button == 1 && sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_ON)) {
+			} else {
 				stick_on_counter = 0;
 			}
 
