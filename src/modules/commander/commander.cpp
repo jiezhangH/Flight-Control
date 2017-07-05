@@ -2832,18 +2832,41 @@ int commander_thread_main(int argc, char *argv[])
 				(status.is_rotary_wing || (!status.is_rotary_wing && land_detector.landed)) &&
 				(stick_in_lower_left || arm_button_pressed || arm_switch_to_disarm_transition) ) {
 
-				if ((internal_state.main_state != commander_state_s::MAIN_STATE_MANUAL) &&
-						(internal_state.main_state != commander_state_s::MAIN_STATE_ACRO) &&
-						(internal_state.main_state != commander_state_s::MAIN_STATE_STAB) &&
-						(internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE) &&
-						!arm_switch_to_disarm_transition &&
-						!(land_detector.landed || (arm_button_pressed && land_detector.maybe_landed))) {
+				/* default is set to disarm */
+				bool disarm = false;
 
-					if (!arm_button_pressed) {
-						print_reject_arm("NOT DISARMING: not in manual mode or landed yet.");
+				/* For manual, acro, stab and rattitude we cannot fully trust the landdetector and therefore
+				 * we introduce a stick counter.
+				 */
+				bool use_stick_counter;
+				switch(internal_state.main_state){
+				case commander_state_s::MAIN_STATE_MANUAL:
+				case commander_state_s::MAIN_STATE_ACRO:
+				case commander_state_s::MAIN_STATE_STAB:
+				case commander_state_s::MAIN_STATE_RATTITUDE:{
+					use_stick_counter = true;
+					break;
+				}
+				default:
+					use_stick_counter = false;
+				}
+				use_stick_counter = use_stick_counter && !arm_switch_to_disarm_transition && !land_detector.landed;
+
+				if(use_stick_counter){
+
+					if((stick_off_counter == rc_arm_hyst)){
+						disarm = true;
+					}else{
+						stick_off_counter++;
 					}
+				}else if(arm_switch_to_disarm_transition || ((stick_on_counter < rc_arm_hyst) && (land_detector.landed || (arm_button_pressed && land_detector.maybe_landed)))){
+					/* we disarm directly */
+					disarm = true;
+				}else{
+					print_reject_arm("NOT DISARMING: Not in manual mode or landed yet.");
+				}
 
-				} else if (((stick_off_counter == rc_arm_hyst) && (stick_on_counter < rc_arm_hyst)) || arm_switch_to_disarm_transition || (arm_button_pressed && land_detector.maybe_landed)) {
+				if(disarm) {
 					/* disarm to STANDBY if ARMED or to STANDBY_ERROR if ARMED_ERROR */
 					arming_state_t new_arming_state = (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED ? vehicle_status_s::ARMING_STATE_STANDBY :
 									   vehicle_status_s::ARMING_STATE_STANDBY_ERROR);
@@ -2863,8 +2886,6 @@ int commander_thread_main(int argc, char *argv[])
 						arming_state_changed = true;
 					}
 				}
-
-				stick_off_counter++;
 			/* do not reset the counter when holding the arm button longer than needed */
 			} else if (!(arm_switch_is_button == 1 && sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_ON)) {
 				stick_off_counter = 0;
