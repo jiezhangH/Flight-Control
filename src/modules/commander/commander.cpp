@@ -2859,7 +2859,7 @@ int commander_thread_main(int argc, char *argv[])
 					}else{
 						stick_off_counter++;
 					}
-				}else if(arm_switch_to_disarm_transition || ((stick_on_counter < rc_arm_hyst) && (land_detector.landed || (arm_button_pressed && land_detector.maybe_landed)))){
+				}else if(arm_switch_to_disarm_transition || ((stick_on_counter < rc_arm_hyst) && land_detector.landed)){
 					/* we disarm directly */
 					disarm = true;
 				}else{
