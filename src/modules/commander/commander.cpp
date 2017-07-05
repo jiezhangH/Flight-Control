@@ -2865,7 +2865,7 @@ int commander_thread_main(int argc, char *argv[])
 
 				}else if(use_stick_counter){
 
-					if((stick_off_counter == rc_arm_hyst)){
+					if(stick_off_counter == rc_arm_hyst){
 						disarm = true;
 						stick_off_counter = 0;
 					}else{
