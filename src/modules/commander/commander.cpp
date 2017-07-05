@@ -2850,18 +2850,18 @@ int commander_thread_main(int argc, char *argv[])
 				default:
 					use_stick_counter = false;
 				}
-				use_stick_counter = use_stick_counter && !arm_switch_to_disarm_transition && !land_detector.landed;
 
-				if(use_stick_counter){
+				if(arm_switch_to_disarm_transition || ((stick_on_counter < rc_arm_hyst) && land_detector.landed)){
+					/* we disarm directly */
+					disarm = true;
+
+				}else if(use_stick_counter){
 
 					if((stick_off_counter == rc_arm_hyst)){
 						disarm = true;
 					}else{
 						stick_off_counter++;
 					}
-				}else if(arm_switch_to_disarm_transition || ((stick_on_counter < rc_arm_hyst) && land_detector.landed)){
-					/* we disarm directly */
-					disarm = true;
 				}else{
 					print_reject_arm("NOT DISARMING: Not in manual mode or landed yet.");
 				}
