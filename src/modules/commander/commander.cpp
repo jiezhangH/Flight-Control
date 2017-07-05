@@ -2823,19 +2823,19 @@ int commander_thread_main(int argc, char *argv[])
 			 * and we are in MANUAL, Rattitude, or AUTO_READY mode or (ASSIST mode and landed)
 			 * do it only for rotary wings in manual mode or fixed wing if landed */
 			const bool stick_in_lower_left = (sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_NONE) && sp_man.r < -STICK_ON_OFF_LIMIT && sp_man.z < 0.1f;
-			const bool arm_switch_to_disarm_transition =  arm_switch_is_button == 0 &&
-					_last_sp_man_arm_switch == manual_control_setpoint_s::SWITCH_POS_ON &&
-					sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_OFF;
+			const bool arm_switch_to_disarm_transition =  (arm_switch_is_button == 0) &&
+					(_last_sp_man_arm_switch == manual_control_setpoint_s::SWITCH_POS_ON) &&
+					(sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_OFF);
 
 			if (in_armed_state &&
-				status.rc_input_mode != vehicle_status_s::RC_IN_MODE_OFF &&
+				(status.rc_input_mode != vehicle_status_s::RC_IN_MODE_OFF) &&
 				(status.is_rotary_wing || (!status.is_rotary_wing && land_detector.landed)) &&
 				(stick_in_lower_left || arm_button_pressed || arm_switch_to_disarm_transition) ) {
 
-				if (internal_state.main_state != commander_state_s::MAIN_STATE_MANUAL &&
-						internal_state.main_state != commander_state_s::MAIN_STATE_ACRO &&
-						internal_state.main_state != commander_state_s::MAIN_STATE_STAB &&
-						internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE &&
+				if ((internal_state.main_state != commander_state_s::MAIN_STATE_MANUAL) &&
+						(internal_state.main_state != commander_state_s::MAIN_STATE_ACRO) &&
+						(internal_state.main_state != commander_state_s::MAIN_STATE_STAB) &&
+						(internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE) &&
 						!arm_switch_to_disarm_transition &&
 						!(land_detector.landed || (arm_button_pressed && land_detector.maybe_landed))) {
 
@@ -2843,7 +2843,7 @@ int commander_thread_main(int argc, char *argv[])
 						print_reject_arm("NOT DISARMING: not in manual mode or landed yet.");
 					}
 
-				} else if ((stick_off_counter == rc_arm_hyst && stick_on_counter < rc_arm_hyst) || arm_switch_to_disarm_transition || (arm_button_pressed && land_detector.maybe_landed)) {
+				} else if (((stick_off_counter == rc_arm_hyst) && (stick_on_counter < rc_arm_hyst)) || arm_switch_to_disarm_transition || (arm_button_pressed && land_detector.maybe_landed)) {
 					/* disarm to STANDBY if ARMED or to STANDBY_ERROR if ARMED_ERROR */
 					arming_state_t new_arming_state = (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED ? vehicle_status_s::ARMING_STATE_STANDBY :
 									   vehicle_status_s::ARMING_STATE_STANDBY_ERROR);
