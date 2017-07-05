@@ -490,7 +490,7 @@ mixer load /dev/px4fmu /etc/mixers/gear.mix
 #
 # Set Landing gear pwm configuration directly for the only channel we use
 # such that landing gear lowers on kill switch lockdown
-pwm disarmed -c 1 -p 1000
+pwm disarmed -c 1 -p 1500
 pwm failsafe -c 1 -p 1000
 
 # There is no further script processing, so we can free some RAM
