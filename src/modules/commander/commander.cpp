@@ -2270,15 +2270,11 @@ int commander_thread_main(int argc, char *argv[])
 				mavlink_and_console_log_info(&mavlink_log_pub, "Freefall detected.");
 			}
 
-			if(!was_crashed && land_detector.crash) {
+			if (!was_crashed && land_detector.crash) {
 				mavlink_and_console_log_info(&mavlink_log_pub, "Crash detected.");
 			}
 
-			if((land_detector.alt_max <= 0.0f) && !PX4_ISFINITE(max_altitude)){
-				mavlink_and_console_log_info(&mavlink_log_pub, "No altitude limit");
-			}
-
-			if((land_detector.alt_max > 0.0f) && (!PX4_ISFINITE(max_altitude) || (fabsf(max_altitude - land_detector.alt_max) > FLT_EPSILON))){
+			if ((land_detector.alt_max > 0.0f) && (!PX4_ISFINITE(max_altitude) || (fabsf(max_altitude - land_detector.alt_max) > FLT_EPSILON))) {
 				mavlink_and_console_log_info(&mavlink_log_pub, "Altitude limit: %i meters above home", (uint64_t)land_detector.alt_max);
 			}
 
@@ -2286,10 +2282,7 @@ int commander_thread_main(int argc, char *argv[])
 			was_falling = land_detector.freefall;
 			was_crashed = land_detector.crash;
 			max_altitude = land_detector.alt_max;
-
 		}
-
-
 
 		/* Update hysteresis time. Use a time of factor 5 longer if we have not taken off yet. */
 		hrt_abstime timeout_time = disarm_when_landed * 1000000;
