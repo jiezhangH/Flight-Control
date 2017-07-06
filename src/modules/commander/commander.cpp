@@ -2732,7 +2732,7 @@ int commander_thread_main(int argc, char *argv[])
 
 		/*The relative altitude of the home point */
 		float current_relative_alt = global_position.alt - _home.alt;
-		if(gohome_land_iterrupt) {
+		if (gohome_land_iterrupt) {
 			if(!emergency_battery_voltage_actions_done && (pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL)) {
@@ -2843,39 +2843,43 @@ int commander_thread_main(int argc, char *argv[])
 				/* default is set to disarm */
 				bool disarm = false;
 
-				/* For manual, acro, stab and rattitude we cannot fully trust the landdetector and therefore
-				 * we introduce a stick counter.
+				/* For manual, acro, stab and rattitude, it is possible to skip the landed state
+				 * by pressing the diarm button or using the disarm switch
 				 */
-				bool use_stick_counter;
+				bool able_to_skip_landdetector;
 				switch(internal_state.main_state){
 				case commander_state_s::MAIN_STATE_MANUAL:
 				case commander_state_s::MAIN_STATE_ACRO:
 				case commander_state_s::MAIN_STATE_STAB:
 				case commander_state_s::MAIN_STATE_RATTITUDE:{
-					use_stick_counter = true;
+					able_to_skip_landdetector = true;
 					break;
 				}
 				default:
-					use_stick_counter = false;
+					able_to_skip_landdetector = false;
 				}
 
-				if(arm_switch_to_disarm_transition || (land_detector.landed)){
+				if (land_detector.landed) {
 					/* we disarm directly */
 					disarm = true;
 
-				}else if(use_stick_counter){
+				} else if(able_to_skip_landdetector) {
 
-					if(stick_off_counter == rc_arm_hyst){
+					/* disarm immediately if arm_switch is on or the user pressed
+					 * the disarm button long enough
+					 */
+					if ((stick_off_counter == rc_arm_hyst) || arm_switch_to_disarm_transition) {
 						disarm = true;
 						stick_off_counter = 0;
-					}else{
+					} else {
 						stick_off_counter++;
 					}
-				}else{
+
+				} else {
 					print_reject_arm("NOT DISARMING: Not in manual mode or landed yet.");
 				}
 
-				if(disarm) {
+				if (disarm) {
 					/* disarm to STANDBY if ARMED or to STANDBY_ERROR if ARMED_ERROR */
 					arming_state_t new_arming_state = (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED ? vehicle_status_s::ARMING_STATE_STANDBY :
 									   vehicle_status_s::ARMING_STATE_STANDBY_ERROR);
