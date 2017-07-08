@@ -86,8 +86,8 @@ MavlinkMissionManager::MavlinkMissionManager(Mavlink *mavlink) : MavlinkStream(m
 	_offboard_mission_sub(-1),
 	_mission_result_sub(-1),
 	_offboard_mission_pub(nullptr),
-	_slow_rate_limiter(_interval / 5.0f),
-	_verbose(false)
+	_slow_rate_limiter(_interval / 5.0f), // Rate limit sending of the current WP sequence to 10 Hz
+	_verbose(mavlink->verbose())
 {
 	_offboard_mission_sub = orb_subscribe(ORB_ID(offboard_mission));
 	_mission_result_sub = orb_subscribe(ORB_ID(mission_result));
@@ -398,10 +398,14 @@ MavlinkMissionManager::send(const hrt_abstime now)
 		   && hrt_elapsed_time(&_time_last_sent) > _retry_timeout) {
 		if (_transfer_seq == 0) {
 			/* try to send items count again after timeout */
+			if (_verbose) { warnx("WPM: send count timeout"); }
+
 			send_mission_count(_transfer_partner_sysid, _transfer_partner_compid, _transfer_count);
 
 		} else {
 			/* try to send item again after timeout */
+			if (_verbose) { warnx("WPM: item re-send timeout"); }
+
 			send_mission_item(_transfer_partner_sysid, _transfer_partner_compid, _transfer_seq - 1);
 		}
 

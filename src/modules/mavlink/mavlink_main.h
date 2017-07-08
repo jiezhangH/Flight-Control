@@ -452,6 +452,8 @@ public:
 
 	void			set_logging_enabled(bool logging) { _logging_enabled = logging; }
 
+	bool			verbose() { return _verbose; }
+
 	int				get_data_rate() { return _datarate; }
 	void			set_data_rate(int rate) { if (rate > 0) { _datarate = rate; } }
 
