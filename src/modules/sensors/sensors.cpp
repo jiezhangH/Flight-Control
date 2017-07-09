@@ -316,6 +316,10 @@ Sensors::~Sensors()
 int
 Sensors::parameters_update()
 {
+	if (_armed) {
+		return 0;
+	}
+
 	/* read the parameter values into _parameters */
 	int ret = update_parameters(_parameter_handles, _parameters);
 
