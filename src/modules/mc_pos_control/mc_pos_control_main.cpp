@@ -313,6 +313,7 @@ private:
 	float _ref_alt;
 	hrt_abstime _ref_timestamp;
 	hrt_abstime _last_warn;
+	hrt_abstime _last_sonar_measurament_time;
 
 	math::Vector<3> _thrust_int;
 	math::Vector<3> _pos;
@@ -526,6 +527,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_ref_alt(0.0f),
 	_ref_timestamp(0),
 	_last_warn(0),
+	_last_sonar_measurament_time(0),
 	_yaw(0.0f),
 	_yaw_takeoff(0.0f),
 	_yaw_lock_in(0.0f),
@@ -2602,8 +2604,9 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	if (obsavoid_on) {
 		bool obstacle_ahead = (_sonar_measurament.orientation == ROTATION_PITCH_90
 				       && _sonar_measurament.current_distance < _sonar_measurament.max_distance &&
-				       (altitude_above_home > 1.5f));
+				       (altitude_above_home > 1.5f) && (_sonar_measurament.timestamp > _last_sonar_measurament_time));
 
+		_last_sonar_measurament_time = _sonar_measurament.timestamp;
 		_vel_max_xy = 4.0f;
 		math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
 
@@ -2631,6 +2634,10 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 				_vel_sp_prev = _vel_sp;
 			}
 		}
+
+	} else {
+		// reset flag if obstacle avoidance off
+		_avoidance_lock_in = false;
 	}
 
 	/* TODO: move this to the end
