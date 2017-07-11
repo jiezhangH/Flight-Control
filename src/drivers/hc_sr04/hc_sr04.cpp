@@ -627,6 +627,90 @@ HC_SR04::stop()
 	work_cancel(HPWORK, &_work);
 }
 
+int
+HC_SR04::start_pwm()
+{
+	int fd_pwm = ::open(PWM_OUTPUT0_DEVICE_PATH, O_RDWR);
+
+	if (fd_pwm == -1) {
+		PX4_WARN("PMW: px4_open fail");
+		return PX4_ERROR;
+	}
+
+	// set PWM rate for the sonar to 20Hz
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
+		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
+		return PX4_ERROR;
+	}
+
+	unsigned group = 1;
+	uint32_t group_mask;
+
+	// Get the group mask
+	if (::ioctl(fd_pwm, PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
+		PX4_ERR("PWM_SERVO_GET_RATEGROUP group %u fail", group);
+		return PX4_ERROR;
+	}
+
+	// Apply group mask
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
+		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
+		return PX4_ERROR;
+	}
+
+	if (::ioctl(fd_pwm, PWM_SERVO_ARM, 0) != OK) {
+		PX4_ERR("PWM_SERVO_ARM fail");
+		return PX4_ERROR;
+	}
+
+	// Set pulsewidth of 10ms specific for this sonar sensor
+	if (::ioctl(fd_pwm, PWM_SERVO_SET(group), 10) != OK) {
+		PX4_ERR("PWM_SERVO_SET group %u fail", group);
+		return PX4_ERROR;
+	}
+
+	::close(fd_pwm);
+	return PX4_OK;
+}
+
+void
+HC_SR04::stop_pwm()
+{
+	/* unadvertise publishing topics */
+	orb_unadvertise(_sensor_info_pub);
+	orb_unadvertise(_distance_sensor_topic);
+
+	int fd_pwm = ::open(PWM_OUTPUT0_DEVICE_PATH, O_RDWR);
+
+	if (fd_pwm == -1) {
+		PX4_WARN("PMW: px4_open fail\n");
+	}
+
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 50) != OK) {
+		PX4_ERR("pwm servo set update rate fail");
+	}
+
+	unsigned group = 1;
+	uint32_t group_mask;
+
+	if (::ioctl(fd_pwm, PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
+		PX4_ERR("pwm servo get rategroup fail");
+	}
+
+	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
+		PX4_ERR("pwm servo set select update rate fail");
+	}
+
+	::close(fd_pwm);
+
+	// reset median filter window if the pwm is stopped
+	for (int i = 0; i < _MF_WINDOW_SIZE; ++i) {
+		_mf_window[i] = get_maximum_distance();
+	}
+
+	_mf_cycle_counter = 0;
+
+}
 
 void
 HC_SR04::cycle_trampoline(void *arg)
