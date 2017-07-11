@@ -215,6 +215,19 @@ private:
 	void				stop();
 
 	/**
+	* Pwm configuration used at driver init and whenever the sensor is restarted through the obstacle
+	* avoidance swicth in the remote controller
+	*/
+
+	int 				start_pwm();
+
+	/**
+	* Pwm configuration used when shutting down the driver and whenever the sensor is switched off
+	* through the obstacle avoidance switch in the remote controller
+	*/
+	void				stop_pwm();
+
+	/**
 	* Set the min and max distance thresholds if you want the end points of the sensors
 	* range to be brought in at all, otherwise it will use the defaults MB12XX_MIN_DISTANCE
 	* and MB12XX_MAX_DISTANCE
@@ -319,56 +332,23 @@ HC_SR04::init()
 
 	_class_instance = register_class_devname(RANGE_FINDER_BASE_DEVICE_PATH);
 
-	int fd_fmu;
-	int fd_pwm;
-
-	fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
+	int fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
 
 	if (fd_fmu == -1) {
 		PX4_WARN("FMU: px4_open fail");
 		return PX4_ERROR;
 	}
 
-	fd_pwm = ::open(PWM_OUTPUT0_DEVICE_PATH, O_RDWR);
+	if (start_pwm() == PX4_OK) {
+		// require user to actively switch obstacle avoidance on
+		_pwm_initialized = false;
 
-	if (fd_pwm == -1) {
-		PX4_WARN("PMW: px4_open fail");
+	} else {
+		PX4_ERR("Start pwm fail");
 		return PX4_ERROR;
 	}
 
 	unsigned capture_count = 0;
-
-	// set PWM rate for the sonar to 20Hz
-	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
-		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
-		return PX4_ERROR;
-	}
-
-	unsigned group = 1;
-	uint32_t group_mask;
-
-	// Get the group mask
-	if (::ioctl(fd_pwm, PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
-		PX4_ERR("PWM_SERVO_GET_RATEGROUP group %u fail", group);
-		return PX4_ERROR;
-	}
-
-	// Apply group mask
-	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
-		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
-		return PX4_ERROR;
-	}
-
-	if (::ioctl(fd_pwm, PWM_SERVO_ARM, 0) != OK) {
-		PX4_ERR("PWM_SERVO_ARM fail");
-		return PX4_ERROR;
-	}
-
-	// Set pulsewidth of 10ms specific for this sonar sensor
-	if (::ioctl(fd_pwm, PWM_SERVO_SET(group), 10) != OK) {
-		PX4_ERR("PWM_SERVO_SET group %u fail", group);
-		return PX4_ERROR;
-	}
 
 	input_capture_config_t cap_config;
 	cap_config.channel = 2;
@@ -625,36 +605,14 @@ HC_SR04::start()
 void
 HC_SR04::stop()
 {
-	/* unadvertise publishing topics */
-	orb_unadvertise(_sensor_info_pub);
-	orb_unadvertise(_distance_sensor_topic);
 
-	DevHandle h_fmu;
-	DevHandle h_pwm;
+	int fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
 
-	DevMgr::getHandle(PX4FMU_DEVICE_PATH, h_fmu);
-
-	if (!h_fmu.isValid()) {
+	if (fd_fmu == -1) {
 		PX4_WARN("FMU: px4_open fail\n");
 	}
 
-	DevMgr::getHandle(PWM_OUTPUT0_DEVICE_PATH, h_pwm);
-
-	if (!h_pwm.isValid()) {
-		PX4_WARN("PMW: px4_open fail\n");
-	}
-
-	h_pwm.ioctl(PWM_SERVO_SET_UPDATE_RATE, 50);
-	unsigned group = 1;
-	uint32_t group_mask;
-
-	if (h_pwm.ioctl(PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
-		PX4_ERR("pwm servo get rategroup fail");
-	}
-
-	if (h_pwm.ioctl(PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
-		PX4_ERR("pwm servo set select update rate fail");
-	}
+	stop_pwm();
 
 	input_capture_config_t cap_config;
 	cap_config.channel = 2;
@@ -663,16 +621,17 @@ HC_SR04::stop()
 	cap_config.callback = nullptr;
 	cap_config.context = nullptr;
 
-	h_fmu.ioctl(INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
+	::ioctl(fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
+
 	_should_exit = true;
 	work_cancel(HPWORK, &_work);
 }
+
 
 void
 HC_SR04::cycle_trampoline(void *arg)
 {
 	HC_SR04 *dev = (HC_SR04 *)arg;
-
 	dev->cycle();
 
 }
