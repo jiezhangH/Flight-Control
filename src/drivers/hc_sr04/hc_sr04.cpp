@@ -78,6 +78,7 @@
 #include <uORB/topics/subsystem_info.h>
 #include <uORB/topics/distance_sensor.h>
 #include <uORB/topics/mc_virtual_attitude_setpoint.h>
+#include <uORB/topics/manual_control_setpoint.h>
 
 #include <lib/conversion/rotation.h>
 
@@ -110,7 +111,7 @@ using namespace DriverFramework;
 
 int static cmp(const void *a, const void *b)
 {
-	return (*(float *)a - * (float *)b);
+	return (*(const float *)a > *(const float *)b);
 }
 
 class HC_SR04 : public device::CDev
@@ -173,7 +174,7 @@ private:
 	int					_class_instance;
 	int					_orb_class_instance;
 
-	bool			_enable_median_filter;
+	bool				_enable_median_filter;
 
 	enum Rotation 		_rotation;
 	orb_advert_t		_sensor_info_pub;
@@ -186,6 +187,10 @@ private:
 
 	std::vector<float>
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
+
+	int 				_manual_sub;
+	struct manual_control_setpoint_s _manual;
+	bool 				_pwm_initialized;
 
 	/**
 	* Test whether the device supported by the driver is present at a
@@ -267,7 +272,10 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_distance_sensor_topic(nullptr),
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows"))
+	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
+	_manual_sub(-1),
+	_manual{},
+	_pwm_initialized(false)
 
 {
 	/* enable debug() calls */
@@ -677,6 +685,41 @@ HC_SR04::cycle()
 		return;
 	}
 
+	/* check obstacle avoidance switch position in the remote controller:
+	* - if avoidance enabled (SWITCH_POS_ON) the ultrasonic sensor is on
+	* - else the ultrasonic sensor is switched off
+	*/
+	if (_manual_sub == -1) {
+		_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+	}
+
+	bool updated;
+	orb_check(_manual_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(manual_control_setpoint), _manual_sub, &_manual);
+
+		if (_manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
+
+			stop_pwm();
+			_pwm_initialized = false;
+
+		} else {
+
+			if (!_pwm_initialized) {
+				int ret = start_pwm();
+
+				if (ret == PX4_OK) {
+					_pwm_initialized = true;
+				}
+			}
+
+		}
+	}
+
+	// publish measured distance only if ultrasonic sensor is on
+	if (_pwm_initialized) {
+
 		irqstate_t flags = px4_enter_critical_section();
 		bool sensor_data_available = _sensor_data_available;
 
@@ -719,6 +762,7 @@ HC_SR04::cycle()
 			_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
 						 &_orb_class_instance, ORB_PRIO_LOW);
 		}
+	}
 
 
 	work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
