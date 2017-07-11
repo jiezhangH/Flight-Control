@@ -49,6 +49,14 @@ set PARAM_FILE /fs/microsd/params
 #
 if mount -t vfat /dev/mmcsd0 /fs/microsd
 then
+	if hardfault_log check
+	then
+		if hardfault_log commit
+		then
+			hardfault_log reset
+		fi
+	fi
+
 	echo "microSD present"
 	unset DATAMAN_OPT
 	set START_LOGGER 1
