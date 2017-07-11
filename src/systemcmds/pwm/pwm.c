@@ -213,7 +213,6 @@ pwm_main(int argc, char *argv[])
 
 			alt_channel_groups |= (1 << group);
 			alt_channels_set = true;
-			warnx("alt channels set, group: %d", group);
 			break;
 
 		case 'm':
