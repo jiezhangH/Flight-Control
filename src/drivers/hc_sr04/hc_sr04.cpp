@@ -677,48 +677,49 @@ HC_SR04::cycle()
 		return;
 	}
 
-	irqstate_t flags = px4_enter_critical_section();
-	bool sensor_data_available = _sensor_data_available;
+		irqstate_t flags = px4_enter_critical_section();
+		bool sensor_data_available = _sensor_data_available;
 
-	// reset flag
-	if (_sensor_data_available) {
-		_sensor_data_available = false;
-	}
+		// reset flag
+		if (_sensor_data_available) {
+			_sensor_data_available = false;
+		}
 
-	float distance = _distance_time * SR04_TIME_2_DISTANCE_M;
-	px4_leave_critical_section(flags);
+		float distance = _distance_time * SR04_TIME_2_DISTANCE_M;
+		px4_leave_critical_section(flags);
 
-	if (!sensor_data_available) {
-		work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
-		return;
-	}
+		if (!sensor_data_available) {
+			work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
+			return;
+		}
 
-	struct distance_sensor_s report = {};
+		struct distance_sensor_s report = {};
 
-	report.timestamp = hrt_absolute_time();
+		report.timestamp = hrt_absolute_time();
 
-	report.min_distance = get_minimum_distance();
+		report.min_distance = get_minimum_distance();
 
-	report.max_distance = get_maximum_distance();
+		report.max_distance = get_maximum_distance();
 
-	if (_enable_median_filter) {
-		report.current_distance = median_filter(distance);
+		if (_enable_median_filter) {
+			report.current_distance = median_filter(distance);
 
-	} else {
-		report.current_distance = distance;
-	}
+		} else {
+			report.current_distance = distance;
+		}
 
-	report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
-	report.orientation = _rotation;
+		report.type = distance_sensor_s::MAV_DISTANCE_SENSOR_ULTRASOUND;
+		report.orientation = _rotation;
 
-	/* publish it, if we are the primary */
-	if (_distance_sensor_topic != nullptr) {
-		orb_publish(ORB_ID(distance_sensor), _distance_sensor_topic, &report);
+		/* publish it, if we are the primary */
+		if (_distance_sensor_topic != nullptr) {
+			orb_publish(ORB_ID(distance_sensor), _distance_sensor_topic, &report);
 
-	} else {
-		_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
-					 &_orb_class_instance, ORB_PRIO_LOW);
-	}
+		} else {
+			_distance_sensor_topic = orb_advertise_multi(ORB_ID(distance_sensor), &report,
+						 &_orb_class_instance, ORB_PRIO_LOW);
+		}
+
 
 	work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
 }
