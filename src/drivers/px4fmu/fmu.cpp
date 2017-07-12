@@ -89,6 +89,7 @@
 #include <uORB/topics/adc_report.h>
 #include <uORB/topics/multirotor_motor_limits.h>
 #include <uORB/topics/vehicle_land_detected.h>
+#include <uORB/topics/vehicle_status_flags.h>
 #include <uORB/topics/led_control.h>
 
 #ifdef HRT_PPM_CHANNEL
@@ -205,6 +206,7 @@ private:
 	int		_param_sub;
 	int		_adc_sub;
 	int     _vehicle_landed_sub;
+	int     _vehicle_status_sub;
 	int     _rc_sub;
 	struct rc_input_values	_rc_in;
 	float		_analog_rc_rssi_volt;
@@ -352,6 +354,7 @@ PX4FMU::PX4FMU() :
 	_param_sub(-1),
 	_adc_sub(-1),
 	_vehicle_landed_sub(-1),
+	_vehicle_status_sub(-1),
 	_rc_sub(-1),
 	_rc_in{},
 	_analog_rc_rssi_volt(-1.0f),
@@ -1019,6 +1022,7 @@ PX4FMU::cycle()
 		_adc_sub = orb_subscribe(ORB_ID(adc_report));
 		_rc_sub = orb_subscribe(ORB_ID(rc_channels));
 		_vehicle_landed_sub =  orb_subscribe(ORB_ID(vehicle_land_detected));
+		_vehicle_status_sub =  orb_subscribe(ORB_ID(vehicle_status_flags));
 
 		/* initialize PWM limit lib */
 		pwm_limit_init(&_pwm_limit);
@@ -1392,9 +1396,18 @@ PX4FMU::cycle()
 #endif
 
 #ifdef RC_SERIAL_PORT
+	/* vehicle status */
+	static struct vehicle_status_flags_s v_flags;
+
+	orb_check(_vehicle_status_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(vehicle_status_flags), _vehicle_status_sub, &v_flags);
+	}
 
 	// Bind the aircraft only if it is upsidedown and it does not have a valid RC bind
-	if (!_was_inverted && _vehicle_landed_state.inverted && _rc_in.rc_lost && !_armed.armed) {
+	if (!_was_inverted && _vehicle_landed_state.inverted && _rc_in.rc_lost && !_armed.armed &&
+	    !(v_flags.conditions & vehicle_status_flags_s::CONDITION_CALIBRATION_ENABLE_MASK)) {
 		_binding_state = BindingStates::START;
 		st24_bind();
 	}
