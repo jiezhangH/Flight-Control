@@ -190,7 +190,7 @@ private:
 
 	int 				_manual_sub;
 	struct manual_control_setpoint_s _manual;
-	bool 				_pwm_initialized;
+	bool 				_pwm_output_active;
 
 	/**
 	* Test whether the device supported by the driver is present at a
@@ -288,7 +288,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
 	_manual_sub(-1),
 	_manual{},
-	_pwm_initialized(false)
+	_pwm_output_active(false)
 
 {
 	/* enable debug() calls */
@@ -341,7 +341,7 @@ HC_SR04::init()
 
 	if (start_pwm() == PX4_OK) {
 		// require user to actively switch obstacle avoidance on
-		_pwm_initialized = false;
+		_pwm_output_active = false;
 
 	} else {
 		PX4_ERR("Start pwm fail");
@@ -745,15 +745,15 @@ HC_SR04::cycle()
 		if (_manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
 
 			stop_pwm();
-			_pwm_initialized = false;
+			_pwm_output_active = false;
 
 		} else {
 
-			if (!_pwm_initialized) {
+			if (!_pwm_output_active) {
 				int ret = start_pwm();
 
 				if (ret == PX4_OK) {
-					_pwm_initialized = true;
+					_pwm_output_active = true;
 				}
 			}
 
@@ -761,7 +761,7 @@ HC_SR04::cycle()
 	}
 
 	// publish measured distance only if ultrasonic sensor is on
-	if (_pwm_initialized) {
+	if (_pwm_output_active) {
 
 		irqstate_t flags = px4_enter_critical_section();
 		bool sensor_data_available = _sensor_data_available;
