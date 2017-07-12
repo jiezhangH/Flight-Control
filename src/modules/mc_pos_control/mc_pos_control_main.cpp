@@ -2604,14 +2604,16 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 	if (obsavoid_on) {
 		bool obstacle_ahead = (_sonar_measurament.orientation == ROTATION_PITCH_90
 				       && _sonar_measurament.current_distance < _sonar_measurament.max_distance &&
-				       (altitude_above_home > 1.5f) && (_sonar_measurament.timestamp > _last_sonar_measurament_time));
+				       (altitude_above_home > 1.5f));
 
+		bool valid_sonar_measurament = (_sonar_measurament.timestamp > _last_sonar_measurament_time);
 		_last_sonar_measurament_time = _sonar_measurament.timestamp;
+
 		_vel_max_xy = 4.0f;
 		math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
 
 		/* if there is an obstacle ahead and UAV is moving forwards enter obstacle avoidance mode*/
-		if (obstacle_ahead && !_avoidance_lock_in && (vel_sp_body(0) > 0.0f)) {
+		if (obstacle_ahead && !_avoidance_lock_in && (vel_sp_body(0) > 0.0f) && valid_sonar_measurament) {
 			_avoidance_lock_in = true;
 			_yaw_lock_in = _yaw;
 		}
