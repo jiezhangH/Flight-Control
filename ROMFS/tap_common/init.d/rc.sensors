@@ -35,7 +35,7 @@ then
 fi
 
 # start hc_sr04, rotation pitch 90 deg
-if hc_sr04 -R 24 -m start
+if hc_sr04 -R 24 -m -a start
 then
 fi
 
