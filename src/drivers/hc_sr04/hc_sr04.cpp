@@ -117,7 +117,7 @@ int static cmp(const void *a, const void *b)
 class HC_SR04 : public device::CDev
 {
 public:
-	HC_SR04(enum Rotation rotation, bool enable_median_filter);
+	HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch);
 	virtual ~HC_SR04();
 
 	virtual int 		init();
@@ -175,6 +175,7 @@ private:
 	int					_orb_class_instance;
 
 	bool				_enable_median_filter;
+	bool 				_enable_obsavoid_swtch;
 
 	enum Rotation 		_rotation;
 	orb_advert_t		_sensor_info_pub;
@@ -269,7 +270,7 @@ private:
  */
 extern "C"  __EXPORT int hc_sr04_main(int argc, char *argv[]);
 
-HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
+HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
 	_min_distance(SR04_MIN_DISTANCE),
 	_max_distance(SR04_MAX_DISTANCE),
@@ -281,6 +282,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_class_instance(-1),
 	_orb_class_instance(-1),
 	_enable_median_filter(enable_median_filter),
+	_enable_obsavoid_swtch(enable_obsavoid_swtch),
 	_rotation(rotation),
 	_sensor_info_pub(nullptr),
 	_distance_sensor_topic(nullptr),
@@ -730,31 +732,33 @@ HC_SR04::cycle()
 	* - if avoidance enabled (SWITCH_POS_ON) the ultrasonic sensor is on
 	* - else the ultrasonic sensor is switched off
 	*/
-	if (_manual_sub == -1) {
-		_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
-	}
+	if (_enable_obsavoid_swtch) {
+		if (_manual_sub == -1) {
+			_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+		}
 
-	bool updated;
-	orb_check(_manual_sub, &updated);
+		bool updated;
+		orb_check(_manual_sub, &updated);
 
-	if (updated) {
-		orb_copy(ORB_ID(manual_control_setpoint), _manual_sub, &_manual);
+		if (updated) {
+			orb_copy(ORB_ID(manual_control_setpoint), _manual_sub, &_manual);
 
-		if (_manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
+			if (_manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
 
-			stop_pwm();
-			_pwm_output_active = false;
+				stop_pwm();
+				_pwm_output_active = false;
 
-		} else {
+			} else {
 
-			if (!_pwm_output_active) {
-				int ret = start_pwm();
+				if (!_pwm_output_active) {
+					int ret = start_pwm();
 
-				if (ret == PX4_OK) {
-					_pwm_output_active = true;
+					if (ret == PX4_OK) {
+						_pwm_output_active = true;
+					}
 				}
-			}
 
+			}
 		}
 	}
 
@@ -866,7 +870,7 @@ namespace  hc_sr04
 
 HC_SR04	*g_dev;
 
-void	start(enum Rotation rotation, bool enable_median_filter);
+void	start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch);
 void	stop();
 // void	test();
 void	info();
@@ -875,7 +879,7 @@ void	info();
  * Start the driver.
  */
 void
-start(enum Rotation rotation, bool enable_median_filter)
+start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch)
 {
 	if (g_dev != nullptr) {
 		PX4_ERR("already started");
@@ -883,7 +887,7 @@ start(enum Rotation rotation, bool enable_median_filter)
 	}
 
 	/* create the driver */
-	g_dev = new HC_SR04(rotation, enable_median_filter);
+	g_dev = new HC_SR04(rotation, enable_median_filter, enable_obsavoid_swtch);
 
 	if (g_dev == nullptr) {
 		goto fail;
@@ -1028,12 +1032,13 @@ hc_sr04_main(int argc, char *argv[])
 
 	int ch;
 	bool enable_median_filter = false;
+	bool enable_obsavoid_swtch = false;
 	enum Rotation rotation = ROTATION_NONE;
 	int myoptind = 1;
 	const char *myoptarg = NULL;
 
 
-	while ((ch = px4_getopt(argc, argv, "R:m", &myoptind, &myoptarg)) != EOF) {
+	while ((ch = px4_getopt(argc, argv, "R:ma", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'R':
 			rotation = (enum Rotation)atoi(myoptarg);
@@ -1041,6 +1046,10 @@ hc_sr04_main(int argc, char *argv[])
 
 		case 'm':
 			enable_median_filter = true;
+			break;
+
+		case 'a':
+			enable_obsavoid_swtch = true;
 			break;
 
 		default:
@@ -1054,7 +1063,7 @@ hc_sr04_main(int argc, char *argv[])
 	 * Start/load the driver.
 	 */
 	if (!strcmp(verb, "start")) {
-		hc_sr04::start(rotation, enable_median_filter);
+		hc_sr04::start(rotation, enable_median_filter, enable_obsavoid_swtch);
 	}
 
 	/*
