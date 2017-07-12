@@ -184,6 +184,7 @@ private:
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
 
+	int 				_fd_fmu;
 
 	std::vector<float>
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
@@ -286,6 +287,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "hc_sr04_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "hc_sr04_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
+	_fd_fmu(-1),
 	_manual_sub(-1),
 	_manual{},
 	_pwm_output_active(false)
@@ -332,9 +334,9 @@ HC_SR04::init()
 
 	_class_instance = register_class_devname(RANGE_FINDER_BASE_DEVICE_PATH);
 
-	int fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
+	_fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
 
-	if (fd_fmu == -1) {
+	if (_fd_fmu == -1) {
 		PX4_WARN("FMU: px4_open fail");
 		return PX4_ERROR;
 	}
@@ -357,17 +359,17 @@ HC_SR04::init()
 	cap_config.callback = &HC_SR04::capture_trampoline;
 	cap_config.context = this; // pass reference to this class
 
-	if (::ioctl(fd_fmu, INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
+	if (::ioctl(_fd_fmu, INPUT_CAP_GET_COUNT, (unsigned long)&capture_count) != 0) {
 		PX4_ERR("Not in a capture mode");
 		return PX4_ERROR;
 	}
 
-	if (::ioctl(fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) != 0) {
+	if (::ioctl(_fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config) != 0) {
 		PX4_ERR("INPUT_CAP_SET_CALLBACK fail for chan %u", cap_config.channel);
 		return PX4_ERROR;
 	}
 
-	if (::ioctl(fd_fmu, INPUT_CAP_SET, (unsigned long)&cap_config) != 0) {
+	if (::ioctl(_fd_fmu, INPUT_CAP_SET, (unsigned long)&cap_config) != 0) {
 		PX4_ERR("INPUT_CAP_SET fail");
 		return PX4_ERROR;
 	}
@@ -606,12 +608,6 @@ void
 HC_SR04::stop()
 {
 
-	int fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
-
-	if (fd_fmu == -1) {
-		PX4_WARN("FMU: px4_open fail\n");
-	}
-
 	stop_pwm();
 
 	input_capture_config_t cap_config;
@@ -621,10 +617,12 @@ HC_SR04::stop()
 	cap_config.callback = nullptr;
 	cap_config.context = nullptr;
 
-	::ioctl(fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
+	::ioctl(_fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
 
 	_should_exit = true;
 	work_cancel(HPWORK, &_work);
+
+	::close(_fd_fmu);
 }
 
 int
