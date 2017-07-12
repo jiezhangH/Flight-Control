@@ -343,15 +343,6 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
-	if (start_pwm() == PX4_OK) {
-		// require user to actively switch obstacle avoidance on
-		_pwm_output_active = false;
-
-	} else {
-		PX4_ERR("Start pwm fail");
-		return PX4_ERROR;
-	}
-
 	unsigned capture_count = 0;
 
 	input_capture_config_t cap_config;
