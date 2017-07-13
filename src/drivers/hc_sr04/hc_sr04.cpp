@@ -191,7 +191,6 @@ private:
 	_latest_sonar_measurements; /* vector to store latest sonar measurements in before writing to report */
 
 	int 				_manual_sub;
-	struct manual_control_setpoint_s _manual;
 	bool 				_pwm_output_active;
 
 	/**
@@ -291,7 +290,6 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_
 	_buffer_overflows(perf_alloc(PC_COUNT, "hc_sr04_buffer_overflows")),
 	_fd_fmu(-1),
 	_manual_sub(-1),
-	_manual{},
 	_pwm_output_active(false)
 
 {
@@ -733,9 +731,10 @@ HC_SR04::cycle()
 		orb_check(_manual_sub, &updated);
 
 		if (updated) {
-			orb_copy(ORB_ID(manual_control_setpoint), _manual_sub, &_manual);
+			struct manual_control_setpoint_s manual;
+			orb_copy(ORB_ID(manual_control_setpoint), _manual_sub, &manual);
 
-			if (_manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
+			if (manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
 
 				stop_pwm();
 				_pwm_output_active = false;
@@ -800,7 +799,6 @@ HC_SR04::cycle()
 						 &_orb_class_instance, ORB_PRIO_LOW);
 		}
 	}
-
 
 	work_queue(HPWORK, &_work, (worker_t)&HC_SR04::cycle_trampoline, this, USEC2TICK(SR04_CONVERSION_INTERVAL));
 }
