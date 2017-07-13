@@ -601,6 +601,10 @@ void
 HC_SR04::stop()
 {
 
+	/* unadvertise publishing topics */
+	orb_unadvertise(_sensor_info_pub);
+	orb_unadvertise(_distance_sensor_topic);
+
 	stop_pwm();
 
 	input_capture_config_t cap_config;
@@ -667,9 +671,6 @@ HC_SR04::start_pwm()
 void
 HC_SR04::stop_pwm()
 {
-	/* unadvertise publishing topics */
-	orb_unadvertise(_sensor_info_pub);
-	orb_unadvertise(_distance_sensor_topic);
 
 	int fd_pwm = ::open(PWM_OUTPUT0_DEVICE_PATH, O_RDWR);
 
