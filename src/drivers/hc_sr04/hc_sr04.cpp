@@ -117,7 +117,7 @@ int static cmp(const void *a, const void *b)
 class HC_SR04 : public device::CDev
 {
 public:
-	HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch);
+	HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_switch);
 	virtual ~HC_SR04();
 
 	virtual int 		init();
@@ -175,7 +175,7 @@ private:
 	int					_orb_class_instance;
 
 	bool				_enable_median_filter;
-	bool 				_enable_obsavoid_swtch;
+	bool 				_enable_obsavoid_switch;
 
 	enum Rotation 		_rotation;
 	orb_advert_t		_sensor_info_pub;
@@ -270,7 +270,7 @@ private:
  */
 extern "C"  __EXPORT int hc_sr04_main(int argc, char *argv[]);
 
-HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch) :
+HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_switch) :
 	CDev("HC_SR04", SR04_DEVICE_PATH, 0),
 	_min_distance(SR04_MIN_DISTANCE),
 	_max_distance(SR04_MAX_DISTANCE),
@@ -282,7 +282,7 @@ HC_SR04::HC_SR04(enum Rotation rotation, bool enable_median_filter, bool enable_
 	_class_instance(-1),
 	_orb_class_instance(-1),
 	_enable_median_filter(enable_median_filter),
-	_enable_obsavoid_swtch(enable_obsavoid_swtch),
+	_enable_obsavoid_switch(enable_obsavoid_switch),
 	_rotation(rotation),
 	_sensor_info_pub(nullptr),
 	_distance_sensor_topic(nullptr),
@@ -724,7 +724,7 @@ HC_SR04::cycle()
 	* - if avoidance enabled (SWITCH_POS_ON) the ultrasonic sensor is on
 	* - else the ultrasonic sensor is switched off
 	*/
-	if (_enable_obsavoid_swtch) {
+	if (_enable_obsavoid_switch) {
 		if (_manual_sub == -1) {
 			_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 		}
@@ -862,7 +862,7 @@ namespace  hc_sr04
 
 HC_SR04	*g_dev;
 
-void	start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch);
+void	start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_switch);
 void	stop();
 // void	test();
 void	info();
@@ -871,7 +871,7 @@ void	info();
  * Start the driver.
  */
 void
-start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_swtch)
+start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_switch)
 {
 	if (g_dev != nullptr) {
 		PX4_ERR("already started");
@@ -879,7 +879,7 @@ start(enum Rotation rotation, bool enable_median_filter, bool enable_obsavoid_sw
 	}
 
 	/* create the driver */
-	g_dev = new HC_SR04(rotation, enable_median_filter, enable_obsavoid_swtch);
+	g_dev = new HC_SR04(rotation, enable_median_filter, enable_obsavoid_switch);
 
 	if (g_dev == nullptr) {
 		goto fail;
@@ -1024,7 +1024,7 @@ hc_sr04_main(int argc, char *argv[])
 
 	int ch;
 	bool enable_median_filter = false;
-	bool enable_obsavoid_swtch = false;
+	bool enable_obsavoid_switch = false;
 	enum Rotation rotation = ROTATION_NONE;
 	int myoptind = 1;
 	const char *myoptarg = NULL;
@@ -1041,7 +1041,7 @@ hc_sr04_main(int argc, char *argv[])
 			break;
 
 		case 'a':
-			enable_obsavoid_swtch = true;
+			enable_obsavoid_switch = true;
 			break;
 
 		default:
@@ -1055,7 +1055,7 @@ hc_sr04_main(int argc, char *argv[])
 	 * Start/load the driver.
 	 */
 	if (!strcmp(verb, "start")) {
-		hc_sr04::start(rotation, enable_median_filter, enable_obsavoid_swtch);
+		hc_sr04::start(rotation, enable_median_filter, enable_obsavoid_switch);
 	}
 
 	/*
