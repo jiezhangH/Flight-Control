@@ -341,6 +341,16 @@ HC_SR04::init()
 		return PX4_ERROR;
 	}
 
+	if (!_enable_obsavoid_switch) {
+		if (start_pwm() == PX4_OK) {
+			_pwm_output_active = true;
+
+		} else {
+			PX4_ERR("Not able to start pwm.");
+			return PX4_ERROR;
+		}
+	}
+
 	unsigned capture_count = 0;
 
 	input_capture_config_t cap_config;
