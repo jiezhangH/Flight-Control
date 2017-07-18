@@ -11,7 +11,7 @@ then
 	param set NAV_ACC_RAD 4.0
 	param set NAV_MC_ALT_RAD 0.8
 	param set MPC_TKO_SPEED 0.7
-	param set MIS_TAKEOFF_ALT 2.5
+	param set MIS_TAKEOFF_ALT 3.0
 	param set MPC_THR_MIN 0.10
 	param set MPC_MANTHR_MIN 0.04
 
