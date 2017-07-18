@@ -613,13 +613,13 @@ HC_SR04::stop()
 	orb_unadvertise(_sensor_info_pub);
 	orb_unadvertise(_distance_sensor_topic);
 
+	stop_pwm();
+
 	int fd_fmu = ::open(PX4FMU_DEVICE_PATH, O_RDWR);
 
 	if (fd_fmu == -1) {
 		PX4_WARN("FMU: px4_open fail\n");
 	}
-
-	stop_pwm();
 
 	input_capture_config_t cap_config;
 	cap_config.channel = 2;
@@ -629,6 +629,7 @@ HC_SR04::stop()
 	cap_config.context = nullptr;
 
 	::ioctl(fd_fmu, INPUT_CAP_SET_CALLBACK, (unsigned long)&cap_config);
+	::close(fd_fmu);
 
 	_should_exit = true;
 	work_cancel(HPWORK, &_work);
