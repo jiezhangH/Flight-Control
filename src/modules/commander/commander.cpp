@@ -1381,7 +1381,7 @@ int commander_thread_main(int argc, char *argv[])
 	param_t _param_arm_switch_is_button = param_find("COM_ARM_SWISBTN");
 	param_t _param_gohome_land_iterrupt = param_find("COM_ALLOW_INT");
 	param_t _param_allow_interrupt_min_alt = param_find("COM_MIN_ALT");
-	param_t _param_disarm_detect_crash = param_find("COM_DISARM_CRASH");
+	param_t _param_disarm_crash = param_find("COM_DISARM_CRASH");
 
 	param_t _param_fmode_1 = param_find("COM_FLTMODE1");
 	param_t _param_fmode_2 = param_find("COM_FLTMODE2");
@@ -1731,7 +1731,6 @@ int commander_thread_main(int argc, char *argv[])
 	int32_t arm_without_gps = 0;
 	int32_t gohome_land_iterrupt = 0;
 	float allow_interrupt_min_alt = 0.0f;
-	int32_t disarm_detect_crash = 0;
 	param_get(_param_autostart_id, &autostart_id);
 	param_get(_param_rc_in_off, &rc_in_off);
 	param_get(_param_arm_without_gps, &arm_without_gps);
@@ -1739,7 +1738,6 @@ int commander_thread_main(int argc, char *argv[])
 	param_get(_param_arm_switch_is_button, &arm_switch_is_button);
 	param_get(_param_gohome_land_iterrupt, &gohome_land_iterrupt);
 	param_get(_param_allow_interrupt_min_alt, &allow_interrupt_min_alt);
-	param_get(_param_disarm_detect_crash, &disarm_detect_crash);
 
 	can_arm_without_gps = (arm_without_gps == 1);
 	status.rc_input_mode = rc_in_off;
@@ -1781,7 +1779,8 @@ int commander_thread_main(int argc, char *argv[])
 
 	int autosave_params; /**< Autosave of parameters enabled/disabled, loaded from parameter */
 
-	int32_t disarm_when_landed = 0;
+	float disarm_when_landed = 0;
+	float disarm_when_crash = 0;
 
 	/* check which state machines for changes, clear "changed" flag */
 	bool arming_state_changed = false;
@@ -1874,6 +1873,7 @@ int commander_thread_main(int argc, char *argv[])
 			param_get(_param_ef_time_thres, &ef_time_thres);
 			param_get(_param_geofence_action, &geofence_action);
 			param_get(_param_disarm_land, &disarm_when_landed);
+			param_get(_param_disarm_crash, &disarm_when_crash);
 
 			// If we update parameters the first time
 			// make sure the hysteresis time gets set.
@@ -2284,20 +2284,18 @@ int commander_thread_main(int argc, char *argv[])
 			max_altitude = land_detector.alt_max;
 		}
 
-		/* Update hysteresis time. Use a time of factor 5 longer if we have not taken off yet. */
-		hrt_abstime timeout_time = disarm_when_landed * 1000000;
-
+		/* Auto Disarm */
 		if (!have_taken_off_since_arming) {
-			timeout_time *= 5;
+			/* pilot has ten seconds time to take off */
+			auto_disarm_hysteresis.set_hysteresis_time_from(false, 10 * 1000000);
+		} else {
+			auto_disarm_hysteresis.set_hysteresis_time_from(false, disarm_when_landed * 1000000);
 		}
 
-		auto_disarm_hysteresis.set_hysteresis_time_from(false, timeout_time);
-
-		// Check for auto-disarm
-		if (armed.armed && land_detector.landed && disarm_when_landed > 0) {
+		if (armed.armed && land_detector.landed && disarm_when_landed > FLT_EPSILON) {
 			auto_disarm_hysteresis.set_state_and_update(true);
 
-		} else if(armed.armed && land_detector.crash && disarm_detect_crash > 0){
+		} else if(armed.armed && land_detector.crash && disarm_when_crash > FLT_EPSILON){
 			//TODO
 			//Now it needs a lot of verification
 
