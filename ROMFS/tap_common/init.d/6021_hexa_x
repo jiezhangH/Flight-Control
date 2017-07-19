@@ -148,7 +148,8 @@ then
 	# RTL settings
 	#
 	param set MIS_LTRMIN_ALT 5.0
-	param set RTL_LAND_DELAY 2.5
+	param set RTL_LAND_DELAY 3.5
+	param set LAND_LOI_DELAY 3.5
 
 	#
 	# Vehicle model settings
