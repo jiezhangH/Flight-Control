@@ -45,7 +45,7 @@
 /**
  * LAND loiter time when switch to the auto land mode
  *
- * If set to 0 the system will not loiter.
+ * If set to a negative value the system will not loiter before landing.
  *
  * @unit s
  * @min -1
