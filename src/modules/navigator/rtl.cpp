@@ -305,7 +305,14 @@ RTL::set_rtl_item()
 			_mission_item.loiter_radius = _navigator->get_loiter_radius();
 			_mission_item.nav_cmd = autoland ? NAV_CMD_LOITER_TIME_LIMIT : NAV_CMD_LOITER_UNLIMITED;
 			_mission_item.acceptance_radius = _navigator->get_acceptance_radius();
-			_mission_item.time_inside = _param_land_delay.get() < 0.0f ? 0.0f : _param_land_delay.get();
+
+			if ((int)_navigator->get_attitude_setpoint()->landing_gear == (int)vehicle_attitude_setpoint_s::LANDING_GEAR_DOWN) {
+				_mission_item.time_inside = 0.0f;
+
+			} else {
+				_mission_item.time_inside = _param_land_delay.get() < 0.0f ? 0.0f : _param_land_delay.get();
+			}
+
 			_mission_item.autocontinue = autoland;
 			_mission_item.origin = ORIGIN_ONBOARD;
 			_mission_item.deploy_gear = true;

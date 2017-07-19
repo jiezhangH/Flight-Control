@@ -270,6 +270,12 @@ Navigator::vehicle_control_mode_update()
 }
 
 void
+Navigator::vehicle_att_sp_update()
+{
+	orb_copy(ORB_ID(vehicle_attitude_setpoint), _vehicle_att_sp_sub, &_vehicle_att_sp);
+}
+
+void
 Navigator::params_update()
 {
 	parameter_update_s param_update;
@@ -320,11 +326,13 @@ Navigator::task_main()
 	_offboard_mission_sub = orb_subscribe(ORB_ID(offboard_mission));
 	_param_update_sub = orb_subscribe(ORB_ID(parameter_update));
 	_vehicle_command_sub = orb_subscribe(ORB_ID(vehicle_command));
+	_vehicle_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 
 	/* copy all topics first time */
 	vehicle_status_update();
 	vehicle_land_detected_update();
 	vehicle_control_mode_update();
+	vehicle_att_sp_update();
 	global_position_update();
 	gps_position_update();
 	sensor_combined_update();
@@ -412,6 +420,12 @@ Navigator::task_main()
 
 		if (updated) {
 			vehicle_control_mode_update();
+		}
+
+		orb_check(_vehicle_att_sp_sub, &updated);
+
+		if (updated) {
+			vehicle_att_sp_update();
 		}
 
 		/* vehicle status updated */

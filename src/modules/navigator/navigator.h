@@ -137,6 +137,7 @@ public:
 	 */
 	struct vehicle_status_s	    *get_vstatus() { return &_vstatus; }
 	struct vehicle_land_detected_s	    *get_land_detected() { return &_land_detected; }
+	struct vehicle_attitude_setpoint_s  *get_attitude_setpoint() { return &_vehicle_att_sp; }
 	struct vehicle_control_mode_s	    *get_control_mode() { return &_control_mode; }
 	struct vehicle_global_position_s   *get_global_position() { return &_global_pos; }
 	struct vehicle_gps_position_s	    *get_gps_position() { return &_gps_pos; }
@@ -257,6 +258,7 @@ private:
 	int		_offboard_mission_sub;		/**< offboard mission subscription */
 	int		_param_update_sub;		/**< param update subscription */
 	int		_vehicle_command_sub;		/**< vehicle commands (onboard and offboard) */
+	int		_vehicle_att_sp_sub;
 
 
 	orb_advert_t	_pos_sp_triplet_pub;		/**< publish position setpoint triplet */
@@ -267,6 +269,7 @@ private:
 							  when pos control is deactivated */
 
 	vehicle_status_s				_vstatus;		/**< vehicle status */
+	vehicle_attitude_setpoint_s			_vehicle_att_sp;
 	vehicle_land_detected_s				_land_detected;		/**< vehicle land_detected */
 	vehicle_control_mode_s				_control_mode;		/**< vehicle control mode */
 	vehicle_global_position_s			_global_pos;		/**< global vehicle position */
@@ -369,6 +372,11 @@ private:
 	 * Retrieve vehicle control mode
 	 */
 	void		vehicle_control_mode_update();
+
+	/**
+	 * Retrieve vehicle attitude
+	 */
+	void		vehicle_att_sp_update();
 
 	/**
 	 * Update parameters
