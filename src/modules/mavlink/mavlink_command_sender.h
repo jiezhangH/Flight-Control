@@ -108,12 +108,12 @@ private:
 		mavlink_command_long_t command = {};
 		hrt_abstime timestamp_us = 0;
 		hrt_abstime last_time_sent_us = 0;
-		int8_t num_sent_per_channel[MAX_MAVLINK_CHANNEL] = {-1, -1, -1, -1};
+		int8_t num_sent_per_channel[MAX_MAVLINK_CHANNEL] = { -1, -1, -1, -1};
 	} command_item_t;
 
 	TimestampedList<command_item_t> _commands;
 
-	bool _debug_enabled = false;
+	bool _debug_enabled = true; // FIXME: enabled for now to debug trigger issues
 	static const uint8_t RETRIES = 3;
 	static const uint64_t TIMEOUT_US = 500000;
 
