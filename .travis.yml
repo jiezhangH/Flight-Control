@@ -67,6 +67,7 @@ script:
       mkdir -p s3autopilot;
       cp build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec s3autopilot;
       echo ${TRAVIS_TAG} > s3autopilot/version;
+      sha256sum s3autopilot/autopilot.yuneec | head -c 64 > s3autopilot/hash
 
     elif [[ "${BUILD_TARGET}" = "check_format" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
       ./Tools/docker_run.sh 'make check_format';
@@ -90,6 +91,8 @@ after_success:
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/autopilot.yuneec;
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/version s3://${S3_BUCKET_NAME}/autopilot/latest/version;
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/version s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/version;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/hash s3://${S3_BUCKET_NAME}/autopilot/latest/hash;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3autopilot/hash s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/hash;
 
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-Linux.zip s3://${S3_BUCKET_NAME}/sitl/latest/Yuneec-SITL-Simulation-Linux.zip;
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-Linux.zip s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/Yuneec-SITL-Simulation-Linux.zip;
