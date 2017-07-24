@@ -65,54 +65,20 @@
 extern void led_on(int led);
 extern void led_off(int led);
 
-// Set externally in commander
-// TODO replace with proper architecture and API
-extern bool prevent_poweroff_flag;
-
-// work queue element
-static struct work_s work;
-
-// define the different states for the shutdown
-#define SHUTDOWN_STATE_INIT 0
-#define SHUTDOWN_STATE_PENDING 1
-#define SHUTDOWN_STATE_COMMITTED 2
-// shutdown initiated flag
-static volatile int shutdown_state = SHUTDOWN_STATE_INIT;
-
-static void pwr_down_call_back(void *args)
+static int default_power_button_state_notification(board_power_button_state_notification_e request)
 {
-	led_on(BOARD_LED_BLUE);
-	// disable the interrups
-	px4_enter_critical_section();
-	// power down board
-	px4_board_pwr(false);
-
-	// keep system busy, to prevent to run other code
-	while (1);
+//	syslog(0,"%d\n", request);
+	return PWR_BUTTON_RESPONSE_SHUT_DOWN_NOW;
 }
 
-static void shutdown_tune_call_back(void *args)
+
+static power_button_state_notification_t power_state_notification = default_power_button_state_notification;
+
+int board_register_power_state_notification_cb(power_button_state_notification_t cb)
 {
-	// lock out button interrupts
-	irqstate_t flags = px4_enter_critical_section();
-	shutdown_state = SHUTDOWN_STATE_COMMITTED;
-	px4_leave_critical_section(flags);
-
-	// turn off LEDs
-	struct led_control_s leds = {0};
-	leds.priority = 2;
-	leds.led_mask = 0xff;
-	leds.mode = 0; // LED OFF
-	orb_advertise(ORB_ID(led_control), &leds);
-	// play shutdown tune
-	struct tune_control_s tune;
-	tune.tune_id = 16; //  shutdown
-	tune.strength = 40;
-	orb_advertise(ORB_ID(tune_control), &tune);
-	// Call power done routine after tune as played
-	work_queue(HPWORK, &work, (worker_t)&pwr_down_call_back, NULL, USEC2TICK(MS_SHUTDOWN_TUNE_LENGTH * 1000));
+	power_state_notification = cb;
+	return OK;
 }
-
 
 /************************************************************************************
  * Private Data
@@ -124,23 +90,38 @@ static void shutdown_tune_call_back(void *args)
 
 static int board_button_irq(int irq, FAR void *context)
 {
+	static struct timespec time_down;
+
 	if (board_pwr_button_down()) {
 
 		led_on(BOARD_LED_RED);
-
-		if (!prevent_poweroff_flag && shutdown_state == SHUTDOWN_STATE_INIT) {
-			shutdown_state = SHUTDOWN_STATE_PENDING;
-			work_queue(HPWORK, &work, (worker_t)&shutdown_tune_call_back, NULL, USEC2TICK(MS_PWR_BUTTON_DOWN * 1000));
-		}
+		clock_gettime(CLOCK_REALTIME, &time_down);
+		power_state_notification(PWR_BUTTON_DOWN);
 
 	} else {
+		power_state_notification(PWR_BUTTON_UP);
+
 		led_off(BOARD_LED_RED);
 
-		// if the shutdown is not initiated cancel the work queue call
-		if (shutdown_state == SHUTDOWN_STATE_PENDING) {
-			// if the button is release before the MS_PWR_BUTTON_DOWN time is passed the work queue is canceled
-			shutdown_state = SHUTDOWN_STATE_INIT;
-			work_cancel(HPWORK, &work);
+		struct timespec now;
+
+		clock_gettime(CLOCK_REALTIME, &now);
+
+		uint64_t tdown_ms = time_down.tv_sec * 1000 + time_down.tv_nsec / 1000000;
+
+		uint64_t tnow_ms  = now.tv_sec * 1000 + now.tv_nsec / 1000000;
+
+		if (tdown_ms != 0 && (tnow_ms - tdown_ms) >= MS_PWR_BUTTON_DOWN) {
+
+			led_on(BOARD_LED_BLUE);
+
+			if (power_state_notification(PWR_BUTTON_REQUEST_SHUT_DOWN) == PWR_BUTTON_RESPONSE_SHUT_DOWN_NOW) {
+				up_mdelay(200);
+				board_shutdown();
+			}
+
+		} else {
+			power_state_notification(PWR_BUTTON_IDEL);
 		}
 
 	}
@@ -188,23 +169,16 @@ bool board_pwr_button_down(void)
 	return 0 == stm32_gpioread(KEY_AD_GPIO);
 }
 
-/****************************************************************************
- * Name: board_pwr
- *
- * Description:
- *   Called to turn on or off the TAP
- *
- ****************************************************************************/
-
-__EXPORT bool px4_board_pwr(bool on_not_off)
+int board_shutdown()
 {
-	if (on_not_off) {
-		stm32_configgpio(POWER_ON_GPIO);
+	led_on(BOARD_LED_BLUE);
 
-	} else {
+	// disable the interrups
+	px4_enter_critical_section();
 
-		stm32_configgpio(POWER_OFF_GPIO);
-	}
+	stm32_configgpio(POWER_OFF_GPIO);
 
-	return true;
+	while (1);
+
+	return 0;
 }

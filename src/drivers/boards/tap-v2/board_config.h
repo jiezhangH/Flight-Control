@@ -265,7 +265,6 @@
 #define BOARD_DMA_ALLOC_POOL_SIZE 5120
 
 #define MS_PWR_BUTTON_DOWN 1500
-#define MS_SHUTDOWN_TUNE_LENGTH 500
 #define KEY_AD_GPIO    (GPIO_INPUT|GPIO_PULLUP|GPIO_EXTI|GPIO_PORTC|GPIO_PIN1)
 #define POWER_ON_GPIO  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
 #define POWER_OFF_GPIO (GPIO_INPUT|GPIO_PULLDOWN|GPIO_PORTA|GPIO_PIN4)
@@ -395,17 +394,6 @@ void board_pwr_init(int stage);
  ****************************************************************************/
 
 bool board_pwr_button_down(void);
-
-/****************************************************************************
- * Name: board_pwr
- *
- * Description:
- *   Called to turn on or off the TAP
- *
- ****************************************************************************/
-
-__EXPORT bool px4_board_pwr(bool on_not_off);
-
 
 #include "../common/board_common.h"
 

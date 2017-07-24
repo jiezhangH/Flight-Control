@@ -4525,7 +4525,7 @@ void *commander_low_prio_loop(void *arg)
 
 							/* sleep 3 seconds and then shutdown */
 							usleep(3000000);
-							px4_board_pwr(false);
+							px4_shutdown_request(false, false);
 						}
 						else {
 							status_flags.condition_calibration_enabled = false;
