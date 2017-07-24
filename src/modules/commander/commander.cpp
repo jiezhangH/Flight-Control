@@ -139,8 +139,6 @@ typedef enum VEHICLE_MODE_FLAG
 
 static constexpr uint8_t COMMANDER_MAX_GPS_NOISE = 60;		/**< Maximum percentage signal to noise ratio allowed for GPS reception */
 
-bool prevent_poweroff_flag = false; ///< If the system is armed it is not allowed to power off and this flag is set to true
-
 /* Decouple update interval and hysteresis counters, all depends on intervals */
 #define COMMANDER_MONITORING_INTERVAL 10000
 #define COMMANDER_MONITORING_LOOPSPERMSEC (1/(COMMANDER_MONITORING_INTERVAL/1000.0f))
@@ -263,6 +261,14 @@ bool low_battery_voltage_actions_done = false;
 bool critical_battery_voltage_actions_done = false;
 bool emergency_battery_voltage_actions_done = false;
 int32_t low_bat_action = 0;
+
+enum class power_state_e : uint8_t
+{
+	idle = 0,
+	pending,
+	commited,
+	wait_for_poweroff
+};
 
 
 /**
@@ -1498,6 +1504,9 @@ int commander_thread_main(int argc, char *argv[])
 		power_button_state_pub = orb_advertise(ORB_ID(power_button_state), &button_state);
 		orb_copy(ORB_ID(power_button_state), power_button_state_sub, &button_state);
 	}
+	power_state_e power_state = power_state_e::idle;
+	hrt_abstime power_state_next_timestamp = 0;
+
 	if (board_register_power_state_notification_cb(power_button_state_notification_cb) != 0) {
 		PX4_ERR("Failed to register power notification callback");
 	}
@@ -1868,12 +1877,6 @@ int commander_thread_main(int argc, char *argv[])
 
 		arming_ret = TRANSITION_NOT_CHANGED;
 
-		if (armed.armed && !armed.manual_lockdown) {
-			prevent_poweroff_flag = true;
-		} else {
-			prevent_poweroff_flag = false;
-		}
-
 		/* update parameters */
 		orb_check(param_changed_sub, &updated);
 
@@ -1991,9 +1994,34 @@ int commander_thread_main(int argc, char *argv[])
 		if (updated) {
 			power_button_state_s button_state;
 			orb_copy(ORB_ID(power_button_state), power_button_state_sub, &button_state);
-			if (button_state.event == power_button_state_s::PWR_BUTTON_STATE_REQUEST_SHUTDOWN) {
-				px4_shutdown_request(false, false);
+			if (button_state.event == power_button_state_s::PWR_BUTTON_STATE_DOWN) {
+
+				// allow shutdown only if not armed or the kill switch is enabled.
+				// This is to circumvent a HW bug, where the button can actually be pressed in air by
+				// wind pressure (!)
+				if (!armed.armed || armed.manual_lockdown) {
+					power_state = power_state_e::pending;
+					power_state_next_timestamp = hrt_absolute_time() + 1500000; // button down time is 1.5s
+				}
+			} else if (button_state.event == power_button_state_s::PWR_BUTTON_STATE_UP
+					|| button_state.event == power_button_state_s::PWR_BUTTON_STATE_IDEL) {
+				if (power_state == power_state_e::pending) { // abort only if not commited yet
+					power_state = power_state_e::idle;
+				}
 			}
+		}
+
+		hrt_abstime current_time = hrt_absolute_time();
+		if (power_state == power_state_e::pending && current_time > power_state_next_timestamp) {
+			// turn off LEDs
+			rgbled_set_color_and_mode(led_control_s::COLOR_WHITE, led_control_s::MODE_OFF, 0, led_control_s::MAX_PRIORITY);
+			// play shutdown tune
+			set_tune_override(16); // FIXME: this definition needs to be added to drv_tone_alarm
+			power_state = power_state_e::commited;
+			power_state_next_timestamp = current_time + 500000; // wait 500ms until power off
+		} else if (power_state == power_state_e::commited && current_time > power_state_next_timestamp) {
+			power_state = power_state_e::wait_for_poweroff;
+			px4_shutdown_request(false, false);
 		}
 
 		orb_check(sp_man_sub, &updated);
@@ -3566,7 +3594,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 	/* driving rgbled */
 	if (changed || last_overload != overload) {
 		uint8_t led_mode = led_control_s::MODE_OFF;
-		uint8_t led_color;
+		uint8_t led_color = led_control_s::COLOR_WHITE;
 		uint8_t prio = 0;
 		static bool activated_high_prio_event = false;
 		bool set_normal_color = false;
