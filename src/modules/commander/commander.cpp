@@ -2257,26 +2257,29 @@ int commander_thread_main(int argc, char *argv[])
 		if (updated) {
 			orb_copy(ORB_ID(vehicle_land_detected), land_detector_sub, &land_detector);
 
-		/* Report Landing/Takeoff detected information only after armed*/
-			if (was_landed != land_detector.landed && armed.armed) {
-				if (land_detector.landed) {
-					mavlink_and_console_log_info(&mavlink_log_pub, "Landing detected.");
-				} else {
-					mavlink_and_console_log_info(&mavlink_log_pub, "Takeoff detected.");
-					have_taken_off_since_arming = true;
+			/* Report landdetector information only after armed*/
+			if(armed.armed){
+
+				if (was_landed != land_detector.landed) {
+					if (land_detector.landed) {
+						mavlink_and_console_log_info(&mavlink_log_pub, "Landing detected.");
+					} else {
+						mavlink_and_console_log_info(&mavlink_log_pub, "Takeoff detected.");
+						have_taken_off_since_arming = true;
+					}
 				}
-			}
 
-			if (!was_falling && land_detector.freefall) {
-				mavlink_and_console_log_info(&mavlink_log_pub, "Freefall detected.");
-			}
+				if (!was_falling && land_detector.freefall) {
+					mavlink_and_console_log_info(&mavlink_log_pub, "Freefall detected.");
+				}
 
-			if (!was_crashed && land_detector.crash) {
-				mavlink_and_console_log_info(&mavlink_log_pub, "Crash detected.");
-			}
+				if (!was_crashed && land_detector.crash) {
+					mavlink_and_console_log_info(&mavlink_log_pub, "Crash detected.");
+				}
 
-			if ((land_detector.alt_max > 0.0f) && (!PX4_ISFINITE(max_altitude) || (fabsf(max_altitude - land_detector.alt_max) > FLT_EPSILON))) {
-				mavlink_and_console_log_info(&mavlink_log_pub, "Altitude limit: %i meters above home", (uint64_t)land_detector.alt_max);
+				if ((land_detector.alt_max > 0.0f) && (!PX4_ISFINITE(max_altitude) || (fabsf(max_altitude - land_detector.alt_max) > FLT_EPSILON))) {
+					mavlink_and_console_log_info(&mavlink_log_pub, "Altitude limit: %i meters above home", (uint64_t)land_detector.alt_max);
+				}
 			}
 
 			was_landed = land_detector.landed;
