@@ -2257,7 +2257,8 @@ int commander_thread_main(int argc, char *argv[])
 		if (updated) {
 			orb_copy(ORB_ID(vehicle_land_detected), land_detector_sub, &land_detector);
 
-			if (was_landed != land_detector.landed) {
+		/* Report Landing/Takeoff detected information only after armed*/
+			if (was_landed != land_detector.landed && armed.armed) {
 				if (land_detector.landed) {
 					mavlink_and_console_log_info(&mavlink_log_pub, "Landing detected.");
 				} else {
