@@ -89,7 +89,7 @@ then
 		# Manual stick input parameters
 		param set RC_FLT_SMP_RATE 33.0
 		param set RC_FLT_CUTOFF 5.0
-		param set MPC_HOLD_XY_DZ 0.05
+		param set MPC_HOLD_DZ 0.1
 		param set MPC_XY_MAN_EXPO 0.7
 		param set MPC_Z_MAN_EXPO 0.6
 		param set MPC_MANTHR_MIN 0.15
