@@ -509,7 +509,8 @@ Navigator::task_main()
 				}
 
 				/* make sure that it never exceeds maximum altitude */
-				if (rep->current.alt > (get_home_position()->alt + get_land_detected()->alt_max)) {
+				if ((rep->current.alt > (get_home_position()->alt + get_land_detected()->alt_max)
+				     && (get_land_detected()->alt_max > 0.0f))) {
 					rep->current.alt = (get_home_position()->alt + get_land_detected()->alt_max);
 				}
 
