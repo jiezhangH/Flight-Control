@@ -154,7 +154,7 @@ then
 	#
 	# Vehicle model settings
 	#
-	param set LNDMC_ALT_MAX 100.0
+	param set LNDMC_ALT_MAX 500.0
 
 	#
 	# Maximum tilt angle
