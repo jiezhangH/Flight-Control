@@ -4363,7 +4363,7 @@ void answer_command(struct vehicle_command_s &cmd, unsigned result,
 {
 	switch (result) {
 	case vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED:
-		tune_positive(true);
+		// No notification on success - less distraction to the user
 		break;
 
 	case vehicle_command_s::VEHICLE_CMD_RESULT_DENIED:
