@@ -220,6 +220,11 @@ int InputMavlinkCmdMount::update_impl(unsigned int timeout_ms, ControlData **con
 			vehicle_command_s vehicle_command;
 			orb_copy(ORB_ID(vehicle_command), _vehicle_command_sub, &vehicle_command);
 
+			// Gimbal pitch should be set to GLOBAL mode during survey
+			if (_control_data.type == ControlData::Type::Neutral) {
+				_stabilize[1] = true;
+			}
+
 			for (int i = 0; i < 3; ++i) {
 				_control_data.stabilize_axis[i] = _stabilize[i];
 			}
