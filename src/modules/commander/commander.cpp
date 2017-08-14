@@ -1665,6 +1665,9 @@ int commander_thread_main(int argc, char *argv[])
 	int sp_man_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 	memset(&sp_man, 0, sizeof(sp_man));
 
+	/*Initialize last_sp_man.mode_slot to -1, set mode slot to unassigned */
+	_last_sp_man.mode_slot=manual_control_setpoint_s::MODE_SLOT_NONE;
+
 	/* Subscribe to offboard control data */
 	int offboard_control_mode_sub = orb_subscribe(ORB_ID(offboard_control_mode));
 	memset(&offboard_control_mode, 0, sizeof(offboard_control_mode));
