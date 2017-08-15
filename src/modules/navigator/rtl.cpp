@@ -55,6 +55,7 @@
 #include <navigator/navigation.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/vtol_vehicle_status.h>
+#include <uORB/topics/vehicle_command.h>
 
 #include "navigator.h"
 #include "rtl.h"
@@ -72,8 +73,9 @@ RTL::RTL(Navigator *navigator, const char *name) :
 {
 	/* load initial params */
 	updateParams();
-	/* initial reset */
-	on_inactive();
+
+	// reset RTL state
+	_rtl_state = RTL_STATE_NONE;
 }
 
 RTL::~RTL()
@@ -316,6 +318,13 @@ RTL::set_rtl_item()
 			_mission_item.autocontinue = autoland;
 			_mission_item.origin = ORIGIN_ONBOARD;
 			_mission_item.deploy_gear = true;
+
+			vehicle_command_s cmd{};
+			// Set gimbal to default orientation
+			cmd.command = vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONFIGURE;
+			cmd.timestamp = hrt_absolute_time();
+			orb_advert_t pub = orb_advertise_queue(ORB_ID(vehicle_command), &cmd, vehicle_command_s::ORB_QUEUE_LENGTH);
+			(void)orb_unadvertise(pub);
 
 			_navigator->set_can_loiter_at_sp(true);
 

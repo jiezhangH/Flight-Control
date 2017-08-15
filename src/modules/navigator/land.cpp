@@ -52,6 +52,7 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/position_setpoint_triplet.h>
+#include <uORB/topics/vehicle_command.h>
 
 #include "land.h"
 #include "navigator.h"
@@ -85,6 +86,14 @@ void
 Land::on_activation()
 {
 	set_current_position_item(&_mission_item);
+
+	vehicle_command_s cmd{};
+	// Set gimbal to default orientation
+	cmd.command = vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONFIGURE;
+	cmd.timestamp = hrt_absolute_time();
+	orb_advert_t pub = orb_advertise_queue(ORB_ID(vehicle_command), &cmd, vehicle_command_s::ORB_QUEUE_LENGTH);
+	(void)orb_unadvertise(pub);
+
 	struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 	pos_sp_triplet->previous.valid = false;
 	mission_apply_limitation(&_mission_item);

@@ -62,6 +62,7 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/mission.h>
 #include <uORB/topics/mission_result.h>
+#include <uORB/topics/vehicle_command.h>
 
 #include "mission.h"
 #include "navigator.h"
@@ -164,12 +165,32 @@ Mission::on_inactive()
 
 	/* reset so current mission item gets restarted if mission was paused */
 	_work_item_type = WORK_ITEM_TYPE_DEFAULT;
+
+	// Disable camera trigger
+	vehicle_command_s cmd{};
+	cmd.command = vehicle_command_s::VEHICLE_CMD_DO_TRIGGER_CONTROL;
+	// Pause trigger
+	cmd.param1 = -1.0f;
+	cmd.param3 = 1.0f;
+	cmd.timestamp = hrt_absolute_time();
+	orb_advert_t pub = orb_advertise_queue(ORB_ID(vehicle_command), &cmd, vehicle_command_s::ORB_QUEUE_LENGTH);
+	(void)orb_unadvertise(pub);
 }
 
 void
 Mission::on_activation()
 {
 	set_mission_items();
+
+	// unpause triggering if it was paused
+	vehicle_command_s cmd{};
+	cmd.command = vehicle_command_s::VEHICLE_CMD_DO_TRIGGER_CONTROL;
+	// unpause trigger
+	cmd.param1 = -1.0f;
+	cmd.param3 = 0.0f;
+	cmd.timestamp = hrt_absolute_time();
+	orb_advert_t pub = orb_advertise_queue(ORB_ID(vehicle_command), &cmd, vehicle_command_s::ORB_QUEUE_LENGTH);
+	(void)orb_unadvertise(pub);
 }
 
 void
