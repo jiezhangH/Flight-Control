@@ -1440,7 +1440,7 @@ protected:
 				cmd.param1 = 0; // all cameras
 				cmd.param2 = 0; // duration 0 because only taking one picture
 				cmd.param3 = 1; // only take one
-				cmd.param4 = NAN;
+				cmd.param4 = trigger.seq; // FIXME: interim solution for a capture command sequence
 				cmd.param5 = NAN;
 				cmd.param6 = NAN;
 				cmd.param7 = NAN;
