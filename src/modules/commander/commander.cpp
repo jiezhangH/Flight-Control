@@ -2726,10 +2726,10 @@ int commander_thread_main(int argc, char *argv[])
 		}
 
 		// Geofence actions
-		if (armed.armed && (geofence_result.geofence_action != geofence_result_s::GF_ACTION_NONE)) {
+		static bool geofence_loiter_on = false;
+		static bool geofence_rtl_on = false;
 
-			static bool geofence_loiter_on = false;
-			static bool geofence_rtl_on = false;
+		if (armed.armed && (geofence_result.geofence_action != geofence_result_s::GF_ACTION_NONE)) {
 
 			// check for geofence violation
 			if (geofence_result.geofence_violated) {
@@ -2786,9 +2786,9 @@ int commander_thread_main(int argc, char *argv[])
 			warning_action_on = warning_action_on || (geofence_loiter_on || geofence_rtl_on);
 		}
 
-		// revert geofence failsafe transition if sticks are moved and we were previously in a manual mode
+		// revert geofence failsafe transition if sticks are moved and we were previously in a manual mode or loiter or rtl
 		// but only if not in a low battery handling action
-		if (!critical_battery_voltage_actions_done && (warning_action_on &&
+		if (!geofence_loiter_on && !geofence_rtl_on && !critical_battery_voltage_actions_done && (warning_action_on &&
 		   (main_state_before_rtl == commander_state_s::MAIN_STATE_MANUAL ||
 			main_state_before_rtl == commander_state_s::MAIN_STATE_ALTCTL ||
 			main_state_before_rtl == commander_state_s::MAIN_STATE_POSCTL ||
