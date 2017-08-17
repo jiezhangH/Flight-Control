@@ -115,7 +115,7 @@ private:
 
 	bool _debug_enabled = true; // FIXME: enabled for now to debug trigger issues
 	static const uint8_t RETRIES = 3;
-	static const uint64_t TIMEOUT_US = 500000;
+	static const uint64_t TIMEOUT_US = 100000;
 
 	/* do not allow copying or assigning this class */
 	MavlinkCommandSender(const MavlinkCommandSender &) = delete;
