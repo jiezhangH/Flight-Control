@@ -321,7 +321,11 @@ RTL::set_rtl_item()
 
 			vehicle_command_s cmd{};
 			// Set gimbal to default orientation
-			cmd.command = vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONFIGURE;
+			cmd.command = vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONTROL;
+			cmd.param1 = 0.0f; // pitch
+			cmd.param2 = 0.0f; // roll
+			cmd.param3 = 0.0f; // yaw
+			cmd.param7 = 2.0f; // VEHICLE_MOUNT_MODE_MAVLINK_TARGETING;
 			cmd.timestamp = hrt_absolute_time();
 			orb_advert_t pub = orb_advertise_queue(ORB_ID(vehicle_command), &cmd, vehicle_command_s::ORB_QUEUE_LENGTH);
 			(void)orb_unadvertise(pub);
