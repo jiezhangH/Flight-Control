@@ -74,9 +74,14 @@ public:
 	virtual void on_inactive();
 
 	/**
-	 * This function is called one time when mode become active, pos_sp_triplet must be initialized here
+	 * This function is called one time when mode becomes active, pos_sp_triplet must be initialized here
 	 */
 	virtual void on_activation();
+
+	/**
+	 * This function is called one time when mode becomes inactive
+	 */
+	virtual void on_inactivation();
 
 	/**
 	 * This function is called while the mode is active
@@ -87,7 +92,7 @@ protected:
 	Navigator *_navigator;
 
 private:
-	bool _first_run;
+	bool _active;
 
 	/* this class has ptr data members, so it should not be copied,
 	 * consequently the copy constructors are private.
