@@ -165,7 +165,11 @@ Mission::on_inactive()
 
 	/* reset so current mission item gets restarted if mission was paused */
 	_work_item_type = WORK_ITEM_TYPE_DEFAULT;
+}
 
+void
+Mission::on_inactivation()
+{
 	// Disable camera trigger
 	vehicle_command_s cmd{};
 	cmd.command = vehicle_command_s::VEHICLE_CMD_DO_TRIGGER_CONTROL;

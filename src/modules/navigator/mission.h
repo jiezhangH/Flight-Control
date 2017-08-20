@@ -73,11 +73,13 @@ public:
 
 	virtual ~Mission();
 
-	virtual void on_inactive();
+	virtual void on_inactive() override;
 
-	virtual void on_activation();
+	virtual void on_inactivation() override;
 
-	virtual void on_active();
+	virtual void on_activation() override;
+
+	virtual void on_active() override;
 
 	enum mission_altitude_mode {
 		MISSION_ALTMODE_ZOH = 0,
