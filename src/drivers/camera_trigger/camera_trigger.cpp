@@ -150,6 +150,8 @@ private:
 	float 			_distance;
 	uint32_t 		_trigger_seq;
 	bool			_trigger_enabled;
+	// XXX overwrite with upstream on rebase
+	bool			_trigger_paused;
 	math::Vector<2>		_last_shoot_position;
 	bool			_valid_position;
 
@@ -219,6 +221,7 @@ CameraTrigger::CameraTrigger() :
 	_distance(25.0f /* m */),
 	_trigger_seq(0),
 	_trigger_enabled(false),
+	_trigger_paused(false),
 	_last_shoot_position(0.0f, 0.0f),
 	_valid_position(false),
 	_vcommand_sub(-1),
@@ -496,6 +499,16 @@ CameraTrigger::cycle_trampoline(void *arg)
 					trig->_trigger_enabled = cmd.param1 > 0.0f;
 					trig->_distance = cmd.param1;
 				}
+
+				// XXX delete on rebase
+				else if (cmd.command == vehicle_command_s::VEHICLE_CMD_DO_TRIGGER_CONTROL) {
+					if (cmd.param1 < 0.0f && fabsf(cmd.param3 - 1) < 0.001f) {
+						trig->_trigger_paused = true;
+
+					} else if (cmd.param1 < 0.0f && fabsf(cmd.param3) < 0.001f) {
+						trig->_trigger_paused = false;
+					}
+				}
 			}
 
 			if ((trig->_trigger_enabled || trig->_mode < 4) && !turning_on) {
@@ -537,11 +550,14 @@ CameraTrigger::engage(void *arg)
 	/* set timestamp the instant before the trigger goes off */
 	report.timestamp = hrt_absolute_time();
 
-	trig->_camera_interface->trigger(true);
+	// XXX overwrite on rebase
+	if (!trig->_trigger_paused) {
+		trig->_camera_interface->trigger(true);
 
-	report.seq = trig->_trigger_seq++;
+		report.seq = trig->_trigger_seq++;
 
-	orb_publish(ORB_ID(camera_trigger), trig->_trigger_pub, &report);
+		orb_publish(ORB_ID(camera_trigger), trig->_trigger_pub, &report);
+	}
 }
 
 void
@@ -549,7 +565,10 @@ CameraTrigger::disengage(void *arg)
 {
 	CameraTrigger *trig = reinterpret_cast<CameraTrigger *>(arg);
 
-	trig->_camera_interface->trigger(false);
+	// XXX overwrite on rebase
+	if (!trig->_trigger_paused) {
+		trig->_camera_interface->trigger(false);
+	}
 }
 
 void
