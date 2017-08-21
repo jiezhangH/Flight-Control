@@ -2405,6 +2405,9 @@ int commander_thread_main(int argc, char *argv[])
 
 		if (auto_disarm_hysteresis.get_state()) {
 			arm_disarm(false, &mavlink_log_pub, "auto disarm on land");
+
+			// if battery_status is emergency, disarmed and emergency_battery_voltage_actions_done false the MAV will shutdown
+			emergency_battery_voltage_actions_done = false;
 		}
 
 		if (!warning_action_on) {
