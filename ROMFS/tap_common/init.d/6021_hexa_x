@@ -155,6 +155,11 @@ then
 	param set LAND_LOI_DELAY 3.5
 
 	#
+	# Mission settings
+	#
+	param set MIS_YAW_ERR 90.0
+
+	#
 	# Vehicle model settings
 	#
 	param set LNDMC_ALT_MAX 500.0
