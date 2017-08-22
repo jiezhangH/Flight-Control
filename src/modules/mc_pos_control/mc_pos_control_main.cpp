@@ -217,6 +217,7 @@ private:
 	control::BlockParamFloat _pos_sp_smoothing;
 	control::BlockParamFloat _takeoff_ramp_time; /**< time contant for smooth takeoff ramp */
 	control::BlockParamFloat _nav_rad; /**< radius that is used by navigator that defines when to update triplets */
+	control::BlockParamFloat _mis_yaw_error; /**< yaw error threshold that is used in mission as update criteria */
 
 	control::BlockDerivative _vel_x_deriv;
 	control::BlockDerivative _vel_y_deriv;
@@ -515,6 +516,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp_smoothing(this, "POS_SMOOTH", true),
 	_takeoff_ramp_time(this, "TKO_RAMP_T", true),
 	_nav_rad(this, "NAV_ACC_RAD", false),
+	_mis_yaw_error(this, "MIS_YAW_ERROR", false),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
@@ -1891,6 +1893,17 @@ void MulticopterPositionControl::control_auto(float dt)
 		_reset_alt_sp = true;
 	}
 
+	/* update yaw setpoint if needed */
+	if (_pos_sp_triplet.current.yawspeed_valid
+	    && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_FOLLOW_TARGET) {
+		_att_sp.yaw_body = _att_sp.yaw_body + _pos_sp_triplet.current.yawspeed * dt;
+
+	} else if (PX4_ISFINITE(_pos_sp_triplet.current.yaw)) {
+		_att_sp.yaw_body = _pos_sp_triplet.current.yaw;
+	}
+
+	float yaw_diff = _wrap_pi(_att_sp.yaw_body - _yaw);
+
 	// Always check reset state of altitude and position control flags in auto
 	reset_pos_sp();
 	reset_alt_sp();
@@ -2195,8 +2208,11 @@ void MulticopterPositionControl::control_auto(float dt)
 					* be used by auto and manual */
 					float acc_track = (final_cruise_speed - vel_sp_along_track_prev) / dt;
 
-					if (acc_track > _acceleration_hor_manual.get()) {
-						vel_sp_along_track = _acceleration_hor_manual.get() * dt + vel_sp_along_track_prev;
+					/* if yaw offset is large, only accelerate with 0.5m/s^2 */
+					float acc = (fabsf(yaw_diff) >  _mis_yaw_error.get()) ? 0.5f : _acceleration_hor_manual.get();
+
+					if (acc_track > acc) {
+						vel_sp_along_track = acc * dt + vel_sp_along_track_prev;
 					}
 
 					/* enforce minimum cruise speed */
@@ -2357,15 +2373,6 @@ void MulticopterPositionControl::control_auto(float dt)
 
 			warn_rate_limited("Auto: Position setpoint not finite");
 			_pos_sp = _curr_pos_sp;
-		}
-
-		/* update yaw setpoint if needed */
-		if (_pos_sp_triplet.current.yawspeed_valid
-		    && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_FOLLOW_TARGET) {
-			_att_sp.yaw_body = _att_sp.yaw_body + _pos_sp_triplet.current.yawspeed * dt;
-
-		} else if (PX4_ISFINITE(_pos_sp_triplet.current.yaw)) {
-			_att_sp.yaw_body = _pos_sp_triplet.current.yaw;
 		}
 
 		/*
