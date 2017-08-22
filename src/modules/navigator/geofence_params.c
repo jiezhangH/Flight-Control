@@ -53,12 +53,11 @@
  * to be reset to 0 to really shut down the system.
  *
  * @min 0
- * @max 4
+ * @max 3
  * @value 0 None
  * @value 1 Warning
  * @value 2 Loiter
  * @value 3 Return to Launch
- * @value 4 Flight terminate
  * @group Geofence
  */
 PARAM_DEFINE_INT32(GF_ACTION, 1);

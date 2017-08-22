@@ -49,13 +49,13 @@
  * Altitude to fly back in RTL in meters
  *
  * @unit m
- * @min 0
+ * @min 5
  * @max 150
  * @decimal 1
  * @increment 0.5
  * @group Return to Launch
  */
-PARAM_DEFINE_FLOAT(RTL_RETURN_ALT, 60);
+PARAM_DEFINE_FLOAT(RTL_RETURN_ALT, 20);
 
 
 /**
