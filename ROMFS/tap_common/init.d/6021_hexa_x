@@ -129,7 +129,8 @@ then
 		param set BAT_V_LOAD_DROP 0.18
 
 		# RC
-		param set COM_RC_LOSS_T 1.5
+		param set COM_RC_LOSS_T 3.0
+		param set COM_DL_LOSS_T 3.0
 
 		# Altitude (manual) mode parameters
 		param set MPC_MAN_TILT_MAX 24
