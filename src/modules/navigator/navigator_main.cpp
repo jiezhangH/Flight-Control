@@ -116,6 +116,7 @@ Navigator::Navigator() :
 	_offboard_mission_sub(-1),
 	_param_update_sub(-1),
 	_vehicle_command_sub(-1),
+	_esc_report_sub(-1),
 	_pos_sp_triplet_pub(nullptr),
 	_mission_result_pub(nullptr),
 	_geofence_result_pub(nullptr),
@@ -134,6 +135,7 @@ Navigator::Navigator() :
 	_takeoff_triplet{},
 	_mission_result{},
 	_att_sp{},
+	_esc_report{},
 	_mission_item_valid(false),
 	_mission_instance_count(0),
 	_loop_perf(perf_alloc(PC_ELAPSED, "navigator")),
@@ -276,6 +278,12 @@ Navigator::vehicle_att_sp_update()
 }
 
 void
+Navigator::vehicle_esc_report_update()
+{
+	orb_copy(ORB_ID(esc_status), _esc_report_sub, &_esc_report);
+}
+
+void
 Navigator::params_update()
 {
 	parameter_update_s param_update;
@@ -327,12 +335,14 @@ Navigator::task_main()
 	_param_update_sub = orb_subscribe(ORB_ID(parameter_update));
 	_vehicle_command_sub = orb_subscribe(ORB_ID(vehicle_command));
 	_vehicle_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
+	_esc_report_sub = orb_subscribe(ORB_ID(esc_status));
 
 	/* copy all topics first time */
 	vehicle_status_update();
 	vehicle_land_detected_update();
 	vehicle_control_mode_update();
 	vehicle_att_sp_update();
+	vehicle_esc_report_update();
 	global_position_update();
 	gps_position_update();
 	sensor_combined_update();
@@ -426,6 +436,12 @@ Navigator::task_main()
 
 		if (updated) {
 			vehicle_att_sp_update();
+		}
+
+		orb_check(_esc_report_sub, &updated);
+
+		if (updated) {
+			vehicle_esc_report_update();
 		}
 
 		/* vehicle status updated */

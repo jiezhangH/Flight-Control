@@ -59,6 +59,7 @@
 #include <uORB/topics/geofence_result.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_land_detected.h>
+#include <uORB/topics/esc_status.h>
 
 #include "navigator_mode.h"
 #include "mission.h"
@@ -150,6 +151,7 @@ public:
 	struct mission_result_s	    *get_mission_result() { return &_mission_result; }
 	struct geofence_result_s		    *get_geofence_result() { return &_geofence_result; }
 	struct vehicle_attitude_setpoint_s *get_att_sp() { return &_att_sp; }
+	struct esc_status_s  			*get_esc_report() { return &_esc_report; }
 
 	int		get_onboard_mission_sub() { return _onboard_mission_sub; }
 	int		get_offboard_mission_sub() { return _offboard_mission_sub; }
@@ -259,7 +261,7 @@ private:
 	int		_param_update_sub;		/**< param update subscription */
 	int		_vehicle_command_sub;		/**< vehicle commands (onboard and offboard) */
 	int		_vehicle_att_sp_sub;
-
+	int		_esc_report_sub;
 
 	orb_advert_t	_pos_sp_triplet_pub;		/**< publish position setpoint triplet */
 	orb_advert_t	_mission_result_pub;
@@ -286,6 +288,7 @@ private:
 	mission_result_s				_mission_result;
 	geofence_result_s				_geofence_result;
 	vehicle_attitude_setpoint_s			_att_sp;
+	esc_status_s 					_esc_report;/**< esc status report include engine failure report */
 
 	bool 		_mission_item_valid;		/**< flags if the current mission item is valid */
 	int		_mission_instance_count;	/**< instance count for the current mission */
@@ -377,6 +380,11 @@ private:
 	 * Retrieve vehicle attitude
 	 */
 	void		vehicle_att_sp_update();
+
+	/**
+	 * Retrieve ESC status report
+	 */
+	void		vehicle_esc_report_update();
 
 	/**
 	 * Update parameters

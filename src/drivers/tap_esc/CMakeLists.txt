@@ -39,6 +39,7 @@ px4_add_module(
 		tap_esc.cpp
 		tap_esc_uploader.cpp
 		tap_esc_common.cpp
+		fault_tolerant_control/fault_tolerant_control.cpp
 	DEPENDS
 		platforms__common
 		lib__led

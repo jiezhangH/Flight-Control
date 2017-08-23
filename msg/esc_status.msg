@@ -17,3 +17,5 @@ uint8 esc_count						# number of connected ESCs
 uint8 esc_connectiontype				# how ESCs connected to the system
 
 esc_report[8] esc
+
+engine_failure_report engine_failure_report # the ESC or motor report of engine failure

@@ -63,7 +63,7 @@
 #include <systemlib/param/param.h>
 #include <systemlib/pwm_limit/pwm_limit.h>
 #include "tap_esc_common.h"
-
+#include "fault_tolerant_control/fault_tolerant_control.h"
 #define NAN_VALUE	(0.0f/0.0f)
 
 #ifndef B250000
@@ -136,9 +136,9 @@ private:
 
 	orb_id_t	_control_topics[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
 
-	orb_advert_t        _esc_feedback_pub;
+	orb_advert_t      _esc_feedback_pub;
 	orb_advert_t      _to_mixer_status; 	///< mixer status flags
-	orb_advert_t    	_mavlink_log_pub;
+	orb_advert_t      _mavlink_log_pub;
 	esc_status_s      _esc_feedback;
 	uint8_t           _channels_count; // The number of ESC channels
 
@@ -167,6 +167,11 @@ private:
 				    float &input);
 
 	hrt_abstime _send_next_tune;
+	FaultTolerantControl *_fault_tolerant_control;
+	int esc_failure_check(uint8_t channel_id);
+	hrt_abstime
+	_wait_esc_save_log; // wait time for ESC saves log,because when motors stop ESC will do not has enough time to save log
+	int _stall_by_lost_prop; // the flag that when the motor stall by a collision of another motor's lost propeller
 };
 
 const uint8_t TAP_ESC::device_mux_map[TAP_ESC_MAX_MOTOR_NUM] = ESC_POS;
@@ -204,8 +209,9 @@ TAP_ESC::TAP_ESC(int channels_count):
 	_initialized(false),
 	_pwm_default_rate(400),
 	_current_update_rate(0),
-	_send_next_tune(0)
-
+	_send_next_tune(0),
+	_wait_esc_save_log(0),
+	_stall_by_lost_prop(-1)
 {
 	_control_topics[0] = ORB_ID(actuator_controls_0);
 	_control_topics[1] = ORB_ID(actuator_controls_1);
@@ -227,6 +233,11 @@ TAP_ESC::TAP_ESC(int channels_count):
 	}
 
 	_outputs.noutputs = 0;
+
+#ifdef CONFIG_ARCH_BOARD_TAP_V2
+	_fault_tolerant_control = new FaultTolerantControl("6x");
+#endif
+
 }
 
 TAP_ESC::~TAP_ESC()
@@ -247,7 +258,7 @@ TAP_ESC::~TAP_ESC()
 
 	// clean up the alternate device node
 	//unregister_class_devname(PWM_OUTPUT_BASE_DEVICE_PATH, _class_instance);
-
+	delete _fault_tolerant_control;
 	tap_esc = nullptr;
 }
 
@@ -454,11 +465,11 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 	for (uint8_t i = 0; i < motor_cnt; i++) {
 		rpm[i] = pwm[i];
 
-		if (rpm[i] > RPMMAX) {
-			rpm[i] = RPMMAX;
+		if ((rpm[i]&RUN_CHANNEL_VALUE_MASK) > RPMMAX) {
+			rpm[i] |= RPMMAX & RUN_CHANNEL_VALUE_MASK;
 
-		} else if (rpm[i] < RPMSTOPPED) {
-			rpm[i] = RPMSTOPPED;
+		} else if ((rpm[i]&RUN_CHANNEL_VALUE_MASK) < RPMSTOPPED) {
+			rpm[i] |= RPMSTOPPED & RUN_CHANNEL_VALUE_MASK;
 		}
 
 		// apply the led color
@@ -632,6 +643,42 @@ bool TAP_ESC::parse_tap_esc_feedback(ESC_UART_BUF *serial_buf, EscPacket *packet
 	}
 
 	return false;
+}
+
+int TAP_ESC::esc_failure_check(uint8_t channel_id)
+{
+	if (!_is_armed) {
+		// clear all motor state
+		_esc_feedback.engine_failure_report.motor_state = 0;
+
+	}
+
+	// the motor has happen failure so far it will not check esc state again when the vehicle is armed
+	if (_esc_feedback.engine_failure_report.motor_state & (1 << channel_id)) {
+		return channel_id;
+
+	} else {
+		// check esc feedback state is error
+		if (_esc_feedback.esc[channel_id].esc_state == ESC_STATUS_ERROR_MOTOR_STALL
+		    || _esc_feedback.esc[channel_id].esc_state == ESC_STATUS_ERROR_HARDWARE
+		    || _esc_feedback.esc[channel_id].esc_state == ESC_STATUS_ERROR_LOSE_CMD
+		    || _esc_feedback.esc[channel_id].esc_state == ESC_STATUS_ERROR_LOSE_PROPELLER) {
+
+			// update ESC save log start time
+			_wait_esc_save_log = hrt_absolute_time();
+
+			// set this motor mask and has failure
+			_esc_feedback.engine_failure_report.motor_state |= 1 << channel_id;
+
+			// print error information for user when the motor has failure
+			mavlink_log_critical(&_mavlink_log_pub, "MOTOR %d ERROR IS %d,ENTER FAULT TOLERANT CONTROL",
+					     channel_id, _esc_feedback.esc[channel_id].esc_state);
+
+			return channel_id;
+		}
+	}
+
+	return PX4_ERROR;
 }
 
 void
@@ -816,6 +863,83 @@ TAP_ESC::cycle()
 			}
 		}
 
+#ifdef CONFIG_ARCH_BOARD_TAP_V2
+
+		int failure_motor_num = -1;
+
+		for (uint8_t channel_id = 0; channel_id < _channels_count; channel_id++) {
+			failure_motor_num = esc_failure_check(channel_id);
+
+			// enter fault tolerant control
+			if (failure_motor_num == channel_id) {
+
+				// update fault tolerant controller parameters about PID or others, only for debug PID parameters
+				_fault_tolerant_control->parameter_update_poll();
+
+				// find the motor with the failure motor is diagonal
+				uint8_t diagonal_motor_num = 0;
+
+				// TODO: to distribute the vehicle motor number of QUAD_X ,this is only for vehicle is HEX_X now
+				// failure motor number: 0 1 2 3 4 5
+				// diagonal motor number:3 4 5 0 1 2
+				if (failure_motor_num + 3 > 5) {
+					diagonal_motor_num = failure_motor_num - 3;
+
+				} else {
+					diagonal_motor_num = failure_motor_num + 3;
+				}
+
+				// check the diagonal motor is failure,will stop it.
+				if (esc_failure_check(diagonal_motor_num) == diagonal_motor_num) {
+
+					// wait ESC save log time,because ESC save log frequency is 5Hz.if we stop motor esc state will clear
+					if (((hrt_absolute_time() - _wait_esc_save_log) > 5000000)
+					    || (_esc_feedback.esc[diagonal_motor_num].esc_setpoint_raw == RPMSTOPPED)) {
+						// stop the failure motor
+						motor_out[diagonal_motor_num] = RPMSTOPPED;
+
+					}
+
+				} else {
+					// recalculate output of the motor with the failure motor is diagonal
+					motor_out[diagonal_motor_num] = _fault_tolerant_control->recalculate_pwm_outputs(motor_out[failure_motor_num],
+									motor_out[diagonal_motor_num], _esc_feedback.engine_failure_report.delta_pwm);
+
+					// wait ESC save log time,because ESC save log frequency is 5Hz.if we stop motor esc state will clear
+					if (((hrt_absolute_time() - _wait_esc_save_log) > 5000000)
+					    || (_esc_feedback.esc[failure_motor_num].esc_setpoint_raw == RPMSTOPPED)) {
+						// stop the failure motor
+						motor_out[failure_motor_num] = RPMSTOPPED;
+
+					}
+				}
+
+				// check a motor stall is caused by a collision of another motor's lost propeller
+				if (_esc_feedback.esc[failure_motor_num].esc_state == ESC_STATUS_ERROR_MOTOR_STALL) {
+					// check whether the other motor is lost propeller
+					for (uint8_t lose_id = 0; lose_id < _channels_count; lose_id++) {
+						if (_esc_feedback.esc[lose_id].esc_state == ESC_STATUS_ERROR_LOSE_PROPELLER) {
+							// stop the failure motor try restart this motor
+							motor_out[failure_motor_num] = RPMSTOPPED;
+							// set the flag when the motor stall by a collision of another motor's lost propeller
+							_stall_by_lost_prop = failure_motor_num;
+							break;
+						}
+					}
+
+				}
+
+				// when ESC unlock to clear motor failure mask
+				if ((hrt_absolute_time() - _wait_esc_save_log) > 50000 && (failure_motor_num == _stall_by_lost_prop)) {
+					// clear this motor mask and has failure
+					_esc_feedback.engine_failure_report.motor_state &= ~(1 << failure_motor_num);
+					_stall_by_lost_prop = -1;
+				}
+			}
+		}
+
+#endif
+
 		/* Kill switch is enabled, emergency stop */
 		if (_armed.manual_lockdown) {
 			for (int i = 0; i < esc_count; ++i) {
@@ -843,10 +967,6 @@ TAP_ESC::cycle()
 #endif
 					_esc_feedback.esc[feed_back_data.channelID].esc_state = feed_back_data.ESCStatus;
 					_esc_feedback.esc[feed_back_data.channelID].esc_vendor = esc_status_s::ESC_VENDOR_TAP;
-					// printf("vol is %d\n",feed_back_data.voltage );
-					// printf("speed is %d\n",feed_back_data.speed );
-					//mavlink_log_info(&_mavlink_log_pub, "tap_esc: %d speed : %d", (int)_esc_feedback.esc[feed_back_data.channelID].esc_state
-					//		,_esc_feedback.esc[feed_back_data.channelID].esc_rpm);
 					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint_raw = motor_out[feed_back_data.channelID];
 					// PWM convert to RPM,PWM:1200~1900<-->RPM:1600~7500 so rpm = 1600 + (pwm - 1200)*((7500-1600)/(1900-1200))
 					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint = motor_out[feed_back_data.channelID] * 8.43f - 8514.3f;
@@ -859,17 +979,6 @@ TAP_ESC::cycle()
 					orb_publish(ORB_ID(esc_status), _esc_feedback_pub, &_esc_feedback);
 				}
 			}
-
-//			if (_packet.msg_id == ESCBUS_MSG_ID_CONFIG_INFO_BASIC) {
-//				ConfigInfoBasicRequest &feed_back_data_config = _packet.d.reqConfigInfoBasic;
-//				uint16_t channel_max;
-//				uint16_t channel_min;
-//
-//				channel_max = feed_back_data_config.maxChannelValue;
-//				channel_min = feed_back_data_config.minChannelValue;
-//				mavlink_log_info(&_mavlink_log_pub, "channel_max: %d channel_min : %d", channel_max,channel_min);
-//			}
-
 		}
 
 		/* and publish for anyone that cares to see */
@@ -1254,7 +1363,7 @@ void start()
 	_task_handle = px4_task_spawn_cmd("tap_esc",
 					  SCHED_DEFAULT,
 					  SCHED_PRIORITY_MAX - 10,
-					  1140,
+					  1200,
 					  (px4_main_t)&task_main_trampoline,
 					  nullptr);
 
