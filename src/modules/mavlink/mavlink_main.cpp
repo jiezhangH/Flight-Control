@@ -1272,7 +1272,9 @@ Mavlink::handle_message(const mavlink_message_t *msg)
 	_parameters_manager->handle_message(msg);
 
 	/* handle packet with ftp component */
-	_mavlink_ftp->handle_message(msg);
+	if (_mavlink_ftp) {
+		_mavlink_ftp->handle_message(msg);
+	}
 
 	/* handle packet with log component */
 	_mavlink_log_handler->handle_message(msg);
@@ -2001,9 +2003,11 @@ Mavlink::task_main(int argc, char *argv[])
 	LL_APPEND(_streams, _parameters_manager);
 
 	/* MAVLINK_FTP stream */
-	_mavlink_ftp = (MavlinkFTP *) MavlinkFTP::new_instance(this);
-	_mavlink_ftp->set_interval(interval_from_rate(80.0f));
-	LL_APPEND(_streams, _mavlink_ftp);
+	if (_ftp_on) {
+		_mavlink_ftp = (MavlinkFTP *) MavlinkFTP::new_instance(this);
+		_mavlink_ftp->set_interval(interval_from_rate(80.0f));
+		LL_APPEND(_streams, _mavlink_ftp);
+	}
 
 	/* MAVLINK_Log_Handler */
 	_mavlink_log_handler = (MavlinkLogHandler *) MavlinkLogHandler::new_instance(this);
