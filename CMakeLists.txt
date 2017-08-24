@@ -189,6 +189,10 @@ endif()
 
 add_definitions(-DBUILD_URI=${BUILD_URI})
 
+if( "$ENV{PX4_RESTRICTED_BUILD}" STREQUAL "1")
+	add_definitions(-DBUILD_WITH_RESTRICTED_SYSTEM_ACCESS)
+endif()
+
 # Define GNU standard installation directories
 include(GNUInstallDirs)
 

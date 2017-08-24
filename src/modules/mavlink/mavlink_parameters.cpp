@@ -140,6 +140,8 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 					return;
 				}
 
+#ifdef BUILD_WITH_RESTRICTED_SYSTEM_ACCESS
+
 				// only allow setting the following params
 				if (strcmp(name, "RTL_RETURN_ALT") != 0 &&
 				    strcmp(name, "GF_ACTION") != 0 &&
@@ -147,6 +149,8 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 				    strcmp(name, "GF_MAX_VER_DIST") != 0) {
 					return;
 				}
+
+#endif /* BUILD_WITH_RESTRICTED_SYSTEM_ACCESS */
 
 				/* attempt to find parameter, set and send it */
 				param_t param = param_find_no_notification(name);
@@ -278,45 +282,49 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 		}
 
 	case MAVLINK_MSG_ID_PARAM_MAP_RC: {
-			// mapping RC parameters could be used to change params indirectly -> disable it
-//			/* map a rc channel to a parameter */
-//			mavlink_param_map_rc_t map_rc;
-//			mavlink_msg_param_map_rc_decode(msg, &map_rc);
-//
-//			if (map_rc.target_system == mavlink_system.sysid &&
-//			    (map_rc.target_component == mavlink_system.compid ||
-//			     map_rc.target_component == MAV_COMP_ID_ALL)) {
-//
-//				/* Copy values from msg to uorb using the parameter_rc_channel_index as index */
-//				size_t i = map_rc.parameter_rc_channel_index;
-//				_rc_param_map.param_index[i] = map_rc.param_index;
-//				strncpy(&(_rc_param_map.param_id[i * (rc_parameter_map_s::PARAM_ID_LEN + 1)]), map_rc.param_id,
-//					MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN);
-//				/* enforce null termination */
-//				_rc_param_map.param_id[i * (rc_parameter_map_s::PARAM_ID_LEN + 1) + rc_parameter_map_s::PARAM_ID_LEN] = '\0';
-//				_rc_param_map.scale[i] = map_rc.scale;
-//				_rc_param_map.value0[i] = map_rc.param_value0;
-//				_rc_param_map.value_min[i] = map_rc.param_value_min;
-//				_rc_param_map.value_max[i] = map_rc.param_value_max;
-//
-//				if (map_rc.param_index == -2) { // -2 means unset map
-//					_rc_param_map.valid[i] = false;
-//
-//				} else {
-//					_rc_param_map.valid[i] = true;
-//				}
-//
-//				_rc_param_map.timestamp = hrt_absolute_time();
-//
-//				if (_rc_param_map_pub == nullptr) {
-//					_rc_param_map_pub = orb_advertise(ORB_ID(rc_parameter_map), &_rc_param_map);
-//
-//				} else {
-//					orb_publish(ORB_ID(rc_parameter_map), _rc_param_map_pub, &_rc_param_map);
-//				}
-//
-//			}
-//
+
+#ifndef BUILD_WITH_RESTRICTED_SYSTEM_ACCESS // mapping RC parameters could be used to change params indirectly -> disable it
+
+			/* map a rc channel to a parameter */
+			mavlink_param_map_rc_t map_rc;
+			mavlink_msg_param_map_rc_decode(msg, &map_rc);
+
+			if (map_rc.target_system == mavlink_system.sysid &&
+			    (map_rc.target_component == mavlink_system.compid ||
+			     map_rc.target_component == MAV_COMP_ID_ALL)) {
+
+				/* Copy values from msg to uorb using the parameter_rc_channel_index as index */
+				size_t i = map_rc.parameter_rc_channel_index;
+				_rc_param_map.param_index[i] = map_rc.param_index;
+				strncpy(&(_rc_param_map.param_id[i * (rc_parameter_map_s::PARAM_ID_LEN + 1)]), map_rc.param_id,
+					MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN);
+				/* enforce null termination */
+				_rc_param_map.param_id[i * (rc_parameter_map_s::PARAM_ID_LEN + 1) + rc_parameter_map_s::PARAM_ID_LEN] = '\0';
+				_rc_param_map.scale[i] = map_rc.scale;
+				_rc_param_map.value0[i] = map_rc.param_value0;
+				_rc_param_map.value_min[i] = map_rc.param_value_min;
+				_rc_param_map.value_max[i] = map_rc.param_value_max;
+
+				if (map_rc.param_index == -2) { // -2 means unset map
+					_rc_param_map.valid[i] = false;
+
+				} else {
+					_rc_param_map.valid[i] = true;
+				}
+
+				_rc_param_map.timestamp = hrt_absolute_time();
+
+				if (_rc_param_map_pub == nullptr) {
+					_rc_param_map_pub = orb_advertise(ORB_ID(rc_parameter_map), &_rc_param_map);
+
+				} else {
+					orb_publish(ORB_ID(rc_parameter_map), _rc_param_map_pub, &_rc_param_map);
+				}
+
+			}
+
+#endif /* BUILD_WITH_RESTRICTED_SYSTEM_ACCESS */
+
 			break;
 		}
 

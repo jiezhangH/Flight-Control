@@ -1619,6 +1619,8 @@ Mavlink::get_rate_mult()
 MavlinkShell *
 Mavlink::get_shell()
 {
+#ifndef BUILD_WITH_RESTRICTED_SYSTEM_ACCESS // disable mavlink shell if this is a restricted build
+
 	if (!_mavlink_shell) {
 		_mavlink_shell = new MavlinkShell();
 
@@ -1635,6 +1637,8 @@ Mavlink::get_shell()
 			}
 		}
 	}
+
+#endif /* BUILD_WITH_RESTRICTED_SYSTEM_ACCESS */
 
 	return _mavlink_shell;
 }
