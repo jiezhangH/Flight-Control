@@ -77,12 +77,12 @@ script:
       PX4_DOCKER_REPO=px4io/px4-dev-clang ./Tools/docker_run.sh 'make clang-tidy-parallel';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       make tests;
-
-      ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
-      mkdir -p s3sitl;
-      cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
-      echo ${TRAVIS_TAG} > s3sitl/version;
     fi
+
+      # ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
+      # mkdir -p s3sitl;
+      # cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
+      # echo ${TRAVIS_TAG} > s3sitl/version;
 
 after_success:
   - set -e
@@ -99,12 +99,12 @@ after_success:
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/latest/version;
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/version;
     fi;
-  - if [[ "${TRAVIS_OS_NAME}" = "osx" && ! -z "${TRAVIS_TAG}" ]]; then
-      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/latest/Yuneec-SITL-Simulation-macOS.zip;
-      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/Yuneec-SITL-Simulation-macOS.zip;
-      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/latest/mac_version;
-      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/mac_version;
-    fi;
+  # - if [[ "${TRAVIS_OS_NAME}" = "osx" && ! -z "${TRAVIS_TAG}" ]]; then
+  #     s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/latest/Yuneec-SITL-Simulation-macOS.zip;
+  #     s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/Yuneec-SITL-Simulation-macOS.zip;
+  #     s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/latest/mac_version;
+  #     s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/${TRAVIS_TAG}/mac_version;
+  #   fi;
 
 deploy:
   - provider: releases
@@ -119,12 +119,12 @@ deploy:
       tags: true
       repo: YUNEEC/Firmware
       condition: $BUILD_TARGET = qgc_firmware
-  - provider: releases
-    api_key:
-      secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
-    file: s3sitl/Yuneec-SITL-Simulation-macOS.zip
-    skip_cleanup: true
-    on:
-      tags: true
-      repo: YUNEEC/Firmware
-      condition: $BUILD_TARGET = tests
+  # - provider: releases
+  #   api_key:
+  #     secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
+  #   file: s3sitl/Yuneec-SITL-Simulation-macOS.zip
+  #   skip_cleanup: true
+  #   on:
+  #     tags: true
+  #     repo: YUNEEC/Firmware
+  #     condition: $BUILD_TARGET = tests
