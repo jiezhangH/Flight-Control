@@ -154,7 +154,7 @@ private:
 
 	void		work_start();
 	void		work_stop();
-	void send_esc_outputs(const float *pwm, const unsigned num_pwm);
+	void send_esc_outputs(const uint16_t *pwm, const unsigned num_pwm);
 	void send_tune_packet(EscbusTunePacket &tune_packet);
 	uint8_t crc8_esc(uint8_t *p, uint8_t len);
 	uint8_t crc_packet(EscPacket &p);
@@ -452,7 +452,7 @@ uint8_t TAP_ESC::crc_packet(EscPacket &p)
 	return p.len + offsetof(EscPacket, d) + 1;
 }
 
-void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
+void TAP_ESC::send_esc_outputs(const uint16_t *pwm, const unsigned num_pwm)
 {
 
 	uint16_t rpm[TAP_ESC_MAX_MOTOR_NUM];
@@ -465,11 +465,11 @@ void TAP_ESC::send_esc_outputs(const float *pwm, const unsigned num_pwm)
 	for (uint8_t i = 0; i < motor_cnt; i++) {
 		rpm[i] = pwm[i];
 
-		if ((rpm[i]&RUN_CHANNEL_VALUE_MASK) > RPMMAX) {
-			rpm[i] |= RPMMAX & RUN_CHANNEL_VALUE_MASK;
+		if ((rpm[i] & RUN_CHANNEL_VALUE_MASK) > RPMMAX) {
+			rpm[i] = (rpm[i] & ~RUN_CHANNEL_VALUE_MASK) | RPMMAX;
 
-		} else if ((rpm[i]&RUN_CHANNEL_VALUE_MASK) < RPMSTOPPED) {
-			rpm[i] |= RPMSTOPPED & RUN_CHANNEL_VALUE_MASK;
+		} else if ((rpm[i] & RUN_CHANNEL_VALUE_MASK) < RPMSTOPPED) {
+			rpm[i] = (rpm[i] & ~RUN_CHANNEL_VALUE_MASK) | RPMSTOPPED;
 		}
 
 		// apply the led color
@@ -834,32 +834,32 @@ TAP_ESC::cycle()
 		}
 
 		const unsigned esc_count = num_outputs;
-		float motor_out[TAP_ESC_MAX_MOTOR_NUM];
+		uint16_t motor_out[TAP_ESC_MAX_MOTOR_NUM];
 
 		// We need to remap from the system default to what PX4's normal
 		// scheme is
 		if (num_outputs == 6) {
-			motor_out[0] = _outputs.output[3];
-			motor_out[1] = _outputs.output[0];
-			motor_out[2] = _outputs.output[4];
-			motor_out[3] = _outputs.output[2];
-			motor_out[4] = _outputs.output[1];
-			motor_out[5] = _outputs.output[5];
+			motor_out[0] = (uint16_t)_outputs.output[3];
+			motor_out[1] = (uint16_t)_outputs.output[0];
+			motor_out[2] = (uint16_t)_outputs.output[4];
+			motor_out[3] = (uint16_t)_outputs.output[2];
+			motor_out[4] = (uint16_t)_outputs.output[1];
+			motor_out[5] = (uint16_t)_outputs.output[5];
 			motor_out[6] = RPMSTOPPED;
 			motor_out[7] = RPMSTOPPED;
 
 		} else if (num_outputs == 4) {
 
-			motor_out[0] = _outputs.output[2];
-			motor_out[2] = _outputs.output[0];
-			motor_out[1] = _outputs.output[1];
-			motor_out[3] = _outputs.output[3];
+			motor_out[0] = (uint16_t)_outputs.output[2];
+			motor_out[2] = (uint16_t)_outputs.output[0];
+			motor_out[1] = (uint16_t)_outputs.output[1];
+			motor_out[3] = (uint16_t)_outputs.output[3];
 
 		} else {
 
 			// Use the system defaults
 			for (int i = 0; i < esc_count; ++i) {
-				motor_out[i] = _outputs.output[i];
+				motor_out[i] = (uint16_t)_outputs.output[i];
 			}
 		}
 
@@ -969,7 +969,7 @@ TAP_ESC::cycle()
 					_esc_feedback.esc[feed_back_data.channelID].esc_vendor = esc_status_s::ESC_VENDOR_TAP;
 					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint_raw = motor_out[feed_back_data.channelID];
 					// PWM convert to RPM,PWM:1200~1900<-->RPM:1600~7500 so rpm = 1600 + (pwm - 1200)*((7500-1600)/(1900-1200))
-					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint = motor_out[feed_back_data.channelID] * 8.43f - 8514.3f;
+					_esc_feedback.esc[feed_back_data.channelID].esc_setpoint = (float)motor_out[feed_back_data.channelID] * 8.43f - 8514.3f;
 					_esc_feedback.esc_connectiontype = esc_status_s::ESC_CONNECTION_TYPE_SERIAL;
 					_esc_feedback.counter++;
 					_esc_feedback.esc_count = esc_count;
