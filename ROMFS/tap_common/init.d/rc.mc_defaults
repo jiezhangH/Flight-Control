@@ -26,6 +26,10 @@ then
 	# RTL first, then land at current position
 	param set COM_LOW_BAT_ACT 3
 
+	# Reset to the link loss defaults
+	param set NAV_RCL_ACT 2
+	param set NAV_DLL_ACT 0
+
 	# Mag calibration setting
 	# do two-side calibration
 	param set CAL_MAG_SIDES 63
