@@ -372,14 +372,15 @@ MissionBlock::is_mission_item_reached()
 		}
 	}
 
-	/* check if velocity needs to be reached */
+	/* check if velocity needs to be reached
+	 * Note: the position controller either tracks position/yaw or velocity */
 	if (_mission_item.force_velocity) {
 
 		float ground_speed = sqrtf(_navigator->get_global_position()->vel_n * _navigator->get_global_position()->vel_n +
 					   _navigator->get_global_position()->vel_e * _navigator->get_global_position()->vel_e);
 
 
-		/* we reached desired velcoity */
+		/* we reached desired velocity */
 
 		if (fabsf(ground_speed - _mission_item.requested_speed) < 0.5f) {
 			_waypoint_velocity_reached = true;
@@ -389,7 +390,7 @@ MissionBlock::is_mission_item_reached()
 
 
 	/* Once the waypoint, yaw setpoint, velocity setpoint have been reached we can start the loiter time countdown */
-	if (_waypoint_position_reached && _waypoint_yaw_reached) {
+	else if (_waypoint_position_reached && _waypoint_yaw_reached) {
 
 		if (_time_first_inside_orbit == 0) {
 			_time_first_inside_orbit = now;
