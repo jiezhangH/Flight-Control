@@ -1997,7 +1997,7 @@ int commander_thread_main(int argc, char *argv[])
 		if (updated) {
 			power_button_state_s button_state;
 			orb_copy(ORB_ID(power_button_state), power_button_state_sub, &button_state);
-			if (button_state.event == power_button_state_s::PWR_BUTTON_STATE_DOWN) {
+			if (button_state.event == power_button_state_s::PWR_BUTTON_STATE_DOWN && power_state == power_state_e::idle) {
 
 				// allow shutdown only if not armed or the kill switch is enabled.
 				// This is to circumvent a HW bug, where the button can actually be pressed in air by
