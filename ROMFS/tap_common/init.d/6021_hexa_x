@@ -130,7 +130,7 @@ then
 
 		# RC
 		param set COM_RC_LOSS_T 3.0
-		param set COM_DL_LOSS_T 3.0
+		param set COM_DL_LOSS_T 10
 
 		# Altitude (manual) mode parameters
 		param set MPC_MAN_TILT_MAX 24
