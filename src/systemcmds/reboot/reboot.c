@@ -87,6 +87,14 @@ int reboot_main(int argc, char *argv[])
 			}
 		}
 
+		if (strcmp(argv[myoptind], "shutdown") == 0) {
+			ret = px4_shutdown_request(false, false);
+
+			if (ret != 0) {
+				PX4_ERR("shutdown failed (%i)", ret);
+			}
+		}
+
 		return ret;
 	}
 
