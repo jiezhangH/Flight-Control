@@ -57,11 +57,16 @@ __BEGIN_DECLS
 #    include <stm32_spi.h>
 #    include <stm32_i2c.h>
 
+/**
+ * Adapting the correct correlation from v1.7.0
+ */
+#    define PX4_CPU_UUID_CORRECT_CORRELATION
+
 /* STM32/32F7 defines the 96 bit UUID as
  *  init32_t[3] that can be read as bytes/half-words/words
  *  init32_t[0] PX4_CPU_UUID_ADDRESS[0] bits 31:0  (offset 0)
  *  init32_t[1] PX4_CPU_UUID_ADDRESS[1] bits 63:32 (offset 4)
- *  init32_t[2] PX4_CPU_UUID_ADDRESS[3] bits 96:64 (offset 8)
+ *  init32_t[2] PX4_CPU_UUID_ADDRESS[2] bits 96:64 (offset 8)
  *
  * The original PX4 stm32 (legacy) based implementation **displayed** the
  * UUID as: ABCD EFGH IJKL
