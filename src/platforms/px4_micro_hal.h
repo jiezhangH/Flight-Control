@@ -93,7 +93,8 @@ __BEGIN_DECLS
 
 /* By not defining PX4_CPU_UUID_CORRECT_CORRELATION the following maintains the legacy incorrect order
  * used for selection of significant digits of the UUID in the PX4 code base.
- * This is done to avoid the ripple effects changing the IDs used on STM32 base platforms
+ * This was done prior to 1.7.0 to avoid the ripple effects changing the IDs used on STM32 base platforms.
+ * From release 1.7.0 on the correct correlation is used.
  */
 #  if defined(PX4_CPU_UUID_CORRECT_CORRELATION)
 #    define PX4_CPU_UUID_WORD32_UNIQUE_H            0 /* Least significant digits change the most */
