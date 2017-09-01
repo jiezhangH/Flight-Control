@@ -64,7 +64,7 @@
 
 #define board_get_uuid32(id) do {for(int _idi=0; _idi < PX4_CPU_UUID_WORD32_LENGTH; _idi++) {id[_idi] = _idi;}} while(0)
 #define board_get_uuid32_formated(format_buffer, size, format, seperator) do { strcpy(format_buffer, SIM_FORMATED_UUID); } while(0)
-
+#define board_get_mfguid_formated(format_buffer, size) do { strcpy(format_buffer, SIM_FORMATED_UUID); } while(0)
 
 #define CONFIG_NFILE_STREAMS 1
 #define CONFIG_SCHED_WORKQUEUE 1
