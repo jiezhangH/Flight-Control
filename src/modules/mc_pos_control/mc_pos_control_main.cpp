@@ -2616,6 +2616,7 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		if (obstacle_ahead && !_avoidance_lock_in && (vel_sp_body(0) > 0.0f) && valid_sonar_measurament) {
 			_avoidance_lock_in = true;
 			_yaw_lock_in = _yaw;
+			PX4_WARN("Obstacle detected.");
 		}
 
 		if (_avoidance_lock_in) {
@@ -2627,6 +2628,7 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 			if (((vel_sp_body(0) < 0.0f) && (fabsf(vel_sp_body(0)) > 0.01f)) || ((fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f))
 					&& no_obstacle_ahead) || (_allow_forward_movement_hysteresis.get_state())) {
 				_avoidance_lock_in = false;
+				PX4_WARN("Exit obstacle avoidance. Altitude above home %f.", (double)altitude_above_home);
 
 			} else {
 				/* set velocity to 0 in order to stop in front of an obstacle*/
