@@ -203,6 +203,7 @@ static unsigned int leds_counter;
 static uint64_t last_print_mode_reject_time = 0;
 
 static systemlib::Hysteresis auto_disarm_hysteresis(false);
+static systemlib::Hysteresis land_interrupt_hysteresis(false);
 
 static float eph_threshold = 5.0f;
 static float epv_threshold = 10.0f;
@@ -1944,6 +1945,10 @@ int commander_thread_main(int argc, char *argv[])
 									(hrt_abstime)disarm_when_landed * 1000000);
 			}
 
+			//TODO add parameter for 1.5s
+			land_interrupt_hysteresis.set_hysteresis_time_from(true,
+					(hrt_abstime)1.5f * 1000000);
+
 			param_get(_param_low_bat_act, &low_bat_action);
 			param_get(_param_offboard_loss_timeout, &offboard_loss_timeout);
 			param_get(_param_offboard_loss_act, &offboard_loss_act);
@@ -2862,6 +2867,7 @@ int commander_thread_main(int argc, char *argv[])
 
 						control_mode.flag_control_updated = true;
 						main_state_transition(&status, commander_state_s::MAIN_STATE_POSCTL, main_state_prev, &status_flags, &internal_state);
+						land_interrupt_hysteresis.set_state_and_update(true);
 					}
 				}
 
@@ -2871,8 +2877,12 @@ int commander_thread_main(int argc, char *argv[])
 				    (sp_man.z - 0.5f) <= min_interrupt_stick_change &&
 					fabsf(local_position.vx) < 0.3f && fabsf(local_position.vy) < 0.3f) {
 
+					land_interrupt_hysteresis.set_state_and_update(false);
+
+					if(!land_interrupt_hysteresis.get_state()){
 						control_mode.flag_control_updated = false;
 						main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state);
+					}
 				}
 		}
 
