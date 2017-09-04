@@ -56,7 +56,7 @@ then
 			hardfault_log reset
 		fi
 	fi
-
+	set SD_CARD_EXIST yes
 	echo "microSD present"
 	unset DATAMAN_OPT
 	set START_LOGGER 1
@@ -68,6 +68,7 @@ else
 		then
 			echo "microSD card formatted"
 			unset DATAMAN_OPT
+			set SD_CARD_EXIST yes
 		else
 			echo "ERROR [init] Format failed"
 			#tone_alarm MNBG
@@ -78,8 +79,9 @@ else
 		set LOG_FILE /dev/null
 		set PARAM_FILE /dev/null
 # microSD not present, shutdown
-		usleep 3000000
-		reboot shutdown
+#		usleep 3000000
+#		reboot shutdown
+		set SD_CARD_EXIST no
 	fi
 fi
 
@@ -227,7 +229,10 @@ then
 	param set SYS_PARAM_VER ${DEFAULTS_VER}
 	param save
 	set NEW_DEFAULTS no
-	reboot
+	if [ $SD_CARD_EXIST == yes ]
+	then
+		reboot
+	fi
 fi
 
 

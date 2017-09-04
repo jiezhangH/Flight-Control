@@ -297,8 +297,11 @@ then
 
 	# Check for an ESC update
 	# if there is one, flash each ESC
-	if tap_esc checkcrc -d ${ESC_TTY} -n 6
+	if [ $SD_CARD_EXIST == yes ]
 	then
+		if tap_esc checkcrc -d ${ESC_TTY} -n 6
+		then
+		fi
 	fi
 
 	# Reboot to be on the safe side that the ESC update
