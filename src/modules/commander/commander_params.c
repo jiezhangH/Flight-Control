@@ -645,9 +645,9 @@ PARAM_DEFINE_FLOAT(COM_ARM_IMU_ACC, 0.7f);
 PARAM_DEFINE_FLOAT(COM_ARM_IMU_GYR, 0.15f);
 
 /**
- * allow interrupt minium altitude
+ * allow interrupt minimum altitude
  *
- *This is the minium altitude the drone allow to be interrupted
+ *This is the minimum altitude the drone allow to be interrupted
  *
  * @group Commander
  * @unit m
@@ -657,3 +657,18 @@ PARAM_DEFINE_FLOAT(COM_ARM_IMU_GYR, 0.15f);
  * @increment 0.5
  */
 PARAM_DEFINE_FLOAT(COM_MIN_ALT, 2.5f);
+
+/**
+ * Land interrupt delay
+ *
+ *If rtl/land is interrupted by sticks, it takes COM_LND_INTRUPT time
+ *to switch back to rtl/land
+ *
+ * @group Commander
+ * @unit m
+ * @min 0.0
+ * @max 20.0
+ * @decimal 1
+ * @increment 0.5
+ */
+PARAM_DEFINE_FLOAT(COM_LND_INTRUPT, 2.5f);
