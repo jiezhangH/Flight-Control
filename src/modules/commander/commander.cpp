@@ -792,7 +792,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 
 		// Check if a mode switch had been requested
 		if ((((uint32_t)cmd->param2) & 1) > 0) {
-			bool low_battery_state = emergency_battery_voltage_actions_done || critical_battery_voltage_actions_done;
+			bool low_battery_state = (emergency_battery_voltage_actions_done || critical_battery_voltage_actions_done) && (low_bat_action > 0);
 			if (!low_battery_state) {
 				transition_result_t main_ret = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_LOITER, main_state_prev, &status_flags, &internal_state);
 
