@@ -665,10 +665,10 @@ PARAM_DEFINE_FLOAT(COM_MIN_ALT, 2.5f);
  *to switch back to rtl/land
  *
  * @group Commander
- * @unit m
+ * @unit s
  * @min 0.0
  * @max 20.0
  * @decimal 1
  * @increment 0.5
  */
-PARAM_DEFINE_FLOAT(COM_LND_INTRUPT, 2.5f);
+PARAM_DEFINE_FLOAT(COM_LND_INTRUPT, 1.0f);
