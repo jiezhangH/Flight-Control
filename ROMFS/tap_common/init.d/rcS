@@ -42,6 +42,7 @@ then
 	set DATAMAN_OPT -r
 fi
 set START_LOGGER 0
+set SD_CARD_EXIST no
 set PARAM_FILE /fs/microsd/params
 
 #
@@ -78,10 +79,6 @@ else
 	else
 		set LOG_FILE /dev/null
 		set PARAM_FILE /dev/null
-# microSD not present, shutdown
-#		usleep 3000000
-#		reboot shutdown
-		set SD_CARD_EXIST no
 	fi
 fi
 
