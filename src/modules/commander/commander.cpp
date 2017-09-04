@@ -805,7 +805,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 				}
 			} else if (low_battery_state){
 				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
-				mavlink_log_critical(&mavlink_log_pub, "Low battery state,Rejecting pause");
+				mavlink_log_critical(&mavlink_log_pub, "Low battery state,rejecting pause");
 			}
 		} else {
 			cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
