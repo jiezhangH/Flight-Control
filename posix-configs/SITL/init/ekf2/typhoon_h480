@@ -75,8 +75,10 @@ mavlink stream -r 50 -s SERVO_OUTPUT_RAW_0 -u 14556
 mavlink stream -r 20 -s RC_CHANNELS -u 14556
 mavlink stream -r 250 -s HIGHRES_IMU -u 14556
 mavlink stream -r 10 -s OPTICAL_FLOW_RAD -u 14556
+mavlink stream -r 10 -s MOUNT_ORIENTATION -u 14556
 mavlink start -u 14557 -r 4000000 -m onboard -o 14540
 mavlink stream -r 50 -s ATTITUDE_QUATERNION -u 14557
+mavlink stream -r 10 -s MOUNT_ORIENTATION -u 14557
 logger start -e -t
 vmount start
 mavlink boot_complete
