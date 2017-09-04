@@ -1422,6 +1422,7 @@ int commander_thread_main(int argc, char *argv[])
 	param_t _param_epv = param_find("COM_HOME_V_T");
 	param_t _param_geofence_action = param_find("GF_ACTION");
 	param_t _param_disarm_land = param_find("COM_DISARM_LAND");
+	param_t _param_land_interrupt_delay = param_find("COM_LND_INTRUPT");
 	param_t _param_low_bat_act = param_find("COM_LOW_BAT_ACT");
 	param_t _param_offboard_loss_timeout = param_find("COM_OF_LOSS_T");
 	param_t _param_arm_without_gps = param_find("COM_ARM_WO_GPS");
@@ -1848,6 +1849,8 @@ int commander_thread_main(int argc, char *argv[])
 
 	float disarm_when_landed = 0;
 	float disarm_when_crash = 0;
+	float land_interrupt_delay = 0; /* if stick interrupt for rtl/land is ON, the vehicle will switch back */
+										   /* to rtl/land if sticks are not moved AND time land_interrupt_delay passed */
 
 	/* check which state machines for changes, clear "changed" flag */
 	bool arming_state_changed = false;
@@ -1945,9 +1948,10 @@ int commander_thread_main(int argc, char *argv[])
 									(hrt_abstime)disarm_when_landed * 1000000);
 			}
 
-			//TODO add parameter for 1.5s
+			param_get(_param_land_interrupt_delay, &land_interrupt_delay);
+			// set land interrupt delay hysteresis
 			land_interrupt_hysteresis.set_hysteresis_time_from(true,
-					(hrt_abstime)1.5f * 1000000);
+					(hrt_abstime)land_interrupt_delay * 1000000);
 
 			param_get(_param_low_bat_act, &low_bat_action);
 			param_get(_param_offboard_loss_timeout, &offboard_loss_timeout);
@@ -2857,32 +2861,37 @@ int commander_thread_main(int argc, char *argv[])
 		/*The relative altitude of the home point */
 		float current_relative_alt = global_position.alt - _home.alt;
 		if (gohome_land_iterrupt) {
-			if(!emergency_battery_voltage_actions_done && (pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
+			if (!emergency_battery_voltage_actions_done && (pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND || pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) &&(
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND ||
 					internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_RTL)) {
-				if((fabsf(sp_man.x - 0.f) > min_interrupt_stick_change ||
+				if ((fabsf(sp_man.x - 0.f) > min_interrupt_stick_change ||
 					fabsf(sp_man.y - 0.f) >min_interrupt_stick_change ||
 					(sp_man.z - 0.5f) > min_interrupt_stick_change) &&
 						current_relative_alt > allow_interrupt_min_alt) {
 
+						/* We interrupted land via sticks */
 						control_mode.flag_control_updated = true;
 						main_state_transition(&status, commander_state_s::MAIN_STATE_POSCTL, main_state_prev, &status_flags, &internal_state);
 						land_interrupt_hysteresis.set_state_and_update(true);
 					}
 				}
 
-				if(control_mode.flag_control_updated &&
+				if (control_mode.flag_control_updated &&
 					fabsf(sp_man.x - 0.f) <= min_interrupt_stick_change &&
 					fabsf(sp_man.y - 0.f) <= min_interrupt_stick_change &&
 				    (sp_man.z - 0.5f) <= min_interrupt_stick_change &&
 					fabsf(local_position.vx) < 0.3f && fabsf(local_position.vy) < 0.3f) {
 
+					/* set land interrupt hysteresis to false since sticks are not moving */
 					land_interrupt_hysteresis.set_state_and_update(false);
 
-					if(!land_interrupt_hysteresis.get_state()){
+					if (!land_interrupt_hysteresis.get_state()){
 						control_mode.flag_control_updated = false;
 						main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state);
 					}
+				} else {
+					/* stick are still moving */
+					land_interrupt_hysteresis.set_state_and_update(true);
 				}
 		}
 
