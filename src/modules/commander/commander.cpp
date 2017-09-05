@@ -792,8 +792,14 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 
 		// Check if a mode switch had been requested
 		if ((((uint32_t)cmd->param2) & 1) > 0) {
-			bool low_battery_state = (emergency_battery_voltage_actions_done || critical_battery_voltage_actions_done) && (low_bat_action > 0);
-			if (!low_battery_state) {
+			// check if a critical or emergency action is in progress and if the battery failsafe mode is not WARNING
+			bool battery_critical_action = (emergency_battery_voltage_actions_done || critical_battery_voltage_actions_done) && (low_bat_action != 0);
+
+			if (battery_critical_action) {
+				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
+				mavlink_log_critical(&mavlink_log_pub, "Low battery state, rejecting pause");
+
+			} else {
 				transition_result_t main_ret = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_LOITER, main_state_prev, &status_flags, &internal_state);
 
 				if ((main_ret != TRANSITION_DENIED)) {
@@ -803,9 +809,6 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 					cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
 					mavlink_log_critical(&mavlink_log_pub, "Rejecting reposition command.");
 				}
-			} else if (low_battery_state){
-				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
-				mavlink_log_critical(&mavlink_log_pub, "Low battery state,rejecting pause");
 			}
 		} else {
 			cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
