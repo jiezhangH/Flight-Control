@@ -38,7 +38,7 @@ matrix:
     - os: osx
       sudo: true
       osx_image: xcode8.3
-      env: BUILD_TARGET=tests PYTHON=2.7.12
+      env: BUILD_TARGET=tests
 
 cache:
   ccache: true
