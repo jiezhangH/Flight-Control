@@ -100,6 +100,7 @@ cp $firmwaredir/Tools/posix.gdbinit $tmpdir/Tools/
 cp $firmwaredir/Tools/setup_gazebo.bash $tmpdir/Tools/
 cp $firmwaredir/Tools/sitl_gazebo/worlds/typhoon_h480.world $tmpdir/Tools/sitl_gazebo/worlds/
 cp -r $firmwaredir/Tools/sitl_gazebo/models/typhoon_h480 $tmpdir/Tools/sitl_gazebo/models
+cp -r $firmwaredir/Tools/sitl_gazebo/models/sonar $tmpdir/Tools/sitl_gazebo/models
 cp $firmwaredir/ROMFS/px4fmu_common/mixers/hexa_x.main.mix $tmpdir/ROMFS/px4fmu_common/mixers/
 cp $firmwaredir/ROMFS/px4fmu_common/mixers/mount_legs.aux.mix $tmpdir/ROMFS/px4fmu_common/mixers/
 
