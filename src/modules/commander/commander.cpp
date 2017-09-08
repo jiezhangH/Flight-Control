@@ -222,6 +222,16 @@ static float max_imu_gyr_diff = 0.09f;
 static float min_stick_change = 0.25f;
 static float min_interrupt_stick_change = 0.15f;
 
+static float crit_bat_thr;
+static float emerg_bat_thr;
+static float bat_low_thr;
+static float cruise_speed;
+static float land_speed;
+static float vel_max_down;
+static float rtl_descend_alt;
+static float bat_work_low_emer_time;
+static float work_time_total;
+
 static struct vehicle_status_s status = {};
 static struct vehicle_roi_s _roi = {};
 static struct battery_status_s battery = {};
@@ -1458,6 +1468,16 @@ int commander_thread_main(int argc, char *argv[])
 	/* pre-flight IMU consistency checks */
 	param_t _param_max_imu_acc_diff = param_find("COM_ARM_IMU_ACC");
 	param_t _param_max_imu_gyr_diff = param_find("COM_ARM_IMU_GYR");
+	param_t _param_crit_thr = param_find("BAT_CRIT_THR");
+	param_t _param_emerg_thr = param_find("BAT_EMERGEN_THR");
+	param_t _param_bat_low_thr = param_find("BAT_LOW_THR");
+	param_t _param_cruise_speed = param_find("MPC_XY_CRUISE");
+	param_t _param_land_speed = param_find("MPC_LAND_SPEED");
+	param_t _param_vel_max_down = param_find("MPC_Z_VEL_MAX_DN");
+	param_t _param_rtl_descend_alt = param_find("RTL_DESCEND_ALT");
+	param_t _param_bat_work_time = param_find("BAT_WORK_TIME");
+	param_t _param_bat_work_low_emer_time = param_find("BAT_WORK_T_LTOE");
+
 
 	// These are too verbose, but we will retain them a little longer
 	// until we are sure we really don't need them.
@@ -2000,6 +2020,16 @@ int commander_thread_main(int argc, char *argv[])
 			param_get(_param_max_imu_acc_diff, &max_imu_acc_diff);
 			param_get(_param_max_imu_gyr_diff, &max_imu_gyr_diff);
 
+			param_get(_param_crit_thr, &crit_bat_thr);
+		    param_get(_param_emerg_thr, &emerg_bat_thr);
+			param_get(_param_bat_low_thr, &bat_low_thr);
+			param_get(_param_cruise_speed, &cruise_speed);
+			param_get(_param_land_speed, &land_speed);
+		    param_get(_param_rtl_descend_alt, &rtl_descend_alt);
+			param_get(_param_bat_work_low_emer_time, &bat_work_low_emer_time);
+			param_get(_param_vel_max_down, &vel_max_down);
+			param_get(_param_bat_work_time, &work_time_total);
+
 			param_init_forced = false;
 
 			/* Set flag to autosave parameters if necessary */
@@ -2471,12 +2501,29 @@ int commander_thread_main(int argc, char *argv[])
 				} else if (!status_flags.usb_connected &&
 					   battery.warning == battery_status_s::BATTERY_WARNING_CRITICAL &&
 					   !critical_battery_voltage_actions_done) {
-					critical_battery_voltage_actions_done = true;
 
-					if (!armed.armed) {
-						mavlink_log_critical(&mavlink_log_pub, "CRITICAL BATTERY, SHUT SYSTEM DOWN.");
+					float home_dist = get_distance_to_next_waypoint(_home.lat,
+							_home.lon, global_position.lat, global_position.lon);
 
+					float home_alt = global_position.alt - _home.alt;
+
+					// estimate of total time left when the critical battery threshold is reached
+					float critical_total_time_left = work_time_total * 60.0f;
+
+					// time to home consists of horizontal speed and vertical speed
+			        float home_dist_time = home_dist / cruise_speed + math::constrain((fabsf(home_alt) -rtl_descend_alt), 0.0f, home_alt) / vel_max_down + math::constrain(fabsf(home_alt), 0.0f, rtl_descend_alt) / land_speed;
+					home_dist_time = math::constrain(home_dist_time, 0.0f, critical_total_time_left);
+					float critical_value;
+
+					if (home_dist_time >= bat_work_low_emer_time) {
+						critical_value = ((crit_bat_thr - bat_low_thr) / (critical_total_time_left)) * (home_dist_time - bat_work_low_emer_time) + bat_low_thr;
 					} else {
+						// 0.03 is added to counteract fluctuation of 3 percent in battery estimation
+						critical_value = ((bat_low_thr - emerg_bat_thr) / bat_work_low_emer_time) * home_dist_time + emerg_bat_thr + 0.03f;
+					}
+
+					if (armed.armed && battery.remaining <= critical_value) {
+
 						if (low_bat_action == 1 || low_bat_action == 3) {
 							// let us send the critical message even if already in RTL
 							transition_result_t s = main_state_transition(&status, commander_state_s::MAIN_STATE_AUTO_RTL, main_state_prev, &status_flags, &internal_state);
@@ -2512,9 +2559,10 @@ int commander_thread_main(int argc, char *argv[])
 						} else {
 							mavlink_log_emergency(&mavlink_log_pub, "CRITICAL BATTERY, RETURN TO LAUNCH ADVISED.");
 						}
-					}
 
-					status_changed = true;
+						critical_battery_voltage_actions_done = true;
+						status_changed = true;
+					}
 
 				} else if (!status_flags.usb_connected &&
 					   battery.warning == battery_status_s::BATTERY_WARNING_EMERGENCY &&
@@ -3479,9 +3527,15 @@ int commander_thread_main(int argc, char *argv[])
 
 		} else if (!status_flags.usb_connected &&
 			   (status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
-			   (battery.warning == battery_status_s::BATTERY_WARNING_CRITICAL)) {
+			   critical_battery_voltage_actions_done) {
 			/* play tune on battery critical */
 			set_tune(TONE_BATTERY_WARNING_FAST_TUNE);
+
+		} else if (!status_flags.usb_connected &&
+				(status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
+				(battery.warning == battery_status_s::BATTERY_WARNING_EMERGENCY)) {
+				/* play tune on battery emergency */
+				set_tune(TONE_BATTERY_WARNING_FAST_TUNE);
 
 		} else if ((status.hil_state != vehicle_status_s::HIL_STATE_ON) &&
 			   (battery.warning == battery_status_s::BATTERY_WARNING_LOW)) {
@@ -3683,7 +3737,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 				led_color = led_control_s::COLOR_AMBER;
 				// removing high priority, the battery is also handled in the status_display inside the event module
 				// prio = 2;
-			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_CRITICAL) {
+			} else if (battery_local->warning == battery_status_s::BATTERY_WARNING_EMERGENCY) {
 				led_color = led_control_s::COLOR_RED;
 				// removing high priority, the battery is also handled in the status_display inside the event module
 				// prio = 2;

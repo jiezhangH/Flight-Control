@@ -92,17 +92,16 @@ PARAM_DEFINE_FLOAT(BAT_LOW_THR, 0.15f);
  * Critical threshold
  *
  * Sets the threshold when the battery will be reported as critically low.
- * This has to be lower than the low threshold. This threshold commonly
- * will trigger RTL.
+ * This parameter is used as starting value for dynamically adjusted critical battery value.
  *
  * @group Battery Calibration
  * @unit norm
  * @min 0.05
- * @max 0.1
+ * @max 0.8
  * @decimal 2
  * @increment 0.01
  */
-PARAM_DEFINE_FLOAT(BAT_CRIT_THR, 0.07f);
+PARAM_DEFINE_FLOAT(BAT_CRIT_THR, 0.50f);
 
 /**
  * Emergency threshold
@@ -194,3 +193,31 @@ PARAM_DEFINE_INT32(BAT_N_CELLS, 0);
  * @reboot_required true
  */
 PARAM_DEFINE_FLOAT(BAT_CAPACITY, -1.0f);
+/**
+ * Battery Flying Time from BAT_CRIT_THR to BAT_LOW_THR.
+ *
+ * Defines the flying time.
+ *
+ * @group Battery Calibration
+ * @unit min
+ * @decimal 0
+ * @min 0.0
+ * @max 50.0
+ * @increment 0.1
+ * @reboot_required true
+ */
+PARAM_DEFINE_FLOAT(BAT_WORK_TIME, 20.0f);
+/**
+ * Battery Flying Time from BAT_LOW_THR to BAT_EMERGEN_THR.
+ *
+ * Defines the flying time.
+ *
+ * @group Battery Calibration
+ * @unit seconds
+ * @decimal 0
+ * @min 0.0
+ * @max 500.0
+ * @increment 0.1
+ * @reboot_required true
+ */
+PARAM_DEFINE_FLOAT(BAT_WORK_T_LTOE, 50.0f);

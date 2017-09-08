@@ -195,7 +195,7 @@ void StatusDisplay::set_leds()
 	}
 
 	// handle battery warnings, once a state is reached it can not be reset
-	if (_battery_status.warning == battery_status_s::BATTERY_WARNING_CRITICAL || _critical_battery) {
+	if (_battery_status.warning == battery_status_s::BATTERY_WARNING_EMERGENCY || _critical_battery) {
 		_led_control.color = led_control_s::COLOR_RED;
 		_led_control.mode = led_control_s::MODE_BLINK_FAST;
 		_critical_battery = true;
